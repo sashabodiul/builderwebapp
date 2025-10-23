@@ -33,12 +33,12 @@ const Work: FC = () => {
     setCurrentScreen('completion');
   };
 
-  const handleWorkComplete = () => {
-    setCurrentScreen('main');
-    setSelectedObject('');
-    // Here you would typically send data to the server
-    alert(t('work.workSuccessfullyCompleted'));
-  };
+  // const handleWorkComplete = () => {
+  //   setCurrentScreen('main');
+  //   setSelectedObject('');
+  //   // Here you would typically send data to the server
+  //   alert(t('work.workSuccessfullyCompleted'));
+  // };
 
   const handleTodoListComplete = () => {
     setCurrentScreen('main');
@@ -63,7 +63,7 @@ const Work: FC = () => {
     case 'completion':
       return (
         <WorkCompletion
-          onComplete={handleWorkComplete}
+          // onComplete={handleWorkComplete}
           onBack={handleCompletionBack}
           onTodoList={() => setCurrentScreen('todo')}
           workerType={workerType}

@@ -3,14 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { Camera, Video, Upload, Check, ArrowRight, ArrowLeft, Hammer, Wrench } from 'lucide-react';
 
 interface WorkCompletionProps {
-  onComplete: () => void;
+  // onComplete: () => void;
   onBack: () => void;
   onTodoList: () => void;
   workerType: 'admin' | 'master' | 'worker';
   objectName: string;
 }
 
-const WorkCompletion: FC<WorkCompletionProps> = ({ onComplete, onBack, onTodoList, workerType, objectName }) => {
+const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, workerType, objectName }) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const [workPhotos, setWorkPhotos] = useState<File[]>([]);
@@ -82,9 +82,9 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onComplete, onBack, onTodoLis
     }
   };
 
-  const handleFinish = () => {
-    onComplete();
-  };
+  // const handleFinish = () => {
+  //   onComplete();
+  // };
 
   const handleBack = () => {
     if (isFirstStep) {

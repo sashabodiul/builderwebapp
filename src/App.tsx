@@ -1,7 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import routes from "./consts/pageRoutes";
 import Footer from "./components/layout/Footer";
-import LanguageSwitcher from "./components/LanguageSwitcher";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
 import Work from "./pages/Work";
