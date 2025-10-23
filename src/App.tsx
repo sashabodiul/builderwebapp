@@ -5,6 +5,7 @@ import Preloader from "./components/layout/Preloader";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
 import Main from "./pages/Main";
+import LoginForm from "./pages/Auth/LoginForm";
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +29,7 @@ function App() {
       <main>
         <Routes>
           <Route path={routes.MAIN} element={<Main />} />
+          <Route path="/login" element={<LoginForm />} />
         </Routes>
       </main>
 
