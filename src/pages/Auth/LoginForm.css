@@ -33,10 +33,6 @@
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
-  background:
-    radial-gradient(1200px 600px at 100% -10%, rgba(255,107,53,0.08), transparent 60%),
-    radial-gradient(900px 500px at -10% 110%, rgba(255,163,127,0.06), transparent 60%),
-    var(--dark-gray);
   position: relative;
   isolation: isolate;
   z-index: 10;
@@ -596,4 +592,20 @@ form { margin-top: .25rem; }
 
 .muted {
   color: rgba(224,224,224,.6);
+}
+
+/* Language switcher on auth page */
+.login-container .language-switcher {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 20;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-gray);
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.4);
+  }
 }

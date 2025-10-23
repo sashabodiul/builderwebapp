@@ -2,8 +2,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import './LoginForm.css';
 import MapSelector from './MapSelector/MapSelector';
+import LanguageSwitcher from '../../components/layout/LanguageSwitcher';
 import 'leaflet/dist/leaflet.css';
 
 import guidePdf from '../../assets/measure-guide.pdf';
@@ -18,6 +20,7 @@ type Step = 1 | 2 | 3 | 4;
 const DRAFT_KEY = 'registerDraft_v1';
 
 const LoginForm = () => {
+  const { t } = useTranslation();
   const [mode, setMode] = useState<Mode>('login');
 
   const [step, setStep] = useState<Step>(1);
@@ -177,8 +180,8 @@ const LoginForm = () => {
       }
     } catch (err: any) {
       console.error(err);
-      const msg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || 'Ошибка';
-      setError(mode === 'login' ? `Ошибка входа: ${msg}` : `Ошибка регистрации: ${msg}`);
+      const msg = err?.response?.data?.detail || err?.response?.data?.message || err?.message || t('auth.loginError');
+      setError(mode === 'login' ? `${t('auth.loginError')}: ${msg}` : `${t('auth.registerError')}: ${msg}`);
     } finally {
       setIsLoading(false);
     }
@@ -209,6 +212,7 @@ const LoginForm = () => {
 
   return (
     <div className="login-container">
+      <LanguageSwitcher />
       <div className="login-card">
         <div className="mode-tabs" role="tablist">
           <button
@@ -217,7 +221,7 @@ const LoginForm = () => {
             className="mode-tab"
             onClick={() => mode !== 'login' && switchMode()}
           >
-            Вход
+            {t('auth.loginTitle')}
           </button>
           <button
             role="tab"
@@ -225,16 +229,16 @@ const LoginForm = () => {
             className="mode-tab"
             onClick={() => mode !== 'register' && switchMode()}
           >
-            Создать профиль
+            {t('auth.create')} {t('auth.profile')}
           </button>
         </div>
 
         <div className="login-header">
           <h2>
-            {mode === 'login' ? 'Добро пожаловать в ' : 'Создать '}
-            <span>SKYBUD</span>
+            {mode === 'login' ? `${t('auth.welcome')} ` : `${t('auth.create')} `}
+            <span className={"text-3xl"}>SKYBUD</span>
           </h2>
-          <p>{mode === 'login' ? 'Войдите в свой аккаунт' : 'Заполните форму регистрации'}</p>
+          <p>{mode === 'login' ? t('auth.loginSubtitle') : t('auth.registerSubtitle')}</p>
         </div>
 
         {mode === 'register' && (
@@ -257,10 +261,10 @@ const LoginForm = () => {
                 ))}
               </div>
               <div className="stepper-label">
-                {step === 1 && 'Основные данные'}
-                {step === 2 && 'Личная информация'}
-                {step === 3 && 'Местоположение и замеры'}
-                {step === 4 && 'Документы'}
+                {step === 1 && t('auth.step1')}
+                {step === 2 && t('auth.step2')}
+                {step === 3 && t('auth.step3')}
+                {step === 4 && t('auth.step4')}
               </div>
             </div>
           </>
@@ -271,10 +275,10 @@ const LoginForm = () => {
           {mode === 'login' && (
             <>
               <div className="input-group">
-                <label>Email</label>
+                <label>{t('auth.email')}</label>
                 <input
                   type="email"
-                  placeholder="Введите ваш email"
+                  placeholder={t('auth.emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -284,11 +288,11 @@ const LoginForm = () => {
               </div>
 
               <div className="input-group">
-                <label>Пароль</label>
+                <label>{t('auth.password')}</label>
                 <div className="password-wrap">
                   <input
                     type={showPass ? 'text' : 'password'}
-                    placeholder="Введите пароль"
+                    placeholder={t('auth.passwordPlaceholder')}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -298,10 +302,10 @@ const LoginForm = () => {
                     type="button"
                     className="pass-toggle"
                     onClick={() => setShowPass((v) => !v)}
-                    aria-label={showPass ? 'Скрыть пароль' : 'Показать пароль'}
-                    title={showPass ? 'Скрыть пароль' : 'Показать пароль'}
+                    aria-label={showPass ? t('auth.hidePasswordAria') : t('auth.showPasswordAria')}
+                    title={showPass ? t('auth.hidePassword') : t('auth.showPassword')}
                   >
-                    {showPass ? 'Скрыть' : 'Показать'}
+                    {showPass ? t('auth.hide') : t('auth.show')}
                   </button>
                 </div>
                 <span className="input-highlight"></span>
@@ -315,10 +319,10 @@ const LoginForm = () => {
               {step === 1 && (
                 <>
                   <div className="input-group">
-                    <label>Email</label>
+                    <label>{t('auth.email')}</label>
                     <input
                       type="email"
-                      placeholder="Введите ваш email"
+                      placeholder={t('auth.emailPlaceholder')}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -328,11 +332,11 @@ const LoginForm = () => {
                   </div>
 
                   <div className="input-group">
-                    <label>Пароль</label>
+                    <label>{t('auth.password')}</label>
                     <div className="password-wrap">
                       <input
                         type={showPass ? 'text' : 'password'}
-                        placeholder="Придумайте надежный пароль"
+                        placeholder={t('auth.passwordPlaceholderRegister')}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -342,13 +346,13 @@ const LoginForm = () => {
                         type="button"
                         className="pass-toggle"
                         onClick={() => setShowPass((v) => !v)}
-                        aria-label={showPass ? 'Скрыть пароль' : 'Показать пароль'}
-                        title={showPass ? 'Скрыть пароль' : 'Показать пароль'}
+                        aria-label={showPass ? t('auth.hidePasswordAria') : t('auth.showPasswordAria')}
+                        title={showPass ? t('auth.hidePassword') : t('auth.showPassword')}
                       >
-                        {showPass ? 'Скрыть' : 'Показать'}
+                        {showPass ? t('auth.hide') : t('auth.show')}
                       </button>
                     </div>
-                    <div className="helper-text">Минимум 8 символов, включая цифры и буквы</div>
+                    <div className="helper-text">{t('auth.passwordHelper')}</div>
                     <span className="input-highlight"></span>
                   </div>
                 </>
@@ -358,20 +362,20 @@ const LoginForm = () => {
                 <>
                   <div className="grid-2">
                     <div className="input-group">
-                      <label>Имя</label>
+                      <label>{t('auth.firstName')}</label>
                       <input
                         type="text"
-                        placeholder="Имя"
+                        placeholder={t('auth.firstName')}
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
                       />
                     </div>
                     <div className="input-group">
-                      <label>Фамилия</label>
+                      <label>{t('auth.lastName')}</label>
                       <input
                         type="text"
-                        placeholder="Фамилия"
+                        placeholder={t('auth.lastName')}
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
@@ -381,20 +385,20 @@ const LoginForm = () => {
 
                   <div className="grid-2">
                     <div className="input-group">
-                      <label>Дата рождения</label>
+                      <label>{t('auth.birthDate')}</label>
                       <input
                         type="date"
-                        placeholder="ДД.ММ.ГГГГ"
+                        placeholder={t('auth.birthDatePlaceholder')}
                         value={birthDate}
                         onChange={(e) => setBirthDate(e.target.value)}
                         required
                       />
                     </div>
                     <div className="input-group">
-                      <label>Домашний адрес</label>
+                      <label>{t('auth.homeAddress')}</label>
                       <input
                         type="text"
-                        placeholder="Введите ваш адрес"
+                        placeholder={t('auth.addressPlaceholder')}
                         value={homeAddress}
                         onChange={(e) => setHomeAddress(e.target.value)}
                       />
@@ -403,19 +407,19 @@ const LoginForm = () => {
 
                   <div className="grid-2">
                     <div className="input-group">
-                      <label>Контакт для экстренных случаев</label>
+                      <label>{t('auth.emergencyContactName')}</label>
                       <input
                         type="text"
-                        placeholder="Имя контактного лица"
+                        placeholder={t('auth.emergencyContactNamePlaceholder')}
                         value={emergencyName}
                         onChange={(e) => setEmergencyName(e.target.value)}
                       />
                     </div>
                     <div className="input-group">
-                      <label>Телефон экстренного контакта</label>
+                      <label>{t('auth.emergencyContactPhone')}</label>
                       <input
                         type="text"
-                        placeholder="+7 (999) 123-45-67"
+                        placeholder={t('auth.emergencyContactPhonePlaceholder')}
                         value={emergencyPhone}
                         onChange={(e) => setEmergencyPhone(e.target.value)}
                       />
@@ -427,13 +431,13 @@ const LoginForm = () => {
               {step === 3 && (
                 <>
                   <div className="input-group">
-                    <label>Местоположение на карте</label>
+                    <label>{t('auth.locationOnMap')}</label>
                     <div className="map-picker-row">
                       <div className="map-picked">
                         {geoLat && geoLng ? (
-                          <span>Выбрано: {Number(geoLat).toFixed(6)}, {Number(geoLng).toFixed(6)}</span>
+                          <span>{t('auth.locationSelected', { lat: Number(geoLat).toFixed(6), lng: Number(geoLng).toFixed(6) })}</span>
                         ) : (
-                          <span className="muted">Местоположение не выбрано</span>
+                          <span className="muted">{t('auth.locationNotSelected')}</span>
                         )}
                       </div>
                       <button
@@ -441,11 +445,11 @@ const LoginForm = () => {
                         className="btn-primary"
                         onClick={() => setMapOpen(true)}
                       >
-                        Выбрать на карте
+                        {t('auth.selectOnMap')}
                       </button>
                     </div>
                     <div className="helper-text">
-                      Выберите ваше местоположение для точной доставки
+                      {t('auth.locationHelper')}
                     </div>
                   </div>
 
@@ -453,28 +457,28 @@ const LoginForm = () => {
 
                   <div className="grid-3">
                     <div className="input-group">
-                      <label>Рост (см)</label>
+                      <label>{t('auth.height')}</label>
                       <input
                         type="number"
-                        placeholder="170"
+                        placeholder={t('auth.heightPlaceholder')}
                         value={heightCm}
                         onChange={(e) => setHeightCm(e.target.value)}
                       />
                     </div>
                     <div className="input-group">
-                      <label>Обхват груди (см)</label>
+                      <label>{t('auth.chest')}</label>
                       <input
                         type="number"
-                        placeholder="90"
+                        placeholder={t('auth.chestPlaceholder')}
                         value={chestCm}
                         onChange={(e) => setChestCm(e.target.value)}
                       />
                     </div>
                     <div className="input-group">
-                      <label>Обхват бедер (см)</label>
+                      <label>{t('auth.hips')}</label>
                       <input
                         type="number"
-                        placeholder="95"
+                        placeholder={t('auth.hipsPlaceholder')}
                         value={hipsCm}
                         onChange={(e) => setHipsCm(e.target.value)}
                       />
@@ -483,28 +487,28 @@ const LoginForm = () => {
 
                   <div className="grid-3">
                     <div className="input-group">
-                      <label>Длина по внутреннему шву (см)</label>
+                      <label>{t('auth.inseam')}</label>
                       <input
                         type="number"
-                        placeholder="75"
+                        placeholder={t('auth.inseamPlaceholder')}
                         value={inseamCm}
                         onChange={(e) => setInseamCm(e.target.value)}
                       />
                     </div>
                     <div className="input-group">
-                      <label>Обхват талии для брюк (см)</label>
+                      <label>{t('auth.pantsWaist')}</label>
                       <input
                         type="number"
-                        placeholder="80"
+                        placeholder={t('auth.pantsWaistPlaceholder')}
                         value={pantsWaistCm}
                         onChange={(e) => setPantsWaistCm(e.target.value)}
                       />
                     </div>
                     <div className="input-group">
-                      <label>Обхват талии для верха (см)</label>
+                      <label>{t('auth.topWaist')}</label>
                       <input
                         type="number"
-                        placeholder="85"
+                        placeholder={t('auth.topWaistPlaceholder')}
                         value={topWaistCm}
                         onChange={(e) => setTopWaistCm(e.target.value)}
                       />
@@ -512,23 +516,23 @@ const LoginForm = () => {
                   </div>
 
                   <div className="input-group">
-                    <label>Обхват головы (см)</label>
+                    <label>{t('auth.headCircumference')}</label>
                     <input
                       type="number"
-                      placeholder="58"
+                      placeholder={t('auth.headCircumferencePlaceholder')}
                       value={headCircumferenceCm}
                       onChange={(e) => setHeadCircumferenceCm(e.target.value)}
                     />
                   </div>
 
                   <div className="helper-text">
-                    Для точных замеров используйте{' '}
+                    {t('auth.measurementHelper')}{' '}
                     <button
                       type="button"
                       className="linklike"
                       onClick={() => setPdfOpen(true)}
                     >
-                      инструкцию по замерам
+                      {t('auth.measurementGuideLink')}
                     </button>
                   </div>
                 </>
@@ -539,7 +543,7 @@ const LoginForm = () => {
                   <div className="grid-2">
                     <div className="input-group">
                       <label className="file-label">
-                        Фото паспорта
+                        {t('auth.passportFile')}
                         <input
                           type="file"
                           accept="image/*"
@@ -547,12 +551,12 @@ const LoginForm = () => {
                         />
                       </label>
                       {passportPhoto && (
-                        <div className="helper-text">Выбран файл: {passportPhoto.name}</div>
+                        <div className="helper-text">{t('auth.fileSelectedText', { filename: passportPhoto.name })}</div>
                       )}
                     </div>
                     <div className="input-group">
                       <label className="file-label">
-                        Фото водительских прав
+                        {t('auth.driverLicenseFile')}
                         <input
                           type="file"
                           accept="image/*"
@@ -560,13 +564,13 @@ const LoginForm = () => {
                         />
                       </label>
                       {driverLicensePhoto && (
-                        <div className="helper-text">Выбран файл: {driverLicensePhoto.name}</div>
+                        <div className="helper-text">{t('auth.fileSelectedText', { filename: driverLicensePhoto.name })}</div>
                       )}
                     </div>
                   </div>
 
                   <div className="success-message" role="status">
-                    Почти готово! Осталось только подтвердить регистрацию
+                    {t('auth.almostDone')}
                   </div>
                 </>
               )}
@@ -579,7 +583,7 @@ const LoginForm = () => {
                     className="btn-secondary"
                     onClick={() => setStep(((step - 1) as Step))}
                   >
-                    Назад
+                    {t('auth.back')}
                   </button>
                 )}
                 {step < 4 && (
@@ -589,7 +593,7 @@ const LoginForm = () => {
                     onClick={() => canNext && setStep(((step + 1) as Step))}
                     disabled={!canNext}
                   >
-                    Далее
+                    {t('auth.next')}
                   </button>
                 )}
               </div>
@@ -602,28 +606,28 @@ const LoginForm = () => {
             {isLoading
               ? <div className="spinner"></div>
               : (mode === 'login'
-                  ? 'Войти'
-                  : (step === 4 ? 'Завершить регистрацию' : 'Сохранить и продолжить'))}
+                  ? t('auth.loginButton')
+                  : (step === 4 ? t('auth.completeRegistration') : t('auth.saveAndContinue')))}
           </button>
         </form>
 
         <div className="login-footer">
           {mode === 'login' ? (
             <p>
-              Нет аккаунта?{' '}
+              {t('auth.noAccountText')}{' '}
               <a href="#" onClick={(e) => { e.preventDefault(); switchMode(); }}>
-                Зарегистрироваться
+                {t('auth.registerLinkText')}
               </a>
             </p>
           ) : (
             <p>
-              Уже есть аккаунт?{' '}
+              {t('auth.haveAccountText')}{' '}
               <a href="#" onClick={(e) => { e.preventDefault(); switchMode(); }}>
-                Войти
+                {t('auth.loginLinkText')}
               </a>
             </p>
           )}
-          <a href="#" className="forgot-password">Забыли пароль?</a>
+          <a href="#" className="forgot-password">{t('auth.forgotPasswordText')}</a>
         </div>
 
         {/* Декор */}
@@ -638,20 +642,20 @@ const LoginForm = () => {
         <div className="modal-backdrop" onClick={() => setPdfOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h3>Памятка по снятию мерок</h3>
+              <h3>{t('auth.measurementGuideTitle')}</h3>
               <button className="modal-close" onClick={() => setPdfOpen(false)}>×</button>
             </div>
             <div className="modal-body">
               <iframe
-                title="Памятка по замерам"
+                title={t('auth.measurementGuide')}
                 src={guidePdf}
                 className="pdf-frame"
               />
             </div>
             <div className="modal-foot">
-              <a href={guidePdf} target="_blank" rel="noopener noreferrer" className="btn-primary">Открыть PDF</a>
-              <a href={guidePdf} download className="btn-secondary">Скачать PDF</a>
-              <button className="btn-secondary" onClick={() => setPdfOpen(false)}>Закрыть</button>
+              <a href={guidePdf} target="_blank" rel="noopener noreferrer" className="btn-primary">{t('auth.openPdf')}</a>
+              <a href={guidePdf} download className="btn-secondary">{t('auth.downloadPdf')}</a>
+              <button className="btn-secondary" onClick={() => setPdfOpen(false)}>{t('auth.close')}</button>
             </div>
           </div>
         </div>
@@ -662,7 +666,7 @@ const LoginForm = () => {
         <div className="modal-backdrop" onClick={() => setMapOpen(false)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h3>Выбор местоположения</h3>
+              <h3>{t('auth.locationSelection')}</h3>
               <button className="modal-close" onClick={() => setMapOpen(false)}>×</button>
             </div>
             <div className="modal-body">
@@ -677,7 +681,7 @@ const LoginForm = () => {
               />
             </div>
             <div className="modal-foot">
-              <button className="btn-secondary" onClick={() => setMapOpen(false)}>Закрыть</button>
+              <button className="btn-secondary" onClick={() => setMapOpen(false)}>{t('auth.close')}</button>
             </div>
           </div>
         </div>

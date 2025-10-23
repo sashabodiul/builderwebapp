@@ -4,24 +4,65 @@
 @tailwind utilities;
 
 :root {
-  --color-bg: #0F0F0F;
-  --color-primary: #FEFEFE;
-  --color-secondary: #4B1211;
-  --color-element: #1C1C1C;
-  --color-sub: #7D7D7D;
-
+  /* CRM Theme Colors */
+  --color-bg: #0c0f12;
+  --color-surface: #14181c;
+  --color-asphalt: #252a2f;
+  --color-asphalt-2: #1d2227;
+  --color-panel: #242424;
+  
+  /* Text Colors */
+  --color-text: #e9eef3;
+  --color-text-strong: #ffffff;
+  --color-text-muted: #a8b0b9;
+  --color-text-dim: #8b949e;
+  
+  /* Orange Accent Colors */
+  --color-orange: #ff7a1a;
+  --color-orange-2: #ff8f3e;
+  --color-orange-primary: #ff6b35;
+  --color-orange-accent: #ff8c42;
+  --color-orange-secondary: #ffb366;
+  
+  /* Status Colors */
+  --color-success: #34c759;
+  --color-danger: #ff4d4f;
+  --color-info: #4da3ff;
+  --color-warning: #ffd666;
+  
+  /* Border Colors */
+  --color-border: #3a4046;
+  --color-border-2: #2e353b;
+  
+  /* Shadows */
+  --shadow: 0 18px 48px rgba(0,0,0,.36);
+  --shadow-focus: 0 0 0 3px rgba(255,122,26,.18);
+  
+  /* Border Radius */
+  --radius-sm: 10px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  
+  /* Legacy support */
+  --color-primary: var(--color-text-strong);
+  --color-secondary: var(--color-asphalt);
+  --color-element: var(--color-surface);
+  --color-sub: var(--color-text-muted);
+  --dark-gray: var(--color-bg);
   --footer-height: 70px;
 }
 
 * {
-  font-family: "SF Pro", sans-serif;
   color: var(--color-primary);
+  font-size: 16px;
 }
 
 html {
-  background: var(--color-bg);
+  background:
+          radial-gradient(90% 75% at 100% 0%, #101418 0%, var(--color-bg) 60%),
+          radial-gradient(1200px 600px at 100% -10%, rgba(255,122,26,0.08), transparent 60%),
+          radial-gradient(900px 500px at -10% 110%, rgba(255,143,62,0.06), transparent 60%);
 }
-
 
 .page {
   display: flex;
@@ -39,8 +80,6 @@ html {
     padding: 12px;
   }
 }
-
-
 
 @layer base {
   :root {
@@ -98,13 +137,12 @@ html {
   }
 }
 
-
-
 @layer base {
   * {
-    @apply border-border;
+    @apply border-theme-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-theme-text-primary;
+    background: transparent;
   }
 }

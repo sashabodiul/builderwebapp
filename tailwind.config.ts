@@ -8,48 +8,81 @@ export default {
   theme: {
   	extend: {
   		colors: {
+  			// CRM Theme Colors using CSS variables
+  			theme: {
+  				// background colors
+  				'bg-primary': 'var(--color-bg)',
+  				'bg-secondary': 'var(--color-surface)',
+  				'bg-tertiary': 'var(--color-asphalt)',
+  				'bg-card': 'var(--color-surface)',
+  				'bg-hover': 'var(--color-asphalt)',
+  				'bg-panel': 'var(--color-panel)',
+				
+				// text colors
+				'text-primary': 'var(--color-text-strong)',
+				'text-secondary': 'var(--color-text)',
+				'text-muted': 'var(--color-text-muted)',
+				'text-dim': 'var(--color-text-dim)',
+				
+				// accent colors
+				'accent': 'var(--color-orange)',
+				'accent-hover': 'var(--color-orange-2)',
+				'accent-primary': 'var(--color-orange-primary)',
+				'accent-secondary': 'var(--color-orange-secondary)',
+				
+				// border colors
+				'border': 'var(--color-border)',
+				'border-light': 'var(--color-border-2)',
+				
+				// status colors
+				'success': 'var(--color-success)',
+				'warning': 'var(--color-warning)',
+				'error': 'var(--color-danger)',
+				'info': 'var(--color-info)'
+  			},
+  			// legacy support
   			bg: 'var(--color-bg)',
+  			element: 'var(--color-surface)',
+  			sub: 'var(--color-text-muted)',
   			primary: {
-  				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				DEFAULT: 'var(--color-orange-primary)',
+  				foreground: 'var(--color-text-strong)'
   			},
   			secondary: {
-  				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				DEFAULT: 'var(--color-asphalt)',
+  				foreground: 'var(--color-text)'
   			},
-  			element: 'var(--color-element)',
-  			sub: 'var(--color-sub)',
-  			background: 'hsl(var(--background))',
-  			foreground: 'hsl(var(--foreground))',
+  			background: 'var(--color-bg)',
+  			foreground: 'var(--color-text-strong)',
   			card: {
-  				DEFAULT: 'hsl(var(--card))',
-  				foreground: 'hsl(var(--card-foreground))'
+  				DEFAULT: 'var(--color-surface)',
+  				foreground: 'var(--color-text-strong)'
   			},
   			popover: {
-  				DEFAULT: 'hsl(var(--popover))',
-  				foreground: 'hsl(var(--popover-foreground))'
+  				DEFAULT: 'var(--color-surface)',
+  				foreground: 'var(--color-text-strong)'
   			},
   			muted: {
-  				DEFAULT: 'hsl(var(--muted))',
-  				foreground: 'hsl(var(--muted-foreground))'
+  				DEFAULT: 'var(--color-asphalt)',
+  				foreground: 'var(--color-text-muted)'
   			},
   			accent: {
-  				DEFAULT: 'hsl(var(--accent))',
-  				foreground: 'hsl(var(--accent-foreground))'
+  				DEFAULT: 'var(--color-orange)',
+  				foreground: 'var(--color-text-strong)'
   			},
   			destructive: {
-  				DEFAULT: 'hsl(var(--destructive))',
-  				foreground: 'hsl(var(--destructive-foreground))'
+  				DEFAULT: 'var(--color-danger)',
+  				foreground: 'var(--color-text-strong)'
   			},
-  			border: 'hsl(var(--border))',
-  			input: 'hsl(var(--input))',
-  			ring: 'hsl(var(--ring))',
+  			border: 'var(--color-border)',
+  			input: 'var(--color-asphalt)',
+  			ring: 'var(--color-orange)',
   			chart: {
-  				'1': 'hsl(var(--chart-1))',
-  				'2': 'hsl(var(--chart-2))',
-  				'3': 'hsl(var(--chart-3))',
-  				'4': 'hsl(var(--chart-4))',
-  				'5': 'hsl(var(--chart-5))'
+  				'1': 'var(--color-orange)',
+  				'2': 'var(--color-orange-2)',
+  				'3': 'var(--color-orange-primary)',
+  				'4': 'var(--color-text)',
+  				'5': 'var(--color-text-muted)'
   			}
   		},
   		borderRadius: {
@@ -59,7 +92,5 @@ export default {
   		}
   	}
   },
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  plugins: [require("tailwindcss-animate")],
+  plugins: [],
 }
-

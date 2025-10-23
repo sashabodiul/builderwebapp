@@ -13,13 +13,17 @@
   z-index: 3 !important;
   position: relative;
   max-width: 480px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
 
   .pageLinks {
     display: flex;
     align-items: center;
     justify-content: space-between;
     height: 100%;
-    width: 100%;
+    flex: 1;
 
     .pageLink {
       display: flex;
@@ -34,5 +38,9 @@
         opacity: 1;
       }
     }
+  }
+
+  .languageSwitcher {
+    margin-left: 16px;
   }
 }

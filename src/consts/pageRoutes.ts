@@ -1,3 +1,5 @@
 export default {
-  MAIN: "/",
+  WORK: "/",
+  SALARY: "/salary",
+  ADMIN: "/admin",
 }

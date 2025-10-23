@@ -3,16 +3,28 @@ import {Link, useLocation} from "react-router-dom";
 import pageRoutes from "../../../consts/pageRoutes.ts";
 import styles from "./Footer.module.scss";
 import classNames from "classnames";
+import {Hammer, DollarSign, Settings } from "lucide-react";
+import LanguageSwitcher from "../LanguageSwitcher";
 
 const Footer: FC = () => {
   const location = useLocation();
 
   const footerLinks = [
     {
-      name: "Main page",
-      route: pageRoutes.MAIN,
-      icon: "/img/footer/icon.png",
-    }
+      name: "Work",
+      route: pageRoutes.WORK,
+      icon: <Hammer />
+    },
+    {
+      name: "Salary",
+      route: pageRoutes.SALARY,
+      icon: <DollarSign />
+    },
+    {
+      name: "Admin",
+      route: pageRoutes.ADMIN,
+      icon: <Settings />
+    },
   ];
 
   return (
@@ -25,11 +37,14 @@ const Footer: FC = () => {
               className={classNames(styles.pageLink, location.pathname === link.route ? styles.active : "")}
               to={link.route}
             >
-              <img src={link.icon} alt="" width={22} />
+              { link.icon }
               <p>{link.name}</p>
             </Link>
           ))}
         </nav>
+        <div className={styles.languageSwitcher}>
+          <LanguageSwitcher/>
+        </div>
       </div>
     </footer>
   );

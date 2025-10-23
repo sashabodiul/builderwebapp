@@ -1,15 +1,18 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import routes from "./consts/pageRoutes";
 import Footer from "./components/layout/Footer";
-import Preloader from "./components/layout/Preloader";
+import LanguageSwitcher from "./components/LanguageSwitcher";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
-import Main from "./pages/Main";
+import Work from "./pages/Work";
+import Salary from "./pages/Salary";
+import Admin from "./pages/Admin";
 import LoginForm from "./pages/Auth/LoginForm";
 
 function App() {
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const isDataLoaded = useInitialFetching();
+  const location = useLocation();
 
   useEffect(() => {
     if (isDataLoaded) {
@@ -23,17 +26,22 @@ function App() {
     window.Telegram.WebApp.expand();
   }
 
+  // Hide footer on auth pages
+  const isAuthPage = location.pathname === '/login';
+
   return (
     <div className={"App"}>
-      {isLoading && <Preloader />}
+      {/*{isLoading && <Preloader />}*/}
       <main>
         <Routes>
-          <Route path={routes.MAIN} element={<Main />} />
+          <Route path={routes.WORK} element={<Work />} />
+          <Route path={routes.SALARY} element={<Salary />} />
+          <Route path={routes.ADMIN} element={<Admin />} />
           <Route path="/login" element={<LoginForm />} />
         </Routes>
       </main>
 
-      <Footer />
+      {!isAuthPage && <Footer />}
     </div>
   )
 }
