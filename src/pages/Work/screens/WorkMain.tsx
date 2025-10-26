@@ -1,9 +1,12 @@
 import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Play, Square, MapPin, Calendar, MessageCircle } from 'lucide-react';
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
-import { toastError } from '../../../lib/toasts';
+import { startWork, getActiveWorkProcess } from '../../../requests/work';
+import { WorkProcessStartOut } from '../../../requests/work/types';
+import { toastError, toastSuccess } from '../../../lib/toasts';
 
 interface WorkMainProps {
   onStartWork: (objectId: string) => void;
@@ -14,11 +17,13 @@ interface WorkMainProps {
 
 const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, onObjectSelect }) => {
   const { t } = useTranslation();
+  const user = useSelector((state: any) => state.data.user);
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [, setActiveWorkProcess] = useState<WorkProcessStartOut | null>(null);
+  const [isStartingWork, setIsStartingWork] = useState(false);
 
-  // Завантаження об'єктів з API
   useEffect(() => {
     const fetchFacilities = async () => {
       const response = await getFacilities();
@@ -37,6 +42,27 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     fetchFacilities();
   }, [t]);
 
+  useEffect(() => {
+    const checkActiveWork = async () => {
+      if (!user?.id) return;
+
+      const response = await getActiveWorkProcess(user.id);
+      
+      if (response.error) {
+        console.error('Failed to check active work:', response);
+        return;
+      }
+
+      if (response.data) {
+        setActiveWorkProcess(response.data);
+        setIsWorking(true);
+        onStartWork(response.data.facility_id?.toString() || '');
+      }
+    };
+
+    checkActiveWork();
+  }, [user?.id, onStartWork]);
+
   const formatToday = () => {
     const today = new Date();
     return today.toLocaleDateString('uk-UA', {
@@ -47,13 +73,63 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     });
   };
 
-  const handleStartWork = () => {
+  const handleStartWork = async () => {
     if (!selectedObject) {
-      alert(t('work.selectObjectFirst'));
+      toastError(t('work.selectObjectFirst'));
       return;
     }
-    setIsWorking(true);
-    onStartWork(selectedObject);
+
+    setIsStartingWork(true);
+    
+    try {
+      toastSuccess(t('work.requestingGeolocation'));
+      
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 30000, 
+          maximumAge: 60000
+        });
+      });
+
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+
+      const startWorkData = {
+        worker_id: user?.id || 0,
+        facility_id: parseInt(selectedObject),
+        latitude,
+        longitude
+      };
+
+      const response = await startWork(startWorkData);
+      
+      if (response.error) {
+        console.error('Failed to start work:', response);
+        toastError(t('work.startWorkError'));
+        setIsStartingWork(false);
+        return;
+      }
+
+      setActiveWorkProcess(response.data);
+      setIsWorking(true);
+      onStartWork(selectedObject);
+      toastSuccess(t('work.workStarted'));
+    } catch (error) {
+      console.error('Error starting work:', error);
+      if (error instanceof GeolocationPositionError) {
+        const errorMessage = error.code === 1 
+          ? t('work.geolocationDenied')
+          : error.code === 2 
+          ? t('work.geolocationUnavailable')
+          : t('work.geolocationTimeout');
+        toastError(errorMessage);
+      } else {
+        toastError(t('work.startWorkError'));
+      }
+    } finally {
+      setIsStartingWork(false);
+    }
   };
 
   const handleStopWork = () => {
@@ -71,7 +147,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   return (
     <div className="min-h-screen page bg-theme-bg-primary p-6">
       <div className="max-w-4xl mx-auto w-full">
-        {/* Header with today's date */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-theme-text-primary mb-2">{t('work.title')}</h1>
           <div className="flex items-center gap-2 text-theme-text-secondary text-lg">
@@ -132,14 +207,23 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 </h2>
                 <button
                   onClick={handleStartWork}
-                  disabled={!selectedObject}
-                  className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject
+                  disabled={!selectedObject || isStartingWork}
+                  className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject && !isStartingWork
                       ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
                       : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
                     }`}
                 >
-                  <Play className="h-6 w-6" />
-                  {t('work.startWork')}
+                  {isStartingWork ? (
+                    <>
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                      {t('work.startingWork')}
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-6 w-6" />
+                      {t('work.startWork')}
+                    </>
+                  )}
                 </button>
                 {!selectedObject && (
                   <p className="text-theme-text-muted mt-3">
@@ -165,7 +249,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   {t('work.stopWork')}
                 </button>
 
-                {/* Telegram Group Button - Only shown when working */}
                 <div className="mt-6 text-center">
                   <button
                     onClick={handleTelegramGroup}
