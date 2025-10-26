@@ -1,6 +1,10 @@
 import { FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
+import { endWork } from '../../../requests/work';
+import { EndWorkData } from '../../../requests/work/types';
+import { toastError, toastSuccess } from '../../../lib/toasts';
 
 interface Task {
   id: string;
@@ -12,11 +16,16 @@ interface Task {
 interface TodoListProps {
   onComplete: () => void;
   onBack: () => void;
+  workPhotos?: File[];
+  toolsPhotos?: File[];
+  videoFile?: File | null;
 }
 
-const TodoList: FC<TodoListProps> = ({ onComplete, onBack }) => {
+const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null }) => {
   const { t } = useTranslation();
+  const user = useSelector((state: any) => state.data.user);
   const [newTaskText, setNewTaskText] = useState('');
+  const [isCompleting, setIsCompleting] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
@@ -90,6 +99,57 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack }) => {
   const markedTasks = tasks.filter(task => task.status !== 'pending').length;
   const totalTasks = tasks.length;
   const allTasksMarked = markedTasks === totalTasks;
+
+  const handleCompleteWork = async () => {
+    if (!user?.id) return;
+
+    setIsCompleting(true);
+
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 60000
+        });
+      });
+
+      const endWorkData: EndWorkData = {
+        worker_id: user.id,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+        status_object_finished: true,
+        done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
+        instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
+        report_video: videoFile || undefined,
+      };
+
+      const response = await endWork(endWorkData);
+      
+      if (response.error) {
+        console.error('Failed to end work:', response);
+        toastError(t('work.endWorkError'));
+        setIsCompleting(false);
+        return;
+      }
+
+      toastSuccess(t('work.workEnded'));
+      onComplete();
+    } catch (error) {
+      console.error('Error ending work:', error);
+      if (error instanceof GeolocationPositionError) {
+        const errorMessage = error.code === 1 
+          ? t('work.geolocationDenied')
+          : error.code === 2 
+          ? t('work.geolocationUnavailable')
+          : t('work.geolocationTimeout');
+        toastError(errorMessage);
+      } else {
+        toastError(t('work.endWorkError'));
+      }
+      setIsCompleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen page bg-theme-bg-primary p-6">
@@ -263,15 +323,25 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack }) => {
           </button>
           
           <button
-            onClick={onComplete}
-            disabled={!allTasksMarked}
+            onClick={handleCompleteWork}
+            disabled={!allTasksMarked || isCompleting}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
-              allTasksMarked
+              allTasksMarked && !isCompleting
                 ? 'bg-theme-accent text-white hover:bg-theme-accent-hover'
                 : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
             }`}
           >
-            {t('work.completeAll')}
+            {isCompleting ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                {t('work.completingWork')}
+              </>
+            ) : (
+              <>
+                <Check className="h-5 w-5" />
+                {t('work.completeAll')}
+              </>
+            )}
           </button>
         </div>
 

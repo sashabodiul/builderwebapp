@@ -1,6 +1,3 @@
-// adjustment types based on OpenAPI schema
-import { DateRangeParams } from "../shared/types.ts";
-
 export type AdjustmentTypeEnum = "penalty" | "prepayment" | "award";
 
 export type AdjustmentOut = {

@@ -133,7 +133,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   };
 
   const handleStopWork = () => {
-    setIsWorking(false);
     onStopWork();
   };
 

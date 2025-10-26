@@ -3,14 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { Camera, Video, Upload, Check, ArrowRight, ArrowLeft, Hammer, Wrench } from 'lucide-react';
 
 interface WorkCompletionProps {
-  // onComplete: () => void;
   onBack: () => void;
-  onTodoList: () => void;
-  workerType: 'admin' | 'master' | 'worker';
+  onTodoList: (workPhotos: File[], toolsPhotos: File[], videoFile: File | null) => void;
   objectName: string;
 }
 
-const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, workerType, objectName }) => {
+const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectName }) => {
   const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState(0);
   const [workPhotos, setWorkPhotos] = useState<File[]>([]);
@@ -26,13 +24,13 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, workerTyp
       icon: <Camera className="h-6 w-6" />,
       required: true
     },
-    ...(workerType === 'admin' || workerType === 'master' ? [{
+    {
       id: 'tools-photos',
       title: t('work.toolsStep'),
       description: t('work.uploadToolsPhotos'),
       icon: <Hammer className="h-6 w-6" />,
       required: true
-    }] : []),
+    },
     {
       id: 'video',
       title: t('work.videoStep'),
@@ -74,9 +72,10 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, workerTyp
     return false;
   };
 
+
   const handleNext = () => {
     if (isLastStep) {
-      onTodoList();
+      onTodoList(workPhotos, toolsPhotos, videoFile);
     } else {
       setCurrentStep(prev => prev + 1);
     }
@@ -315,7 +314,7 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, workerTyp
                 : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
             }`}
           >
-            {t('work.nextStep')}
+            {isLastStep ? t('work.goToTasks') : t('work.nextStep')}
             {!isLastStep && <ArrowRight className="h-4 w-4" />}
           </button>
         </div>

@@ -1,21 +1,22 @@
 import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
+// import { useSelector } from 'react-redux';
 import WorkMain from './screens/WorkMain';
 import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
-import { getFacilities } from '../../requests/facility';
-import { FacilityOut } from '../../requests/facility/types';
+import { getFacilities, FacilityOut } from '@/requests';
 
 type WorkScreen = 'main' | 'completion' | 'todo';
 
 const Work: FC = () => {
   const { t } = useTranslation();
-  const user = useSelector((state: any) => state.data.user);
+  // const user = useSelector((state: any) => state.data.user);
   const [currentScreen, setCurrentScreen] = useState<WorkScreen>('main');
   const [selectedObject, setSelectedObject] = useState<string>('');
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
-  const [workerType] = useState<'admin' | 'master' | 'worker'>('worker'); // Mock worker type
+  const [workPhotos, setWorkPhotos] = useState<File[]>([]);
+  const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
 
   // Завантаження об'єктів з API
   useEffect(() => {
@@ -57,15 +58,23 @@ const Work: FC = () => {
   // const handleWorkComplete = () => {
   //   setCurrentScreen('main');
   //   setSelectedObject('');
-  //   // Here you would typically send data to the server
-  //   alert(t('work.workSuccessfullyCompleted'));
+  //   // Робота завершена через API в WorkCompletion
   // };
 
-  const handleTodoListComplete = () => {
+  const handleTodoListComplete = async () => {
+    // Очищаємо дані після завершення роботи
+    setWorkPhotos([]);
+    setToolsPhotos([]);
+    setVideoFile(null);
     setCurrentScreen('main');
     setSelectedObject('');
-    // Here you would typically send data to the server
-    alert(t('work.allTasksCompletedMessage'));
+  };
+
+  const handleTodoListTransition = (photos: File[], tools: File[], video: File | null) => {
+    setWorkPhotos(photos);
+    setToolsPhotos(tools);
+    setVideoFile(video);
+    setCurrentScreen('todo');
   };
 
   const getSelectedObjectName = () => {
@@ -77,10 +86,8 @@ const Work: FC = () => {
     case 'completion':
       return (
         <WorkCompletion
-          // onComplete={handleWorkComplete}
           onBack={handleCompletionBack}
-          onTodoList={() => setCurrentScreen('todo')}
-          workerType={workerType}
+          onTodoList={handleTodoListTransition}
           objectName={getSelectedObjectName()}
         />
       );
@@ -90,6 +97,9 @@ const Work: FC = () => {
         <TodoList
           onComplete={handleTodoListComplete}
           onBack={handleTodoListBack}
+          workPhotos={workPhotos}
+          toolsPhotos={toolsPhotos}
+          videoFile={videoFile}
         />
       );
     
