@@ -4,9 +4,10 @@ import { useTranslation } from 'react-i18next';
 import WorkMain from './screens/WorkMain';
 import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
-import { getFacilities, FacilityOut } from '@/requests';
+import WorkSummary from './screens/WorkSummary';
+import { getFacilities, FacilityOut, WorkProcessEndOut } from '@/requests';
 
-type WorkScreen = 'main' | 'completion' | 'todo';
+type WorkScreen = 'main' | 'completion' | 'todo' | 'summary';
 
 const Work: FC = () => {
   const { t } = useTranslation();
@@ -17,6 +18,7 @@ const Work: FC = () => {
   const [workPhotos, setWorkPhotos] = useState<File[]>([]);
   const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [workSummaryData, setWorkSummaryData] = useState<WorkProcessEndOut | null>(null);
 
   // Завантаження об'єктів з API
   useEffect(() => {
@@ -61,11 +63,18 @@ const Work: FC = () => {
   //   // Робота завершена через API в WorkCompletion
   // };
 
-  const handleTodoListComplete = async () => {
-    // Очищаємо дані після завершення роботи
+  const handleTodoListComplete = async (workData: WorkProcessEndOut) => {
+    // Зберігаємо дані завершення роботи
+    setWorkSummaryData(workData);
+    setCurrentScreen('summary');
+  };
+
+  const handleSummaryComplete = () => {
+    // Очищаємо дані після перегляду підсумків
     setWorkPhotos([]);
     setToolsPhotos([]);
     setVideoFile(null);
+    setWorkSummaryData(null);
     setCurrentScreen('main');
     setSelectedObject('');
   };
@@ -102,6 +111,14 @@ const Work: FC = () => {
           videoFile={videoFile}
         />
       );
+    
+    case 'summary':
+      return workSummaryData ? (
+        <WorkSummary
+          workData={workSummaryData}
+          onComplete={handleSummaryComplete}
+        />
+      ) : null;
     
     default:
       return (

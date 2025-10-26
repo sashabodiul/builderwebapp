@@ -137,8 +137,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   };
 
   const handleTelegramGroup = () => {
-    // Mock Telegram group link
-    const telegramGroupUrl = 'https://t.me/skybud_workers';
+    const selectedFacility = facilities.find(facility => facility.id.toString() === selectedObject);
+    const telegramGroupUrl = selectedFacility?.invite_link || 'https://t.me/skybud_workers';
     window.open(telegramGroupUrl, '_blank');
   };
 

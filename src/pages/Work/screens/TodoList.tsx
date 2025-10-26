@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { endWork } from '../../../requests/work';
-import { EndWorkData } from '../../../requests/work/types';
+import { EndWorkData, WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 
 interface Task {
@@ -14,7 +14,7 @@ interface Task {
 }
 
 interface TodoListProps {
-  onComplete: () => void;
+  onComplete: (workData: WorkProcessEndOut) => void;
   onBack: () => void;
   workPhotos?: File[];
   toolsPhotos?: File[];
@@ -26,6 +26,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const user = useSelector((state: any) => state.data.user);
   const [newTaskText, setNewTaskText] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isObjectCompleted, setIsObjectCompleted] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: '1',
@@ -118,7 +119,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         worker_id: user.id,
         latitude: position.coords.latitude,
         longitude: position.coords.longitude,
-        status_object_finished: true,
+        status_object_finished: isObjectCompleted,
         done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
         instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
         report_video: videoFile || undefined,
@@ -134,7 +135,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       }
 
       toastSuccess(t('work.workEnded'));
-      onComplete();
+      onComplete(response.data);
     } catch (error) {
       console.error('Error ending work:', error);
       if (error instanceof GeolocationPositionError) {
@@ -310,6 +311,22 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
               <Plus className="h-4 w-4" />
               {t('work.add')}
             </button>
+          </div>
+        </div>
+
+        {/* Object Completion Checkbox */}
+        <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="object-completed"
+              checked={isObjectCompleted}
+              onChange={(e) => setIsObjectCompleted(e.target.checked)}
+              className="w-5 h-5 text-theme-accent bg-theme-bg-primary border-theme-border rounded focus:ring-theme-accent focus:ring-2"
+            />
+            <label htmlFor="object-completed" className="text-theme-text-primary font-medium cursor-pointer">
+              {t('work.objectCompletedCheckbox')}
+            </label>
           </div>
         </div>
 
