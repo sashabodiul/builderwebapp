@@ -1,6 +1,9 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Play, Square, MapPin, Calendar, MessageCircle } from 'lucide-react';
+import { getFacilities } from '../../../requests/facility';
+import { FacilityOut } from '../../../requests/facility/types';
+import { toastError } from '../../../lib/toasts';
 
 interface WorkMainProps {
   onStartWork: (objectId: string) => void;
@@ -12,15 +15,27 @@ interface WorkMainProps {
 const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, onObjectSelect }) => {
   const { t } = useTranslation();
   const [isWorking, setIsWorking] = useState<boolean>(false);
+  const [facilities, setFacilities] = useState<FacilityOut[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Mock data for objects
-  const objects = [
-    { id: '1', name: 'ЖК "Сонячний" - Буд. 1', address: 'вул. Центральна, 15' },
-    { id: '2', name: 'Офісний центр "Бізнес Плаза"', address: 'пр. Перемоги, 42' },
-    { id: '3', name: 'Торговий центр "МегаМолл"', address: 'вул. Шопінгова, 8' },
-    { id: '4', name: 'ЖК "Зелений Парк" - Буд. 3', address: 'вул. Паркова, 25' },
-    { id: '5', name: 'Складський комплекс "Логістик"', address: 'вул. Промислова, 100' }
-  ];
+  // Завантаження об'єктів з API
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      const response = await getFacilities();
+
+      if (response.error) {
+        console.error('Failed to fetch facilities:', response);
+        toastError(t('work.loadError'));
+        setIsLoading(false);
+        return;
+      }
+
+      setFacilities(response.data);
+      setIsLoading(false);
+    };
+
+    fetchFacilities();
+  }, [t]);
 
   const formatToday = () => {
     const today = new Date();
@@ -65,38 +80,49 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </div>
         </div>
 
-        {/* Object selection */}
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
           <h2 className="text-2xl font-bold text-theme-text-primary mb-4">{t('work.selectObject')}</h2>
-          <div className="space-y-3">
-            {objects.map((object) => (
-              <div
-                key={object.id}
-                className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  selectedObject === object.id
-                    ? 'border-theme-accent bg-theme-accent/10'
-                    : 'border-theme-border hover:border-theme-accent/50'
-                }`}
-                    onClick={() => onObjectSelect(object.id)}
-              >
-                <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-theme-accent mt-1 flex-shrink-0" />
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-theme-text-primary mb-1">
-                      {object.name}
-                    </h3>
-                    <p className="text-theme-text-secondary">{object.address}</p>
+          {isLoading ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
+            </div>
+          ) : facilities.length === 0 ? (
+            <div className="flex justify-center items-center py-8">
+              <div className="text-theme-text-secondary text-lg">{t('work.noObjects')}</div>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+              {facilities.map((facility) => (
+                <div
+                  key={facility.id}
+                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedObject === facility.id.toString()
+                      ? 'border-theme-accent bg-theme-accent/10'
+                      : 'border-theme-border hover:border-theme-accent/50'
+                    }`}
+                  onClick={() => onObjectSelect(facility.id.toString())}
+                >
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-theme-accent mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-theme-text-primary mb-1">
+                        {facility.name || t('work.unnamedObject')}
+                      </h3>
+                      {facility.latitude && facility.longitude && (
+                        <p className="text-theme-text-secondary">
+                          {facility.latitude.toFixed(6)}, {facility.longitude.toFixed(6)}
+                        </p>
+                      )}
+                    </div>
+                    {selectedObject === facility.id.toString() && (
+                      <div className="w-4 h-4 bg-theme-accent rounded-full flex-shrink-0 mt-1"></div>
+                    )}
                   </div>
-                  {selectedObject === object.id && (
-                    <div className="w-4 h-4 bg-theme-accent rounded-full flex-shrink-0 mt-1"></div>
-                  )}
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Work control */}
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6">
           <div className="text-center">
             {!isWorking ? (
@@ -107,11 +133,10 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 <button
                   onClick={handleStartWork}
                   disabled={!selectedObject}
-                  className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${
-                    selectedObject
+                  className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject
                       ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
                       : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
-                  }`}
+                    }`}
                 >
                   <Play className="h-6 w-6" />
                   {t('work.startWork')}
@@ -129,7 +154,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 </h2>
                 <div className="bg-theme-accent/20 border border-theme-accent rounded-xl p-4 mb-6">
                   <p className="text-theme-text-primary font-medium">
-                    {t('work.currentObject')}: {objects.find(obj => obj.id === selectedObject)?.name}
+                    {t('work.currentObject')}: {facilities.find(facility => facility.id.toString() === selectedObject)?.name || t('work.unnamedObject')}
                   </p>
                 </div>
                 <button
@@ -139,7 +164,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   <Square className="h-6 w-6" />
                   {t('work.stopWork')}
                 </button>
-                
+
                 {/* Telegram Group Button - Only shown when working */}
                 <div className="mt-6 text-center">
                   <button

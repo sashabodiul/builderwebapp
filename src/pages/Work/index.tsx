@@ -1,16 +1,37 @@
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import WorkMain from './screens/WorkMain';
 import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
+import { getFacilities } from '../../requests/facility';
+import { FacilityOut } from '../../requests/facility/types';
 
 type WorkScreen = 'main' | 'completion' | 'todo';
 
 const Work: FC = () => {
   const { t } = useTranslation();
+  const user = useSelector((state: any) => state.data.user);
   const [currentScreen, setCurrentScreen] = useState<WorkScreen>('main');
   const [selectedObject, setSelectedObject] = useState<string>('');
+  const [facilities, setFacilities] = useState<FacilityOut[]>([]);
   const [workerType] = useState<'admin' | 'master' | 'worker'>('worker'); // Mock worker type
+
+  // Завантаження об'єктів з API
+  useEffect(() => {
+    const fetchFacilities = async () => {
+      const response = await getFacilities();
+      
+      if (response.error) {
+        console.error('Failed to fetch facilities:', response);
+        return;
+      }
+      
+      setFacilities(response.data);
+    };
+
+    fetchFacilities();
+  }, []);
 
   const handleStartWork = (objectId: string) => {
     setSelectedObject(objectId);
@@ -48,15 +69,8 @@ const Work: FC = () => {
   };
 
   const getSelectedObjectName = () => {
-    // Mock objects data - in real app this would come from props or context
-    const objects = [
-      { id: '1', name: 'ЖК "Сонячний" - Буд. 1', address: 'вул. Центральна, 15' },
-      { id: '2', name: 'Офісний центр "Бізнес Плаза"', address: 'пр. Перемоги, 42' },
-      { id: '3', name: 'Торговий центр "МегаМолл"', address: 'вул. Шопінгова, 8' },
-      { id: '4', name: 'ЖК "Зелений Парк" - Буд. 3', address: 'вул. Паркова, 25' },
-      { id: '5', name: 'Складський комплекс "Логістик"', address: 'вул. Промислова, 100' }
-    ];
-    return objects.find(obj => obj.id === selectedObject)?.name || '';
+    const facility = facilities.find(facility => facility.id.toString() === selectedObject);
+    return facility?.name || t('work.unnamedObject');
   };
 
   switch (currentScreen) {
