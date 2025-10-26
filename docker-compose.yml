@@ -2,7 +2,7 @@ version: '3.3'
 services:
   skybud-webapp:
     build:
-      context: ..
+      context: .
       dockerfile: Dockerfile
     image: skybud-webapp:latest
     container_name: skybud-webapp
