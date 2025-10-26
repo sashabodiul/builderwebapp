@@ -1,47 +1,65 @@
-import { FC } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Plus, Minus } from 'lucide-react';
+import { getWorkerPayroll } from '../../requests/worker';
+import { WorkerPayrollOut } from '../../requests/worker/types';
+import { toastError } from '../../lib/toasts';
 
 const Salary: FC = () => {
   const { t } = useTranslation();
+  const user = useSelector((state: any) => state.data.user);
+  const [salaryData, setSalaryData] = useState<WorkerPayrollOut | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // static salary data
-  const salaryData = {
-    worker_id: 1,
-    period: {
-      date_from: "2025-08-31T00:00:00.000Z",
-      date_to: "2025-09-29T23:59:59.999Z"
-    },
-    base_calculation: {
-      total_hours: 0,
-      base_salary: 0,
-      work_processes_count: 0,
-      days_worked: 0,
-      overtime_hours: 0,
-      hours_rate: 0,
-      total_accrued: 0
-    },
-    adjustments: {
-      penalties: {
-        total: 0,
-        count: 0,
-        details: []
-      },
-      prepayments: {
-        total: 0,
-        count: 0,
-        details: []
-      },
-      awards: {
-        total: 0,
-        count: 0,
-        details: []
+  useEffect(() => {
+    const fetchSalaryData = async () => {
+      if (!user?.id) return;
+      
+      const response = await getWorkerPayroll(user.id);
+      
+      if (response.error) {
+        console.error('Failed to fetch salary data:', response);
+        toastError(t('salary.loadError'));
+        setIsLoading(false);
+        return;
       }
-    },
-    final_salary: 0
-  };
+      
+      setSalaryData(response.data);
+      setIsLoading(false);
+    };
 
-  const formatDate = (dateString: string) => {
+    fetchSalaryData();
+  }, [user?.id, t]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen page bg-theme-bg-primary p-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-4xl font-bold text-theme-text-primary mb-8">{t('salary.title')}</h1>
+          <div className="flex justify-center items-center h-64">
+            <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salaryData) {
+    return (
+      <div className="min-h-screen page bg-theme-bg-primary p-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-4xl font-bold text-theme-text-primary mb-8">{t('salary.title')}</h1>
+          <div className="flex justify-center items-center h-64">
+            <div className="text-theme-text-secondary text-lg">{t('salary.noData')}</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('uk-UA', {
       day: '2-digit',
       month: '2-digit',
@@ -60,72 +78,59 @@ const Salary: FC = () => {
     return `${amount.toFixed(2).replace('.', ',')} €`;
   };
 
+  const salaryCards = [
+    {
+      value: salaryData.base_calculation.work_processes_count,
+      label: t('salary.workProcesses'),
+      textSize: 'text-4xl'
+    },
+    {
+      value: `${formatDate(salaryData.period.date_from)} — ${formatDate(salaryData.period.date_to)}`,
+      label: t('salary.period'),
+      textSize: 'text-3xl'
+    },
+    {
+      value: formatTime(salaryData.base_calculation.total_hours),
+      label: t('salary.totalHours'),
+      textSize: 'text-3xl'
+    },
+    {
+      value: formatCurrency(salaryData.base_calculation.base_salary),
+      label: t('salary.baseSalary'),
+      textSize: 'text-4xl'
+    },
+    {
+      value: salaryData.adjustments.penalties.count + salaryData.adjustments.prepayments.count + salaryData.adjustments.awards.count,
+      label: t('salary.adjustments'),
+      textSize: 'text-4xl'
+    },
+    {
+      value: formatCurrency(salaryData.final_salary),
+      label: t('salary.finalSalary'),
+      textSize: 'text-4xl',
+      isAccent: true
+    }
+  ];
+
   return (
     <div className="min-h-screen page bg-theme-bg-primary p-6">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold text-theme-text-primary mb-8">{t('salary.title')}</h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* left side - 2x3 grid */}
           <div className="lg:col-span-2 grid grid-cols-2 gap-6">
-            {/* top row */}
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-theme-text-primary mb-3">
-                  {formatTime(salaryData.base_calculation.overtime_hours)}
+            {salaryCards.map((card, index) => (
+              <div key={index} className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
+                <div className="text-center">
+                  <div className={`${card.textSize} font-bold ${card.isAccent ? 'text-theme-accent' : 'text-theme-text-primary'} mb-3`}>
+                    {card.value}
+                  </div>
+                  <div className="text-lg text-theme-text-secondary font-medium">{card.label}</div>
                 </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.overtime')}</div>
               </div>
-            </div>
-
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-theme-text-primary mb-3">
-                  {formatDate(salaryData.period.date_from)} — {formatDate(salaryData.period.date_to)}
-                </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.period')}</div>
-              </div>
-            </div>
-
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-theme-text-primary mb-3">
-                  {formatTime(salaryData.base_calculation.total_hours)} × {formatCurrency(salaryData.base_calculation.base_salary)}
-                </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.hoursRate')}</div>
-              </div>
-            </div>
-
-            {/* bottom row */}
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-theme-text-primary mb-3">
-                  {salaryData.base_calculation.days_worked}
-                </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.daysWorked')}</div>
-              </div>
-            </div>
-
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-theme-text-primary mb-3">
-                  {formatTime(salaryData.base_calculation.total_hours)}
-                </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.totalHours')}</div>
-              </div>
-            </div>
-
-            <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 hover:bg-theme-bg-hover transition-colors">
-              <div className="text-center">
-                <div className="text-4xl font-bold text-theme-accent mb-3">
-                  {formatCurrency(salaryData.base_calculation.total_accrued)}
-                </div>
-                <div className="text-lg text-theme-text-secondary font-medium">{t('salary.totalAccrued')}</div>
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* right side - total to pay */}
           <div className="bg-theme-bg-card border border-theme-border rounded-xl">
             <div className="p-6 pb-4">
               <h3 className="text-theme-text-primary text-2xl font-bold">{t('salary.totalToPay')}</h3>
@@ -139,29 +144,35 @@ const Salary: FC = () => {
                 <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.base_calculation.base_salary)}</span>
               </div>
               
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <Plus className="h-6 w-6 text-theme-success" />
-                  <span className="text-theme-text-secondary text-lg font-medium">{t('salary.advances')}</span>
+              {salaryData.adjustments.prepayments.total > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Plus className="h-6 w-6 text-theme-success" />
+                    <span className="text-theme-text-secondary text-lg font-medium">{t('salary.advances')}</span>
+                  </div>
+                  <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.prepayments.total)}</span>
                 </div>
-                <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.prepayments.total)}</span>
-              </div>
+              )}
               
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <Plus className="h-6 w-6 text-theme-success" />
-                  <span className="text-theme-text-secondary text-lg font-medium">{t('salary.bonuses')}</span>
+              {salaryData.adjustments.awards.total > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Plus className="h-6 w-6 text-theme-success" />
+                    <span className="text-theme-text-secondary text-lg font-medium">{t('salary.bonuses')}</span>
+                  </div>
+                  <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.awards.total)}</span>
                 </div>
-                <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.awards.total)}</span>
-              </div>
+              )}
               
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <Minus className="h-6 w-6 text-theme-error" />
-                  <span className="text-theme-text-secondary text-lg font-medium">{t('salary.penalties')}</span>
+              {salaryData.adjustments.penalties.total > 0 && (
+                <div className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Minus className="h-6 w-6 text-theme-error" />
+                    <span className="text-theme-text-secondary text-lg font-medium">{t('salary.penalties')}</span>
+                  </div>
+                  <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.penalties.total)}</span>
                 </div>
-                <span className="text-theme-text-primary font-bold text-lg">{formatCurrency(salaryData.adjustments.penalties.total)}</span>
-              </div>
+              )}
 
               <div className="border-t-2 border-theme-border pt-4 mt-4">
                 <div className="flex items-center justify-between">
