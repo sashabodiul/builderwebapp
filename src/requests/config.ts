@@ -1,27 +1,25 @@
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL + "/api",
+  baseURL: import.meta.env.VITE_API_URL + "/api/v1",
 });
 
 api.interceptors.request.use((config) => {
-  config.headers["Authorization"] = `Bearer ${localStorage.getItem("token")}`;
+  const apiToken = import.meta.env.VITE_API_TOKEN;
+  if (apiToken) {
+    config.headers["Authorization"] = apiToken;
+  }
   return config;
 });
 
 type ApiRequestOptions = AxiosRequestConfig;
-export type ApiResponse<T> = {
-  data: T;
-  error?: unknown;
-  status?: number;
-};
 
 const apiRequest = async <T>(
   method: Method,
   route: string,
   options: ApiRequestOptions = {},
   body: object | null = null
-): Promise<ApiResponse<T>> => {
+): Promise<{ data: T; error?: unknown; status?: number }> => {
   try {
     const config: ApiRequestOptions = { ...options };
     if (body) {

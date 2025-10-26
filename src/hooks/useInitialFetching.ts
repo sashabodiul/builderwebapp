@@ -1,19 +1,42 @@
-import {useDispatch} from "react-redux";
-import {useEffect, useState} from "react";
-import {login} from "../requests/user"
+import { useDispatch } from "react-redux";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { getWorkerByTelegramId } from "../requests/worker";
+import { setUser, clearUser } from "../store/slice";
 
 const useInitialFetching = () => {
   const [isLoaded, setIsLoaded] = useState(false);
-
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    login(dispatch)
-      .then(() => setIsLoaded(true));
-  }, [dispatch]);
+    const checkAuth = async () => {
+      // Extract telegram_id from Telegram WebApp or use debug value
+      let telegram_id: number;
+
+      if (import.meta.env.VITE_DEBUG) {
+        telegram_id = 1359929127;
+      } else {
+        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+        telegram_id = telegramUser?.id;
+      }
+
+      const response = await getWorkerByTelegramId(telegram_id);
+
+      if (response?.error) {
+        console.error('Auth check failed:', response.error);
+        dispatch(clearUser());
+        navigate('/register');
+        setIsLoaded(true);
+        return;
+      }
+      dispatch(setUser(response.data));
+    };
+
+    checkAuth();
+  }, [dispatch, navigate]);
 
   return isLoaded;
-}
-
+};
 
 export default useInitialFetching;
