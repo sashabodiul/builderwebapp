@@ -1,0 +1,13 @@
+version: '3.3'
+services:
+  skybud-webapp:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: skybud-webapp:latest
+    container_name: skybud-webapp
+    ports:
+      - '5173:80'
+    env_file:
+      - .env
+    restart: unless-stopped

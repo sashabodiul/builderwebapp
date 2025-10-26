@@ -15,6 +15,7 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
   const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
 
   const steps = [
     {
@@ -57,8 +58,29 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
 
   const handleVideoUpload = (file: File) => {
     setVideoFile(file);
-    // Simulate video duration check
-    setVideoDuration(35); // Mock duration
+    setIsLoadingVideo(true);
+    setVideoDuration(0);
+    
+    const videoUrl = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    
+    video.addEventListener('loadedmetadata', () => {
+      const duration = Math.floor(video.duration);
+      setVideoDuration(duration);
+      setIsLoadingVideo(false);
+      
+      URL.revokeObjectURL(videoUrl);
+    });
+    
+    video.addEventListener('error', () => {
+      console.error('Error loading video metadata');
+      setVideoDuration(0);
+      setIsLoadingVideo(false);
+      URL.revokeObjectURL(videoUrl);
+    });
+    
+    video.src = videoUrl;
+    video.load();
   };
 
   const canProceed = () => {
@@ -67,7 +89,7 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
     } else if (currentStepData.id === 'tools-photos') {
       return toolsPhotos.length > 0;
     } else if (currentStepData.id === 'video') {
-      return videoFile && videoDuration >= 30;
+      return videoFile && !isLoadingVideo && videoDuration >= 30;
     }
     return false;
   };
@@ -287,7 +309,21 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
                     {videoFile.name}
                   </div>
                   <div className="text-theme-text-secondary text-xs mt-1">
-                    Тривалість: {videoDuration}с
+                    {isLoadingVideo ? (
+                      <div className="flex items-center justify-center gap-2">
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-theme-accent"></div>
+                        {t('work.calculatingDuration')}
+                      </div>
+                    ) : (
+                      <div className={`${videoDuration < 30 ? 'text-theme-error' : 'text-theme-text-secondary'}`}>
+                        Тривалість: {videoDuration}с
+                        {videoDuration < 30 && (
+                          <div className="text-xs text-theme-error mt-1">
+                            {t('work.minimumDuration')}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
