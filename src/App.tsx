@@ -9,6 +9,10 @@ import Work from "./pages/Work";
 import Salary from "./pages/Salary";
 import Admin from "./pages/Admin";
 import RegisterForm from "./pages/Auth/RegisterForm";
+import Facilities from "./pages/Admin/screens/Facilities";
+import FacilityTypes from "./pages/Admin/screens/FacilityTypes";
+import Workers from "./pages/Admin/screens/Workers";
+import Tasks from "./pages/Admin/screens/Tasks";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -44,6 +48,22 @@ function App() {
           <Route 
             path={routes.ADMIN} 
             element={isAuthenticated ? <Admin /> : <Navigate to="/register" replace />} 
+          />
+          <Route 
+            path={routes.ADMIN_FACILITIES} 
+            element={isAuthenticated ? <Facilities /> : <Navigate to="/register" replace />} 
+          />
+          <Route 
+            path={routes.ADMIN_FACILITY_TYPES} 
+            element={isAuthenticated ? <FacilityTypes /> : <Navigate to="/register" replace />} 
+          />
+          <Route 
+            path={routes.ADMIN_WORKERS} 
+            element={isAuthenticated ? <Workers /> : <Navigate to="/register" replace />} 
+          />
+          <Route 
+            path={routes.ADMIN_TASKS} 
+            element={isAuthenticated ? <Tasks /> : <Navigate to="/register" replace />} 
           />
           <Route 
             path={routes.REGISTER} 

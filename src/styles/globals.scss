@@ -81,7 +81,7 @@ html {
   overflow-x: hidden;
   position: relative;
   z-index: 2;
-  padding: var(--safe-area-height) 16px calc(20px + var(--footer-height)) !important;
+  padding: calc(var(--safe-area-height) + 15px) 16px calc(20px + var(--footer-height)) !important;
 
   @media (max-width: 360px) {
     padding: 12px;
