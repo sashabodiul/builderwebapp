@@ -4,6 +4,7 @@ import routes from "./consts/pageRoutes";
 import Footer from "./components/layout/Footer";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
+import { useTelegramWebApp } from "./hooks/useTelegramWebApp";
 import Work from "./pages/Work";
 import Salary from "./pages/Salary";
 import Admin from "./pages/Admin";
@@ -14,6 +15,8 @@ function App() {
   const isDataLoaded = useInitialFetching();
   const location = useLocation();
   const isAuthenticated = useSelector((state: any) => state.data.isAuthenticated);
+  
+  useTelegramWebApp();
 
   useEffect(() => {
     if (isDataLoaded) {
@@ -23,11 +26,6 @@ function App() {
     }
   }, [isDataLoaded]);
 
-  if (window.Telegram) {
-    window.Telegram.WebApp.expand();
-  }
-
-  // Hide footer on auth pages
   const isAuthPage = location.pathname === '/register';
 
   return (

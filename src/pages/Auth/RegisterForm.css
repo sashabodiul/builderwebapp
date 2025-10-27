@@ -169,6 +169,7 @@ form { margin-top: .25rem; }
   margin-top: .4rem;
   font-size: .8rem;
   color: rgba(224,224,224,.6);
+  line-height: 1.4;
 }
 
 /* Ошибка / Валидность */
@@ -412,6 +413,21 @@ form { margin-top: .25rem; }
 }
 .password-wrap input {
   padding-right: 96px; /* место под кнопку */
+  border-radius: var(--input-radius);
+  background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.06)), var(--light-gray);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text-gray);
+  font-size: 1rem;
+  outline: none;
+  transition: box-shadow .25s ease, border-color .25s ease, background .25s ease, transform .1s ease;
+}
+.password-wrap input:hover {
+  border-color: rgba(255,255,255,0.16);
+}
+.password-wrap input:focus {
+  box-shadow: var(--ring);
+  border-color: var(--orange-primary);
+  transform: translateZ(0);
 }
 .pass-toggle {
   position: absolute;
@@ -425,11 +441,20 @@ form { margin-top: .25rem; }
   border-radius: 8px;
   font-size: .85rem;
   cursor: pointer;
-  transition: background .2s ease, border-color .2s ease;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
 }
 .pass-toggle:hover {
   background: rgba(255,255,255,.12);
   border-color: rgba(255,255,255,.2);
+  color: #fff;
+}
+.pass-toggle:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(255,107,53,.3);
+  border-color: var(--orange-primary);
 }
 
 /* ===== Stepper ===== */

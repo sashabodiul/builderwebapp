@@ -207,7 +207,7 @@ const RegisterForm = () => {
   const progressPct = useMemo(() => (step / 4) * 100, [step]);
 
   return (
-    <div className="login-container">
+    <div className="page login-container">
       <LanguageSwitcher/>
       <div className="login-card">
         <div className="login-header">
@@ -279,9 +279,9 @@ const RegisterForm = () => {
                   >
                     {showPass ? t('auth.hide') : t('auth.show')}
                   </button>
+                  <span className="input-highlight"></span>
                 </div>
                 <div className="helper-text">{t('auth.passwordHelper')}</div>
-                <span className="input-highlight"></span>
               </div>
             </>
           )}

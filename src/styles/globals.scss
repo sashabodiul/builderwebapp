@@ -50,6 +50,12 @@
   --color-sub: var(--color-text-muted);
   --dark-gray: var(--color-bg);
   --footer-height: 70px;
+
+  --safe-area-height: calc(var(--tg-content-safe-area-inset-top) * 2);
+}
+
+html.desktop {
+  --safe-area-height: 10px;
 }
 
 * {
@@ -74,11 +80,15 @@ html {
   overflow-x: hidden;
   position: relative;
   z-index: 2;
-  padding: 16px 16px calc(20px + var(--footer-height));
+  padding: var(--safe-area-height) 16px calc(20px + var(--footer-height)) !important;
 
   @media (max-width: 360px) {
     padding: 12px;
   }
+}
+
+.Toastify__toast {
+  top: var(--safe-area-height);
 }
 
 @layer base {
