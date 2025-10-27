@@ -23,7 +23,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -40,9 +39,7 @@ import {
 import { getFacilities, createFacility, updateFacility, deleteFacility } from '@/requests/facility';
 import { getFacilityTypes } from '@/requests/facility-type';
 import { FacilityOut, FacilityCreate, FacilityUpdate } from '@/requests/facility/types';
-import { FacilityTypeOut } from '@/requests/facility-type/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
-import FloatingActionButton from './components/FloatingActionButton';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 
 const facilitySchema = z.object({
@@ -52,7 +49,7 @@ const facilitySchema = z.object({
   invite_link: z.string().optional(),
   latitude: z.string().optional(),
   longitude: z.string().optional(),
-  status: z.enum(['active', 'inactive']).default('active'),
+  status_active: z.boolean(),
 });
 
 type FacilityFormData = z.infer<typeof facilitySchema>;
@@ -158,29 +155,33 @@ const Facilities: React.FC = () => {
       invite_link: '',
       latitude: '',
       longitude: '',
-      status: 'active',
+      status_active: true,
     },
   });
 
   const handleCreate = (data: FacilityFormData) => {
-    const facilityData = {
-      ...data,
+    const facilityData: FacilityCreate = {
+      name: data.name,
       facility_type_id: parseInt(data.facility_type_id),
-      group_id: data.group_id ? parseInt(data.group_id) : undefined,
-      latitude: data.latitude ? parseFloat(data.latitude) : undefined,
-      longitude: data.longitude ? parseFloat(data.longitude) : undefined,
+      group_id: data.group_id ? parseInt(data.group_id) : null,
+      invite_link: data.invite_link || null,
+      latitude: data.latitude ? parseFloat(data.latitude) : null,
+      longitude: data.longitude ? parseFloat(data.longitude) : null,
+      status_active: data.status_active,
     };
     createMutation.mutate(facilityData);
   };
 
   const handleEdit = (data: FacilityFormData) => {
     if (!editingFacility) return;
-    const facilityData = {
-      ...data,
+    const facilityData: FacilityUpdate = {
+      name: data.name,
       facility_type_id: parseInt(data.facility_type_id),
       group_id: data.group_id ? parseInt(data.group_id) : undefined,
+      invite_link: data.invite_link || undefined,
       latitude: data.latitude ? parseFloat(data.latitude) : undefined,
       longitude: data.longitude ? parseFloat(data.longitude) : undefined,
+      status_active: data.status_active,
     };
     updateMutation.mutate({ id: editingFacility.id, data: facilityData });
   };
@@ -194,13 +195,13 @@ const Facilities: React.FC = () => {
   const openEditDialog = (facility: FacilityOut) => {
     setEditingFacility(facility);
     form.reset({
-      name: facility.name,
-      facility_type_id: facility.facility_type_id.toString(),
+      name: facility.name || '',
+      facility_type_id: facility.facility_type_id?.toString() || '',
       group_id: facility.group_id?.toString() || '',
       invite_link: facility.invite_link || '',
       latitude: facility.latitude?.toString() || '',
       longitude: facility.longitude?.toString() || '',
-      status: facility.status,
+      status_active: facility.status_active ?? true,
     });
     setIsEditDialogOpen(true);
   };
@@ -210,22 +211,23 @@ const Facilities: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    return status === 'active' ? (
-      <Badge className="bg-green-500 text-white">{t('admin.facilities.status.active')}</Badge>
+  const getStatusBadge = (statusActive: boolean | null) => {
+    return statusActive ? (
+      <Badge className="bg-green-500 text-white">{t('admin.facilities.statusOptions.active')}</Badge>
     ) : (
-      <Badge className="bg-gray-500 text-white">{t('admin.facilities.status.inactive')}</Badge>
+      <Badge className="bg-gray-500 text-white">{t('admin.facilities.statusOptions.inactive')}</Badge>
     );
   };
 
-  const getFacilityTypeName = (typeId: number) => {
+  const getFacilityTypeName = (typeId: number | null) => {
+    if (!typeId) return 'Unknown Type';
     const type = facilityTypes.find(t => t.id === typeId);
     return type?.name || 'Unknown Type';
   };
 
   const filteredFacilities = facilities.filter(facility => {
     if (typeFilter === 'all') return true;
-    return facility.facility_type_id.toString() === typeFilter;
+    return facility.facility_type_id?.toString() === typeFilter;
   });
 
   if (facilitiesLoading) {
@@ -294,7 +296,7 @@ const Facilities: React.FC = () => {
                 <CardHeader>
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{facility.name}</CardTitle>
-                    {getStatusBadge(facility.status)}
+                        {getStatusBadge(facility.status_active)}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -467,19 +469,19 @@ const Facilities: React.FC = () => {
 
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="status_active"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t('admin.facilities.status')}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">{t('admin.facilities.status.active')}</SelectItem>
-                          <SelectItem value="inactive">{t('admin.facilities.status.inactive')}</SelectItem>
+                          <SelectItem value="true">{t('admin.facilities.statusOptions.active')}</SelectItem>
+                          <SelectItem value="false">{t('admin.facilities.statusOptions.inactive')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -611,19 +613,19 @@ const Facilities: React.FC = () => {
 
                 <FormField
                   control={form.control}
-                  name="status"
+                  name="status_active"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>{t('admin.facilities.status')}</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={(value) => field.onChange(value === 'true')} value={field.value ? 'true' : 'false'}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="active">{t('admin.facilities.status.active')}</SelectItem>
-                          <SelectItem value="inactive">{t('admin.facilities.status.inactive')}</SelectItem>
+                          <SelectItem value="true">{t('admin.facilities.statusOptions.active')}</SelectItem>
+                          <SelectItem value="false">{t('admin.facilities.statusOptions.inactive')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -658,14 +660,18 @@ const Facilities: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Floating Action Button */}
-        <FloatingActionButton
-          label={t('admin.facilities.createTitle')}
-          onClick={() => {
-            form.reset();
-            setIsCreateDialogOpen(true);
-          }}
-        />
+        {/* Create Button */}
+        <div className="mt-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.facilities.createTitle')}
+          </Button>
+        </div>
       </div>
     </div>
   );

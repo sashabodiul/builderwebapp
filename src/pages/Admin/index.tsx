@@ -8,29 +8,29 @@ const Admin: FC = () => {
 
   const adminCards = [
     {
-      title: t('admin.facility'),
-      description: t('admin.facilityDescription'),
+      title: t('admin.facilities.title'),
+      description: t('admin.facilities.subtitle'),
       icon: <Building className="h-6 w-6" />,
       color: "blue",
       link: "/admin/facilities"
     },
     {
-      title: t('admin.facilityType'),
-      description: t('admin.facilityTypeDescription'),
+      title: t('admin.facilityTypes.title'),
+      description: t('admin.facilityTypes.subtitle'),
       icon: <Building2 className="h-6 w-6" />,
       color: "green",
       link: "/admin/facility-types"
     },
     {
-      title: t('admin.workers'),
-      description: t('admin.workersDescription'),
+      title: t('admin.workers.title'),
+      description: t('admin.workers.subtitle'),
       icon: <Users className="h-6 w-6" />,
       color: "orange",
       link: "/admin/workers"
     },
     {
-      title: t('admin.tasks'),
-      description: t('admin.tasksDescription'),
+      title: t('admin.tasks.title'),
+      description: t('admin.tasks.subtitle'),
       icon: <CheckSquare className="h-6 w-6" />,
       color: "purple",
       link: "/admin/tasks"

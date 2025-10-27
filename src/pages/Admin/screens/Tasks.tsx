@@ -42,7 +42,6 @@ import { getFacilities } from '@/requests/facility';
 import { getWorkers } from '@/requests/worker';
 import { WorkTaskOut, WorkTaskCreate, WorkTaskUpdate } from '@/requests/work-task/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
-import FloatingActionButton from './components/FloatingActionButton';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 
 const taskSchema = z.object({
@@ -194,7 +193,7 @@ const Tasks: React.FC = () => {
   });
 
   const handleCreate = (data: TaskFormData) => {
-    const taskData = {
+    const taskData: WorkTaskCreate = {
       text: data.text,
       facility_id: parseInt(data.facility_id),
       worker_id: data.worker_id ? parseInt(data.worker_id) : null,
@@ -207,7 +206,7 @@ const Tasks: React.FC = () => {
   const handleEdit = (data: TaskFormData) => {
     if (!editingTask) return;
 
-    const taskData = {
+    const taskData: WorkTaskUpdate = {
       text: data.text,
       facility_id: parseInt(data.facility_id),
       worker_id: data.worker_id ? parseInt(data.worker_id) : null,
@@ -246,12 +245,12 @@ const Tasks: React.FC = () => {
 
   const getStatusBadge = (task: WorkTaskOut) => {
     if (task.finished) {
-      return <Badge className="bg-green-500 text-white">{t('admin.tasks.status.finished')}</Badge>;
+      return <Badge className="bg-green-500 text-white">{t('admin.tasks.statusOptions.finished')}</Badge>;
     }
     if (task.expires_at && new Date(task.expires_at) < new Date()) {
-      return <Badge className="bg-red-500 text-white">{t('admin.tasks.status.overdue')}</Badge>;
+      return <Badge className="bg-red-500 text-white">{t('admin.tasks.statusOptions.overdue')}</Badge>;
     }
-    return <Badge className="bg-blue-500 text-white">{t('admin.tasks.status.pending')}</Badge>;
+    return <Badge className="bg-blue-500 text-white">{t('admin.tasks.statusOptions.pending')}</Badge>;
   };
 
   const getStatusIcon = (task: WorkTaskOut) => {
@@ -719,14 +718,18 @@ const Tasks: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Floating Action Button */}
-        <FloatingActionButton
-          label={t('admin.tasks.createTitle')}
-          onClick={() => {
-            form.reset();
-            setIsCreateDialogOpen(true);
-          }}
-        />
+        {/* Create Button */}
+        <div className="mt-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.tasks.createTitle')}
+          </Button>
+        </div>
       </div>
     </div>
   );

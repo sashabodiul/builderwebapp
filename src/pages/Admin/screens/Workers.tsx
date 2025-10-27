@@ -38,7 +38,6 @@ import {
 import { getWorkers, createWorker, updateWorker, deleteWorker } from '@/requests/worker';
 import { WorkerOut, WorkerCreate, WorkerUpdate } from '@/requests/worker/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
-import FloatingActionButton from './components/FloatingActionButton';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 
 const workerSchema = z.object({
@@ -632,14 +631,18 @@ const Workers: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Floating Action Button */}
-        <FloatingActionButton
-          label={t('admin.workers.createTitle')}
-          onClick={() => {
-            form.reset();
-            setIsCreateDialogOpen(true);
-          }}
-        />
+        {/* Create Button */}
+        <div className="mt-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.workers.createTitle')}
+          </Button>
+        </div>
       </div>
     </div>
   );

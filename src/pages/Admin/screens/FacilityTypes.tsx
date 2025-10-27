@@ -33,7 +33,6 @@ import {
 import { getFacilityTypes, createFacilityType, updateFacilityType, deleteFacilityType } from '@/requests/facility-type';
 import { FacilityTypeOut, FacilityTypeCreate, FacilityTypeUpdate } from '@/requests/facility-type/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
-import FloatingActionButton from './components/FloatingActionButton';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 
 const facilityTypeSchema = z.object({
@@ -348,14 +347,18 @@ const FacilityTypes: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Floating Action Button */}
-        <FloatingActionButton
-          label={t('admin.facilityTypes.createTitle')}
-          onClick={() => {
-            form.reset();
-            setIsCreateDialogOpen(true);
-          }}
-        />
+        {/* Create Button */}
+        <div className="mt-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.facilityTypes.createTitle')}
+          </Button>
+        </div>
       </div>
     </div>
   );
