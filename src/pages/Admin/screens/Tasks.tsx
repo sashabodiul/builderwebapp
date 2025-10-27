@@ -11,6 +11,7 @@ import routes from '@/consts/pageRoutes';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DateInput } from '@/components/ui/date-input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
@@ -186,7 +187,7 @@ const Tasks: React.FC = () => {
     defaultValues: {
       text: '',
       facility_id: '',
-      worker_id: '',
+      worker_id: 'unassigned',
       expires_at: '',
       photo: undefined,
     },
@@ -196,7 +197,7 @@ const Tasks: React.FC = () => {
     const taskData: WorkTaskCreate = {
       text: data.text,
       facility_id: parseInt(data.facility_id),
-      worker_id: data.worker_id ? parseInt(data.worker_id) : null,
+      worker_id: data.worker_id && data.worker_id !== 'unassigned' ? parseInt(data.worker_id) : null,
       expires_at: data.expires_at || null,
       photo: data.photo || null,
     };
@@ -209,7 +210,7 @@ const Tasks: React.FC = () => {
     const taskData: WorkTaskUpdate = {
       text: data.text,
       facility_id: parseInt(data.facility_id),
-      worker_id: data.worker_id ? parseInt(data.worker_id) : null,
+      worker_id: data.worker_id && data.worker_id !== 'unassigned' ? parseInt(data.worker_id) : null,
       expires_at: data.expires_at || null,
       photo: data.photo || null,
     };
@@ -231,7 +232,7 @@ const Tasks: React.FC = () => {
     form.reset({
       text: task.text || '',
       facility_id: task.facility_id?.toString() || '',
-      worker_id: task.worker_id?.toString() || '',
+      worker_id: task.worker_id?.toString() || 'unassigned',
       expires_at: task.expires_at ? new Date(task.expires_at).toISOString().slice(0, 16) : '',
       photo: undefined,
     });
@@ -527,7 +528,7 @@ const Tasks: React.FC = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">{t('admin.tasks.unassigned')}</SelectItem>
+                          <SelectItem value="unassigned">{t('admin.tasks.unassigned')}</SelectItem>
                           {workers.map((worker) => (
                             <SelectItem key={worker.id} value={worker.id.toString()}>
                               {`${worker.first_name || ''} ${worker.last_name || ''}`.trim() || 'Unknown Worker'}
@@ -547,7 +548,7 @@ const Tasks: React.FC = () => {
                     <FormItem>
                       <FormLabel>{t('admin.tasks.expiresAt')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DateInput
                           type="datetime-local"
                           {...field}
                           placeholder={t('admin.tasks.expiresAtPlaceholder')}
@@ -654,7 +655,7 @@ const Tasks: React.FC = () => {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">{t('admin.tasks.unassigned')}</SelectItem>
+                          <SelectItem value="unassigned">{t('admin.tasks.unassigned')}</SelectItem>
                           {workers.map((worker) => (
                             <SelectItem key={worker.id} value={worker.id.toString()}>
                               {`${worker.first_name || ''} ${worker.last_name || ''}`.trim() || 'Unknown Worker'}
@@ -674,7 +675,7 @@ const Tasks: React.FC = () => {
                     <FormItem>
                       <FormLabel>{t('admin.tasks.expiresAt')}</FormLabel>
                       <FormControl>
-                        <Input
+                        <DateInput
                           type="datetime-local"
                           {...field}
                           placeholder={t('admin.tasks.expiresAtPlaceholder')}
