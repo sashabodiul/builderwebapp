@@ -622,7 +622,7 @@ form { margin-top: .25rem; }
 /* Language switcher on auth page */
 .login-container .language-switcher {
   position: absolute;
-  top: 20px;
+  top: calc(var(--safe-area-height) + 20px);
   right: 20px;
   z-index: 20;
   background: rgba(0, 0, 0, 0.3);

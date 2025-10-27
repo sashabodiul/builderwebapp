@@ -51,7 +51,8 @@
   --dark-gray: var(--color-bg);
   --footer-height: 70px;
 
-  --safe-area-height: calc(var(--tg-content-safe-area-inset-top) * 2);
+  // --safe-area-height: calc(var(--tg-content-safe-area-inset-top) * 2);
+  --safe-area-height: 100px;
 }
 
 html.desktop {
