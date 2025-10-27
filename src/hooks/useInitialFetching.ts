@@ -23,7 +23,7 @@ const useInitialFetching = () => {
 
       const response = await getWorkerByTelegramId(telegram_id);
 
-      if (response?.error) {
+      if (response?.error && !import.meta.env.VITE_DISABLE_AUTH) {
         console.error('Auth check failed:', response.error);
         dispatch(clearUser());
         navigate('/register');

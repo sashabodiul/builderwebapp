@@ -174,7 +174,7 @@ const MapSelector: React.FC<MapSelectorProps> = ({
             <MapContainer
               center={position}
               zoom={13}
-              style={{ height: '400px', width: '100%', borderRadius: '8px' }}
+              style={{ height: '100%', width: '100%', borderRadius: '8px' }}
               ref={mapRef}
             >
               <TileLayer
