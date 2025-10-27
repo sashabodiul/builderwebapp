@@ -288,7 +288,7 @@ const Tasks: React.FC = () => {
   if (tasksLoading) {
     return (
       <div className="min-h-screen bg-theme-bg-primary p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
           </div>
@@ -298,8 +298,8 @@ const Tasks: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg-primary p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="page min-h-screen bg-theme-bg-primary p-4">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -311,6 +311,19 @@ const Tasks: React.FC = () => {
             </Link>
             <h1 className="text-3xl font-bold text-theme-text-primary">{t('admin.tasks.title')}</h1>
           </div>
+        </div>
+
+        {/* Create Button */}
+        <div className="mb-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.tasks.createTitle')}
+          </Button>
         </div>
 
         {/* Filters */}
@@ -718,18 +731,6 @@ const Tasks: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Create Button */}
-        <div className="mt-6">
-          <Button
-            onClick={() => {
-              form.reset();
-              setIsCreateDialogOpen(true);
-            }}
-            className="w-full"
-          >
-            {t('admin.tasks.createTitle')}
-          </Button>
-        </div>
       </div>
     </div>
   );

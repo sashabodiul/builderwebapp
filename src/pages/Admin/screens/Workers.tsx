@@ -149,6 +149,7 @@ const Workers: React.FC = () => {
   const handleCreate = (data: WorkerFormData) => {
     const workerData = {
       ...data,
+      username: data.username ? data.username.replace(/^@/, '') : data.username,
       rate: parseFloat(data.rate),
       telegram_id: data.telegram_id ? parseInt(data.telegram_id) : null,
       birthday: data.birthday ? new Date(data.birthday).toISOString() : null,
@@ -160,6 +161,7 @@ const Workers: React.FC = () => {
     if (!editingWorker) return;
     const workerData = {
       ...data,
+      username: data.username ? data.username.replace(/^@/, '') : data.username,
       rate: parseFloat(data.rate),
       telegram_id: data.telegram_id ? parseInt(data.telegram_id) : undefined,
       birthday: data.birthday ? new Date(data.birthday).toISOString() : undefined,
@@ -223,7 +225,7 @@ const Workers: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-theme-bg-primary p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
           </div>
@@ -233,8 +235,8 @@ const Workers: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg-primary p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="page min-h-screen bg-theme-bg-primary p-4">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -246,6 +248,19 @@ const Workers: React.FC = () => {
             </Link>
             <h1 className="text-3xl font-bold text-theme-text-primary">{t('admin.workers.title')}</h1>
           </div>
+        </div>
+
+        {/* Create Button */}
+        <div className="mb-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.workers.createTitle')}
+          </Button>
         </div>
 
         {/* Workers List */}
@@ -631,18 +646,6 @@ const Workers: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Create Button */}
-        <div className="mt-6">
-          <Button
-            onClick={() => {
-              form.reset();
-              setIsCreateDialogOpen(true);
-            }}
-            className="w-full"
-          >
-            {t('admin.workers.createTitle')}
-          </Button>
-        </div>
       </div>
     </div>
   );

@@ -280,7 +280,7 @@
       "email": "Email",
       "emailPlaceholder": "Enter email address",
       "telegramUsername": "Telegram Username",
-      "telegramUsernamePlaceholder": "@username",
+      "telegramUsernamePlaceholder": "username",
       "telegramId": "Telegram ID",
       "telegramIdPlaceholder": "Enter Telegram ID",
       "type": "Worker Type",

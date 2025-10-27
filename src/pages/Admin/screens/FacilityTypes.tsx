@@ -12,11 +12,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -147,7 +145,7 @@ const FacilityTypes: React.FC = () => {
   const openEditDialog = (type: FacilityTypeOut) => {
     setEditingType(type);
     form.reset({
-      name: type.name,
+      name: type.name || '',
       description: type.description || '',
     });
     setIsEditDialogOpen(true);
@@ -161,7 +159,7 @@ const FacilityTypes: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-theme-bg-primary p-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-7xl mx-auto">
           <div className="flex items-center justify-center h-64">
             <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
           </div>
@@ -171,8 +169,8 @@ const FacilityTypes: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-theme-bg-primary p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="page min-h-screen bg-theme-bg-primary p-4">
+      <div className="max-w-7xl mx-auto w-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
@@ -184,6 +182,19 @@ const FacilityTypes: React.FC = () => {
             </Link>
             <h1 className="text-3xl font-bold text-theme-text-primary">{t('admin.facilityTypes.title')}</h1>
           </div>
+        </div>
+
+        {/* Create Button */}
+        <div className="mb-6">
+          <Button
+            onClick={() => {
+              form.reset();
+              setIsCreateDialogOpen(true);
+            }}
+            className="w-full"
+          >
+            {t('admin.facilityTypes.createTitle')}
+          </Button>
         </div>
 
         {/* Facility Types List */}
@@ -347,18 +358,6 @@ const FacilityTypes: React.FC = () => {
           isLoading={deleteMutation.isPending}
         />
 
-        {/* Create Button */}
-        <div className="mt-6">
-          <Button
-            onClick={() => {
-              form.reset();
-              setIsCreateDialogOpen(true);
-            }}
-            className="w-full"
-          >
-            {t('admin.facilityTypes.createTitle')}
-          </Button>
-        </div>
       </div>
     </div>
   );

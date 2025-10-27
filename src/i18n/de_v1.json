@@ -259,7 +259,7 @@
       "email": "E-Mail",
       "emailPlaceholder": "Geben Sie die E-Mail-Adresse ein",
       "telegramUsername": "Telegram-Benutzername",
-      "telegramUsernamePlaceholder": "@username",
+      "telegramUsernamePlaceholder": "username",
       "telegramId": "Telegram-ID",
       "telegramIdPlaceholder": "Geben Sie die Telegram-ID ein",
       "type": "Mitarbeitertyp",

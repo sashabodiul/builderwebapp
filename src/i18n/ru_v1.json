@@ -289,7 +289,7 @@
       "email": "Email",
       "emailPlaceholder": "Введите email адрес",
       "telegramUsername": "Telegram имя пользователя",
-      "telegramUsernamePlaceholder": "@username",
+      "telegramUsernamePlaceholder": "username",
       "telegramId": "Telegram ID",
       "telegramIdPlaceholder": "Введите Telegram ID",
       "type": "Тип сотрудника",

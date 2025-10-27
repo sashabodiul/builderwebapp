@@ -294,7 +294,7 @@
       "email": "Email",
       "emailPlaceholder": "Введіть email адресу",
       "telegramUsername": "Telegram ім'я користувача",
-      "telegramUsernamePlaceholder": "@username",
+      "telegramUsernamePlaceholder": "username",
       "telegramId": "Telegram ID",
       "telegramIdPlaceholder": "Введіть Telegram ID",
       "type": "Тип працівника",
