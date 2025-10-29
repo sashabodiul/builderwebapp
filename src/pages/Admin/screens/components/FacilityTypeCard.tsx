@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { Edit, Trash2 } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,7 +17,6 @@ const FacilityTypeCard: React.FC<FacilityTypeCardProps> = ({
   onEdit,
   onDelete,
 }) => {
-  const { t } = useTranslation();
 
   return (
     <Card className="bg-theme-bg-card border-theme-border hover:border-theme-accent transition-colors">

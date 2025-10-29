@@ -29,8 +29,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const getStatusBadge = (finished: boolean, expiresAt: string | null) => {
-    if (finished) {
+  const getStatusBadge = (finished: boolean | null, expiresAt: string | null) => {
+    if (finished === true) {
       return (
         <Badge className="bg-green-500 text-white">
           <CheckCircle className="h-3 w-3 mr-1" />
@@ -123,7 +123,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
             </div>
           )}
 
-          {task.photo && (
+          {task.photo_url && (
             <div className="flex items-center gap-2">
               <span className="font-medium">{t('admin.tasks.photo')}:</span>
               <span className="text-theme-accent">✓ {t('admin.tasks.photoAttached')}</span>

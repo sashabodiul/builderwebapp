@@ -21,7 +21,9 @@ const WorkerCard: React.FC<WorkerCardProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  const getTypeBadge = (type: string) => {
+  const getTypeBadge = (type: string | null) => {
+    if (!type) return null;
+    
     const colors = {
       student: 'bg-blue-500',
       master: 'bg-green-500',

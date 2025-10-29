@@ -56,11 +56,6 @@ const FacilityCard: React.FC<FacilityCardProps> = ({
               </h3>
               {getStatusBadge(facility.status_active)}
             </div>
-            {facility.description && (
-              <p className="text-sm text-theme-text-muted leading-relaxed mb-3">
-                {facility.description}
-              </p>
-            )}
           </div>
         </div>
 
