@@ -42,3 +42,18 @@ export type WorkTaskQueryParams = {
   worker_id?: number | null;
   finished?: boolean | null;
 };
+
+// bulk update payloads based on OpenAPI schema
+export type WorkTaskBulkUpdateItem = {
+  id: number;
+  finished: boolean;
+};
+
+export type WorkTaskBulkUpdate = {
+  tasks: WorkTaskBulkUpdateItem[];
+};
+
+export type WorkTaskBulkUpdateResponse = {
+  updated: number;
+  failed?: number[];
+};

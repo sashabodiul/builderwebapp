@@ -1,6 +1,7 @@
 {
   "common": {
       "create": "Create",
+      "add": "Add",
       "edit": "Edit",
       "delete": "Delete",
       "creating": "Creating...",
@@ -199,8 +200,40 @@
     "readyToFinish": "Ready to finish work",
     "workSuccessfullyCompleted": "Work successfully completed!",
     "allTasksCompletedMessage": "All tasks completed! Work finished!",
+    "summaryRate": "Earnings",
     "step": "Step",
     "of": "of",
+    "loadError": "Failed to load objects",
+    "noObjects": "Objects are unavailable",
+    "unnamedObject": "Unnamed",
+    "startWorkError": "Failed to start work",
+    "workStarted": "Work started!",
+    "geolocationError": "Failed to get geolocation",
+    "geolocationDenied": "Geolocation access denied. Allow access in browser settings",
+    "geolocationUnavailable": "Geolocation is unavailable on this device",
+    "geolocationTimeout": "Geolocation request timed out",
+    "requestingGeolocation": "Requesting geolocation access... Allow it in the browser",
+    "startingWork": "Starting work...",
+    "endWorkError": "Failed to finish work",
+    "workEnded": "Work finished!",
+    "endingWork": "Finishing work...",
+    "completingWork": "Completing work...",
+    "completeWork": "Finish work",
+    "goToTasks": "Go to tasks",
+    "workDayCompleted": "Work day completed!",
+    "congratulationsMessage": "Congratulations on successfully completing the work!",
+    "workPeriod": "Work period",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "workTime": "Work time",
+    "lunchTime": "Lunch time",
+    "overtimeTime": "Overtime",
+    "workStatus": "Work status",
+    "objectCompleted": "Object completed",
+    "objectNotCompleted": "Object not completed",
+    "returnToMain": "Return to main",
+    "objectCompletedCheckbox": "Object completed",
+    "calculatingDuration": "Calculating duration...",
     "confirm": "Confirm",
     "continue": "Continue",
     "cancel": "Cancel",
@@ -363,6 +396,35 @@
       "createError": "Failed to create task",
       "updateError": "Failed to update task",
       "deleteError": "Failed to delete task"
+    },
+    "workProcesses": {
+      "title": "Work processes",
+      "subtitle": "Ended shifts with media, comments and tasks",
+      "loadError": "Failed to load work processes",
+      "filters": {
+        "workerId": "worker_id",
+        "facilityId": "facility_id",
+        "facilityTypeId": "facility_type_id"
+      },
+      "fields": {
+        "start": "start",
+        "end": "end",
+        "salary": "salary"
+      },
+      "badges": {
+        "finished": "finished",
+        "notFinished": "not finished",
+        "done": "done",
+        "open": "open"
+      },
+      "noPhotos": "no photos",
+      "reportVideo": "report video",
+      "comments": "comments",
+      "noComments": "no comments",
+      "addComment": "Add a comment...",
+      "tasksLatest": "tasks (latest)",
+      "noTasks": "no tasks",
+      "addTask": "Add a task..."
     }
   }
 }

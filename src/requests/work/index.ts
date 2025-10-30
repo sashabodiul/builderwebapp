@@ -62,7 +62,7 @@ export const getWorkProcesses = async (params?: {
   if (params?.facility_id !== undefined && params.facility_id !== null) queryParams.append('facility_id', params.facility_id.toString());
   if (params?.facility_type_id !== undefined && params.facility_type_id !== null) queryParams.append('facility_type_id', params.facility_type_id.toString());
   
-  const url = queryParams.toString() ? `/work/?${queryParams.toString()}` : '/work';
+  const url = queryParams.toString() ? `/work/?${queryParams.toString()}` : '/work/';
   return await apiRequest<(WorkProcessStartOut | WorkProcessEndOut)[]>("GET", url);
 };
 

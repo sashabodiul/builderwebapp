@@ -1,6 +1,6 @@
 import apiRequest from "../config.ts";
 import { ApiResponse } from "../shared/types.ts";
-import { WorkTaskOut, WorkTaskCreate, WorkTaskUpdate, WorkTaskQueryParams } from "./types.ts";
+import { WorkTaskOut, WorkTaskCreate, WorkTaskUpdate, WorkTaskQueryParams, WorkTaskBulkUpdate, WorkTaskBulkUpdateResponse } from "./types.ts";
 
 export const getWorkTasks = async (params?: WorkTaskQueryParams): Promise<ApiResponse<WorkTaskOut[]>> => {
   const queryParams = new URLSearchParams();
@@ -57,4 +57,8 @@ export const updateWorkTask = async (task_id: number, data: WorkTaskUpdate): Pro
 
 export const deleteWorkTask = async (task_id: number): Promise<ApiResponse<void>> => {
   return await apiRequest<void>("DELETE", `/work_task/${task_id}`);
+};
+
+export const bulkUpdateWorkTasks = async (data: WorkTaskBulkUpdate): Promise<ApiResponse<WorkTaskBulkUpdateResponse>> => {
+  return await apiRequest<WorkTaskBulkUpdateResponse>("PATCH", "/work_task/bulk-update", {}, data);
 };

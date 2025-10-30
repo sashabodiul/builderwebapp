@@ -6,5 +6,6 @@ export default {
   ADMIN_FACILITY_TYPES: "/admin/facility-types",
   ADMIN_WORKERS: "/admin/workers",
   ADMIN_TASKS: "/admin/tasks",
+  ADMIN_WORK_PROCESSES: "/admin/work-processes",
   REGISTER: "/register",
 }

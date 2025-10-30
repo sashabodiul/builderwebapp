@@ -206,7 +206,7 @@
     "workTime": "Время работы",
     "lunchTime": "Время обеда",
     "overtimeTime": "Переработка",
-    "summaryRate": "Ставка",
+    "summaryRate": "Заработок",
     "workStatus": "Статус работы",
     "objectCompleted": "Объект завершен",
     "objectNotCompleted": "Объект не завершен",
@@ -369,10 +369,40 @@
       "createError": "Ошибка создания задачи",
       "updateError": "Ошибка обновления задачи",
       "deleteError": "Ошибка удаления задачи"
+    },
+    "workProcesses": {
+      "title": "Рабочие процессы",
+      "subtitle": "Завершенные смены с медиа, комментариями и задачами",
+      "loadError": "Не удалось загрузить рабочие процессы",
+      "filters": {
+        "workerId": "worker_id",
+        "facilityId": "facility_id",
+        "facilityTypeId": "facility_type_id"
+      },
+      "fields": {
+        "start": "начало",
+        "end": "конец",
+        "salary": "зарплата"
+      },
+      "badges": {
+        "finished": "завершено",
+        "notFinished": "не завершено",
+        "done": "выполнено",
+        "open": "открыто"
+      },
+      "noPhotos": "нет фото",
+      "reportVideo": "видео отчет",
+      "comments": "комментарии",
+      "noComments": "нет комментариев",
+      "addComment": "Добавить комментарий...",
+      "tasksLatest": "задачи (последние)",
+      "noTasks": "нет задач",
+      "addTask": "Добавить задачу..."
     }
   },
   "common": {
       "create": "Создать",
+      "add": "Добавить",
       "edit": "Редактировать",
       "delete": "Удалить",
       "creating": "Создание...",

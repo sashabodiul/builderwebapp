@@ -109,6 +109,8 @@ const Work: FC = () => {
           workPhotos={workPhotos}
           toolsPhotos={toolsPhotos}
           videoFile={videoFile}
+          facilityId={selectedObject ? Number(selectedObject) : null}
+          facilityTypeId={facilities.find(f => f.id.toString() === selectedObject)?.facility_type_id ?? null}
         />
       );
     

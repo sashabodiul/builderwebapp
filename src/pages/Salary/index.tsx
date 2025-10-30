@@ -5,9 +5,11 @@ import { Plus, Minus } from 'lucide-react';
 import { getWorkerPayroll } from '../../requests/worker';
 import { WorkerPayrollOut } from '../../requests/worker/types';
 import { toastError } from '../../lib/toasts';
+import useBackButton from '@/hooks/useBackButton';
 
 const Salary: FC = () => {
   const { t } = useTranslation();
+  useBackButton('/');
   const user = useSelector((state: any) => state.data.user);
   const [salaryData, setSalaryData] = useState<WorkerPayrollOut | null>(null);
   const [isLoading, setIsLoading] = useState(true);

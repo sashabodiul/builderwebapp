@@ -1,10 +1,12 @@
 import { FC } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Building, Building2, Users, CheckSquare, ArrowRight } from 'lucide-react';
+import { Building, Building2, Users, CheckSquare, ArrowRight, Clock } from 'lucide-react';
+import useBackButton from '@/hooks/useBackButton';
 
 const Admin: FC = () => {
   const { t } = useTranslation();
+  useBackButton('/');
 
   const adminCards = [
     {
@@ -34,6 +36,13 @@ const Admin: FC = () => {
       icon: <CheckSquare className="h-6 w-6" />,
       color: "purple",
       link: "/admin/tasks"
+    },
+    {
+      title: t('admin.workProcesses.title'),
+      description: t('admin.workProcesses.subtitle'),
+      icon: <Clock className="h-6 w-6" />,
+      color: "blue",
+      link: "/admin/work-processes"
     }
   ];
 

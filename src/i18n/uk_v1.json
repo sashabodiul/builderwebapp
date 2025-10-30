@@ -206,7 +206,7 @@
     "workTime": "Час роботи",
     "lunchTime": "Час обіду",
     "overtimeTime": "Переробка",
-    "summaryRate": "Ставка",
+    "summaryRate": "Заробіток",
     "workStatus": "Статус роботи",
     "objectCompleted": "Об'єкт завершено",
     "objectNotCompleted": "Об'єкт не завершено",
@@ -374,10 +374,40 @@
       "createError": "Помилка створення завдання",
       "updateError": "Помилка оновлення завдання",
       "deleteError": "Помилка видалення завдання"
+    },
+    "workProcesses": {
+      "title": "Робочі процеси",
+      "subtitle": "Завершені зміни з медіа, коментарями та завданнями",
+      "loadError": "Не вдалося завантажити робочі процеси",
+      "filters": {
+        "workerId": "worker_id",
+        "facilityId": "facility_id",
+        "facilityTypeId": "facility_type_id"
+      },
+      "fields": {
+        "start": "початок",
+        "end": "кінець",
+        "salary": "зарплата"
+      },
+      "badges": {
+        "finished": "завершено",
+        "notFinished": "не завершено",
+        "done": "виконано",
+        "open": "відкрито"
+      },
+      "noPhotos": "немає фото",
+      "reportVideo": "відеозвіт",
+      "comments": "коментарі",
+      "noComments": "немає коментарів",
+      "addComment": "Додати коментар...",
+      "tasksLatest": "завдання (останні)",
+      "noTasks": "немає завдань",
+      "addTask": "Додати завдання..."
     }
   },
   "common": {
       "create": "Створити",
+      "add": "Додати",
       "edit": "Редагувати", 
       "delete": "Видалити",
       "creating": "Створення...",

@@ -13,6 +13,7 @@ import Facilities from "./pages/Admin/screens/Facilities";
 import FacilityTypes from "./pages/Admin/screens/FacilityTypes";
 import Workers from "./pages/Admin/screens/Workers";
 import Tasks from "./pages/Admin/screens/Tasks";
+import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -64,6 +65,10 @@ function App() {
           <Route 
             path={routes.ADMIN_TASKS} 
             element={isAuthenticated ? <Tasks /> : <Navigate to="/register" replace />} 
+          />
+          <Route 
+            path={routes.ADMIN_WORK_PROCESSES} 
+            element={isAuthenticated ? <WorkProcesses /> : <Navigate to="/register" replace />} 
           />
           <Route 
             path={routes.REGISTER} 

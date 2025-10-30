@@ -1,10 +1,12 @@
-import { FC, useState } from 'react';
+import { FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { endWork } from '../../../requests/work';
 import { EndWorkData, WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
+import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks } from '../../../requests/work-task';
+import { WorkTaskOut } from '../../../requests/work-task/types';
 
 interface Task {
   id: string;
@@ -19,46 +21,43 @@ interface TodoListProps {
   workPhotos?: File[];
   toolsPhotos?: File[];
   videoFile?: File | null;
+  facilityId?: number | null;
+  facilityTypeId?: number | null;
 }
 
-const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null }) => {
+const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null, facilityId = null, facilityTypeId = null }) => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [newTaskText, setNewTaskText] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
   const [isObjectCompleted, setIsObjectCompleted] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: '1',
-      text: 'Перевірити якість виконаної роботи',
-      status: 'pending',
-      isCustom: false
-    },
-    {
-      id: '2',
-      text: 'Прибрати робоче місце',
-      status: 'pending',
-      isCustom: false
-    },
-    {
-      id: '3',
-      text: 'Перевірити інструменти на наявність',
-      status: 'pending',
-      isCustom: false
-    },
-    {
-      id: '4',
-      text: 'Заповнити звіт про виконану роботу',
-      status: 'pending',
-      isCustom: false
-    },
-    {
-      id: '5',
-      text: 'Повідомити керівника про завершення',
-      status: 'pending',
-      isCustom: false
-    }
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  const queryParams = useMemo(() => ({
+    facility_id: facilityId,
+    facility_type_id: facilityTypeId,
+    finished: null as boolean | null,
+  }), [facilityId, facilityTypeId]);
+
+  useEffect(() => {
+    const loadTasks = async () => {
+      try {
+        const response = await getWorkTasks(queryParams);
+        if (response.error) return;
+        const fetched = (response.data || []) as WorkTaskOut[];
+        const mapped: Task[] = fetched.map((t) => ({
+          id: String(t.id),
+          text: t.text || '',
+          status: t.finished ? 'completed' : 'pending',
+          isCustom: false,
+        }));
+        setTasks(mapped);
+      } catch {
+        // silent
+      }
+    };
+    loadTasks();
+  }, [queryParams]);
 
   const handleTaskComplete = (taskId: string) => {
     setTasks(prev => prev.map(task => 
@@ -107,6 +106,28 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     setIsCompleting(true);
 
     try {
+      // update server tasks in bulk and create custom tasks one-by-one
+      const existingTasks = tasks.filter(t => !t.isCustom);
+      const customTasks = tasks.filter(t => t.isCustom);
+
+      if (existingTasks.length > 0) {
+        const bulkPayload = {
+          tasks: existingTasks.map(t => ({ id: Number(t.id), finished: t.status === 'completed' }))
+        };
+        await bulkUpdateWorkTasks(bulkPayload);
+      }
+
+      for (const ct of customTasks) {
+        if (ct.text.trim().length === 0) continue;
+        await createWorkTask({
+          text: ct.text.trim(),
+          facility_id: facilityId ?? undefined,
+          facility_type_id: facilityTypeId ?? undefined,
+          worker_id: user.id,
+          finished: ct.status === 'completed',
+        });
+      }
+
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
@@ -153,7 +174,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   };
 
   return (
-    <div className="min-h-screen page bg-theme-bg-primary p-6">
+    <div className="min-h-screen page bg-theme-bg-primary p-6 overflow-x-hidden">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -170,21 +191,21 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-4 max-[350px]:gap-2">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-theme-accent rounded-full flex items-center justify-center text-white font-bold">
                 ✓
               </div>
               <span className="text-theme-text-secondary text-sm">{t('work.workPhotosStep')}</span>
             </div>
-            <div className="w-8 h-0.5 bg-theme-accent"></div>
+            <div className="w-8 h-0.5 bg-theme-accent max-[400px]:hidden"></div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-theme-accent rounded-full flex items-center justify-center text-white font-bold">
                 ✓
               </div>
               <span className="text-theme-text-secondary text-sm">{t('work.toolsStep')}</span>
             </div>
-            <div className="w-8 h-0.5 bg-theme-accent"></div>
+            <div className="w-8 h-0.5 bg-theme-accent max-[400px]:hidden"></div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-theme-accent rounded-full flex items-center justify-center text-white font-bold">
                 3
@@ -216,7 +237,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${
+                className={`flex items-center gap-3 p-4 rounded-lg border transition-all w-full ${
                   task.status === 'completed'
                     ? 'bg-theme-accent/10 border-theme-accent'
                     : task.status === 'not-completed'
@@ -255,7 +276,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
                 {/* Task text */}
                 <div className="flex-1">
-                  <span className={`text-lg ${
+                  <span className={`text-lg break-words leading-snug ${
                     task.status === 'completed' 
                       ? 'line-through text-theme-text-muted' 
                       : task.status === 'not-completed'
@@ -290,19 +311,19 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           <h3 className="text-lg font-semibold text-theme-text-primary mb-4">
             {t('work.addNewTask')}
           </h3>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <input
               type="text"
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder={t('work.taskPlaceholder')}
-              className="flex-1 px-4 py-3 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-primary placeholder-theme-text-muted focus:outline-none focus:border-theme-accent"
+              className="flex-1 w-full px-4 py-3 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-primary placeholder-theme-text-muted focus:outline-none focus:border-theme-accent"
             />
             <button
               onClick={handleAddTask}
               disabled={!newTaskText.trim()}
-              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+              className={`px-4 py-3 rounded-lg font-medium transition-colors flex items-center gap-2 w-full sm:w-auto ${
                 newTaskText.trim()
                   ? 'bg-theme-accent text-white hover:bg-theme-accent-hover'
                   : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
@@ -331,10 +352,10 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between">
+        <div className="flex flex-col sm:flex-row justify-between gap-3">
           <button
             onClick={onBack}
-            className="flex items-center gap-2 px-6 py-3 border border-theme-border text-theme-text-secondary rounded-lg hover:bg-theme-bg-hover transition-colors"
+            className="flex items-center gap-2 px-6 py-3 border border-theme-border text-theme-text-secondary rounded-lg hover:bg-theme-bg-hover transition-colors w-full sm:w-auto"
           >
             {t('work.back')}
           </button>
@@ -342,7 +363,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           <button
             onClick={handleCompleteWork}
             disabled={!allTasksMarked || isCompleting}
-            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors ${
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-colors w-full sm:w-auto ${
               allTasksMarked && !isCompleting
                 ? 'bg-theme-accent text-white hover:bg-theme-accent-hover'
                 : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
@@ -356,7 +377,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             ) : (
               <>
                 <Check className="h-5 w-5" />
-                {t('work.completeAll')}
+                {t('work.finishWork')}
               </>
             )}
           </button>

@@ -20,9 +20,10 @@ export type WorkProcessEndOut = {
   end_latitude: number;
   end_longitude: number;
   status_object_finished: boolean;
-  report_video: string | null;
-  done_work_photos: string | null;
-  instrument_photos: string | null;
+  // urls come from backend
+  report_video_url: string | null;
+  done_work_photos_url: string[] | null;
+  instrument_photos_url: string[] | null;
   lunch_time: number | null;
   overtime_time: number | null;
   work_time: number | null;
