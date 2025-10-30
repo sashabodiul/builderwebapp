@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Edit, Trash2, Mail, Phone, DollarSign, Calendar } from 'lucide-react';
+import { Edit, Trash2, Mail, Phone, DollarSign, Calendar, Euro } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,14 @@ interface WorkerCardProps {
   worker: WorkerOut;
   onEdit: (worker: WorkerOut) => void;
   onDelete: (worker: WorkerOut) => void;
+  onAdjust?: (worker: WorkerOut) => void;
 }
 
 const WorkerCard: React.FC<WorkerCardProps> = ({
   worker,
   onEdit,
   onDelete,
+  onAdjust,
 }) => {
   const { t } = useTranslation();
 
@@ -93,6 +95,16 @@ const WorkerCard: React.FC<WorkerCardProps> = ({
         </div>
 
         <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-theme-border">
+          {onAdjust && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onAdjust(worker)}
+              title={t('admin.adjustments.openDialog')}
+            >
+              <Euro className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

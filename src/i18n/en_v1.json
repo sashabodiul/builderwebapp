@@ -320,6 +320,7 @@
       "subtitle": "Manage workers and staff",
       "createTitle": "Create Worker",
       "editTitle": "Edit Worker",
+      "edit": "Edit",
       "deleteTitle": "Delete Worker",
       "deleteDescription": "Are you sure you want to delete this worker? This action cannot be undone.",
       "firstName": "First Name",
@@ -427,6 +428,30 @@
       "tasksLatest": "tasks (latest)",
       "noTasks": "no tasks",
       "addTask": "Add a task..."
+    },
+    "adjustments": {
+      "title": "Adjustments",
+      "openDialog": "Open adjustments",
+      "type": "Type",
+      "selectType": "Select type",
+      "types": {
+        "penalty": "Penalty",
+        "prepayment": "Prepayment",
+        "award": "Award"
+      },
+      "amount": "Amount",
+      "reason": "Reason",
+      "reasonPlaceholder": "Enter reason",
+      "photo": "Photo",
+      "sendNotification": "Send Telegram notification",
+      "currentTypeTotal": "Total for selected type",
+      "viewPhoto": "View photo",
+      "empty": "No adjustments found",
+      "loadError": "Failed to load adjustments",
+      "createSuccess": "Adjustment created",
+      "createError": "Failed to create adjustment",
+      "deleteSuccess": "Adjustment deleted",
+      "deleteError": "Failed to delete adjustment"
     }
   }
 }

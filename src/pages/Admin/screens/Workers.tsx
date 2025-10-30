@@ -19,6 +19,7 @@ import { toastError, toastSuccess } from '@/lib/toasts';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import WorkerForm from './components/WorkerForm';
 import WorkerCard from './components/WorkerCard';
+import WorkerAdjustmentDialog from './components/WorkerAdjustmentDialog.tsx';
 
 const Workers: React.FC = () => {
   const { t } = useTranslation();
@@ -29,6 +30,8 @@ const Workers: React.FC = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingWorker, setEditingWorker] = useState<WorkerOut | null>(null);
   const [deletingWorker, setDeletingWorker] = useState<WorkerOut | null>(null);
+  const [adjustmentWorker, setAdjustmentWorker] = useState<WorkerOut | null>(null);
+  const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
 
   // Query
   const { data: workers = [], isLoading } = useQuery({
@@ -140,6 +143,11 @@ const Workers: React.FC = () => {
     setIsDeleteDialogOpen(true);
   };
 
+  const openAdjustmentDialog = (worker: WorkerOut) => {
+    setAdjustmentWorker(worker);
+    setIsAdjustmentOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="page min-h-screen bg-theme-bg-primary p-4">
@@ -181,6 +189,7 @@ const Workers: React.FC = () => {
                 worker={worker}
                 onEdit={openEditDialog}
                 onDelete={openDeleteDialog}
+                onAdjust={openAdjustmentDialog}
               />
             ))
           )}
@@ -239,6 +248,16 @@ const Workers: React.FC = () => {
           title={t('admin.workers.deleteTitle')}
           description={t('admin.workers.deleteDescription')}
           isLoading={deleteMutation.isPending}
+        />
+
+        {/* Adjustments Dialog */}
+        <WorkerAdjustmentDialog
+          open={isAdjustmentOpen}
+          onOpenChange={(o: boolean) => {
+            setIsAdjustmentOpen(o);
+            if (!o) setAdjustmentWorker(null);
+          }}
+          worker={adjustmentWorker}
         />
       </div>
     </div>
