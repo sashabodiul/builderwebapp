@@ -7,11 +7,12 @@ type FeatureLinkCardProps = {
   icon: ReactNode;
   color?: 'blue' | 'green' | 'orange' | 'purple';
   to: string;
+  state?: any;
   rightIcon?: ReactNode;
 };
 
 // shared card used across admin and routes pages
-const FeatureLinkCard: FC<FeatureLinkCardProps> = ({ title, description, icon, color = 'blue', to, rightIcon }) => {
+const FeatureLinkCard: FC<FeatureLinkCardProps> = ({ title, description, icon, color = 'blue', to, state, rightIcon }) => {
   const baseCard = "group flex items-center gap-4 p-6 bg-theme-bg-card border border-theme-border rounded-xl text-theme-text-primary transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl relative overflow-hidden";
   const colorCard: Record<NonNullable<FeatureLinkCardProps['color']>, string> = {
     blue: "hover:border-blue-400 hover:shadow-blue-400/20",
@@ -36,7 +37,7 @@ const FeatureLinkCard: FC<FeatureLinkCardProps> = ({ title, description, icon, c
   };
 
   return (
-    <Link to={to} className={`${baseCard} ${colorCard[color]}`}>
+    <Link to={to} state={state} className={`${baseCard} ${colorCard[color]}`}>
       <div className={`absolute top-0 left-0 right-0 h-1 ${topBorder[color]} transition-all duration-300 group-hover:h-1.5`} />
       <div className={`${baseIcon} ${colorIcon[color]}`}>{icon}</div>
       <div className="flex-1">

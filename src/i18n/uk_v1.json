@@ -456,11 +456,24 @@
   }
   ,
   "routes": {
-    "title": "оберіть мету поїздки",
-    "materials": "матеріали",
-    "object": "обʼєкт",
-    "home": "дім",
-    "washFuel": "мийка / заправка",
-    "personal": "особисте"
+    "title": "Оберіть Мету Поїздки",
+    "materials": "Матеріали",
+    "object": "Обʼєкт",
+    "home": "Дім",
+    "washFuel": "Мийка / Заправка",
+    "personal": "Особисте",
+    "confirmTitle": "Підтвердження Маршруту",
+    "emptyPoints": "Поки що немає маршрутних точок",
+    "materialsAskTitle": "Вкажіть Поїздку За Матеріалами",
+    "siteAskTitle": "Вкажіть Обʼєкт",
+    "washFuelAskTitle": "Вкажіть Адресу Мийки або Заправки",
+    "chooseReason": "Оберіть Причину Маршруту",
+    "inputs": {
+      "shopName": "Назва Магазину",
+      "siteName": "Назва Обʼєкту",
+      "address": "Адреса"
+    },
+    "personalConfirmTitle": "Підтвердити Особисту Поїздку",
+    "personalNoRoute": "Без маршруту або з довільною точкою"
   }
 }

@@ -456,11 +456,24 @@
   }
   ,
   "routes": {
-    "title": "choose trip purpose",
-    "materials": "materials",
-    "object": "site",
-    "home": "home",
-    "washFuel": "wash / fuel",
-    "personal": "personal"
+    "title": "Choose Trip Purpose",
+    "materials": "Materials",
+    "object": "Site",
+    "home": "Home",
+    "washFuel": "Wash / Fuel",
+    "personal": "Personal",
+    "confirmTitle": "Confirm Route",
+    "emptyPoints": "No route points yet",
+    "materialsAskTitle": "Specify Materials Trip",
+    "siteAskTitle": "Specify Site",
+    "washFuelAskTitle": "Specify Wash or Fuel Address",
+    "chooseReason": "Choose Route Reason",
+    "inputs": {
+      "shopName": "Shop Name",
+      "siteName": "Site Name",
+      "address": "Address"
+    },
+    "personalConfirmTitle": "Confirm Personal Trip",
+    "personalNoRoute": "No route or arbitrary point"
   }
 }

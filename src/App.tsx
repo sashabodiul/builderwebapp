@@ -15,6 +15,12 @@ import Workers from "./pages/Admin/screens/Workers";
 import Tasks from "./pages/Admin/screens/Tasks";
 import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
 import RoutesPage from "./pages/Routes";
+import MaterialsFlow from "@/pages/Routes/MaterialsFlow";
+import SiteFlow from "@/pages/Routes/SiteFlow";
+import HomeFlow from "@/pages/Routes/HomeFlow";
+import WashFuelFlow from "@/pages/Routes/WashFuelFlow";
+import PersonalFlow from "@/pages/Routes/PersonalFlow";
+import ReasonSelector from "@/pages/Routes/ReasonSelector";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -33,6 +39,7 @@ function App() {
   }, [isDataLoaded]);
 
   const isAuthPage = location.pathname === '/register';
+  const isRoutesPage = location.pathname.startsWith('/routes');
 
   const loadingFallback = (
     <div className="p-6 text-theme-text-muted text-center">loading…</div>
@@ -58,6 +65,30 @@ function App() {
           <Route 
             path={routes.ROUTES} 
             element={renderProtected(<RoutesPage />)} 
+          />
+          <Route 
+            path={"/routes/materials"}
+            element={renderProtected(<MaterialsFlow />)}
+          />
+          <Route 
+            path={"/routes/site"}
+            element={renderProtected(<SiteFlow />)}
+          />
+          <Route 
+            path={"/routes/home"}
+            element={renderProtected(<HomeFlow />)}
+          />
+          <Route 
+            path={"/routes/wash-fuel"}
+            element={renderProtected(<WashFuelFlow />)}
+          />
+          <Route 
+            path={"/routes/personal"}
+            element={renderProtected(<PersonalFlow />)}
+          />
+          <Route 
+            path={"/routes/reason"}
+            element={renderProtected(<ReasonSelector />)}
           />
           <Route 
             path={routes.SALARY} 
@@ -94,7 +125,7 @@ function App() {
         </Routes>
       </main>
 
-      {!isAuthPage && <Footer />}
+      {!isAuthPage && !isRoutesPage && <Footer />}
     </div>
   )
 }
