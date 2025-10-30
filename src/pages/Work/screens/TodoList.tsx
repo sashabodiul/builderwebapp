@@ -5,7 +5,9 @@ import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { endWork } from '../../../requests/work';
 import { EndWorkData, WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
-import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks } from '../../../requests/work-task';
+import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks, updateWorkTask } from '../../../requests/work-task';
+import { createComment } from '../../../requests/comment';
+import ImageViewer from '@/components/ui/ImageViewer';
 import { WorkTaskOut } from '../../../requests/work-task/types';
 
 interface Task {
@@ -13,23 +15,27 @@ interface Task {
   text: string;
   status: 'pending' | 'completed' | 'not-completed';
   isCustom: boolean;
+  photo_url?: string | null;
 }
 
 interface TodoListProps {
-  onComplete: (workData: WorkProcessEndOut) => void;
-  onBack: () => void;
+  onComplete?: (workData: WorkProcessEndOut) => void;
+  onBack?: () => void;
   workPhotos?: File[];
   toolsPhotos?: File[];
   videoFile?: File | null;
   facilityId?: number | null;
   facilityTypeId?: number | null;
+  embedded?: boolean;
+  hideBack?: boolean;
 }
 
-const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null, facilityId = null, facilityTypeId = null }) => {
+const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null, facilityId = null, facilityTypeId = null, embedded = false, hideBack = false }) => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [newTaskText, setNewTaskText] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
+  const [workComment, setWorkComment] = useState('');
   const [isObjectCompleted, setIsObjectCompleted] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
 
@@ -50,6 +56,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           text: t.text || '',
           status: t.finished ? 'completed' : 'pending',
           isCustom: false,
+          photo_url: t.photo_url || null,
         }));
         setTasks(mapped);
       } catch {
@@ -59,23 +66,58 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     loadTasks();
   }, [queryParams]);
 
-  const handleTaskComplete = (taskId: string) => {
+  const handleTaskComplete = async (taskId: string) => {
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status: 'completed' } : task
     ));
+    if (embedded) {
+      const numericId = Number(taskId);
+      if (!isNaN(numericId)) {
+        try { await updateWorkTask(numericId, { finished: true }); } catch {}
+      }
+    }
   };
 
-  const handleTaskNotComplete = (taskId: string) => {
+  const handleTaskNotComplete = async (taskId: string) => {
     setTasks(prev => prev.map(task => 
       task.id === taskId ? { ...task, status: 'not-completed' } : task
     ));
+    if (embedded) {
+      const numericId = Number(taskId);
+      if (!isNaN(numericId)) {
+        try { await updateWorkTask(numericId, { finished: false }); } catch {}
+      }
+    }
   };
 
-  const handleAddTask = () => {
+  const handleAddTask = async () => {
     if (newTaskText.trim()) {
+      const text = newTaskText.trim();
+      if (embedded) {
+        try {
+          const res = await createWorkTask({
+            text,
+            facility_id: facilityId ?? undefined,
+            facility_type_id: facilityTypeId ?? undefined,
+            worker_id: user?.id,
+          });
+          if (!res.error && res.data) {
+            const created: Task = {
+              id: String(res.data.id),
+              text: res.data.text || text,
+              status: res.data.finished ? 'completed' : 'pending',
+              isCustom: false,
+              photo_url: res.data.photo_url || null,
+            };
+            setTasks(prev => [created, ...prev]);
+            setNewTaskText('');
+            return;
+          }
+        } catch {}
+      }
       const newTask: Task = {
         id: Date.now().toString(),
-        text: newTaskText.trim(),
+        text,
         status: 'pending',
         isCustom: true
       };
@@ -101,6 +143,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const allTasksMarked = markedTasks === totalTasks;
 
   const handleCompleteWork = async () => {
+    if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
 
     setIsCompleting(true);
@@ -155,8 +198,16 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         return;
       }
 
+      // optional comment after getting process id
+      try {
+        const text = workComment.trim();
+        if (text.length > 0) {
+          await createComment({ worker_process_id: response.data.id, text });
+        }
+      } catch {}
+
       toastSuccess(t('work.workEnded'));
-      onComplete(response.data);
+      onComplete && onComplete(response.data);
     } catch (error) {
       console.error('Error ending work:', error);
       if (error instanceof GeolocationPositionError) {
@@ -174,9 +225,10 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   };
 
   return (
-    <div className="min-h-screen page bg-theme-bg-primary p-6 overflow-x-hidden">
+    <div className={`bg-theme-bg-primary p-6 overflow-x-hidden ${embedded ? '' : 'min-h-screen page'}`}>
       <div className="max-w-2xl mx-auto">
         {/* Header */}
+        {!embedded && (
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-theme-text-primary mb-2">
             {t('work.todoList')}
@@ -188,8 +240,10 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             {t('work.step')} 3 {t('work.of')} 3: {t('work.todoList')}
           </div>
         </div>
+        )}
 
         {/* Progress Steps */}
+        {!embedded && (
         <div className="mb-8">
           <div className="flex items-center justify-center gap-4 max-[350px]:gap-2">
             <div className="flex items-center gap-2">
@@ -214,7 +268,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             </div>
           </div>
         </div>
+        )}
 
+        {!embedded && (
         <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-6">
           <div className="text-theme-text-primary font-semibold">
             {t('work.progress')}: {markedTasks}/{totalTasks}
@@ -230,76 +286,83 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             <span>❌ {notCompletedTasks} {t('work.notCompleted')}</span>
           </div>
         </div>
+        )}
 
         {/* Tasks List */}
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
-          <div className="space-y-3">
+          <div className="space-y-4">
             {tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`flex items-center gap-3 p-4 rounded-lg border transition-all w-full ${
-                  task.status === 'completed'
-                    ? 'bg-theme-accent/10 border-theme-accent'
-                    : task.status === 'not-completed'
-                    ? 'bg-theme-error/10 border-theme-error'
-                    : 'bg-theme-bg-tertiary border-theme-border hover:border-theme-accent/50'
-                }`}
-              >
-                {/* Task action buttons */}
-                <div className="flex items-center gap-2">
-                  {/* Complete button */}
-                  <button
-                    onClick={() => handleTaskComplete(task.id)}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
-                      task.status === 'completed'
-                        ? 'bg-theme-accent border-theme-accent text-white'
-                        : 'border-theme-border text-theme-text-muted hover:border-theme-accent hover:bg-theme-accent/10'
-                    }`}
-                    title={t('work.complete')}
-                  >
-                    <Check className="h-4 w-4" />
-                  </button>
-
-                  {/* Not complete button */}
-                  <button
-                    onClick={() => handleTaskNotComplete(task.id)}
-                    className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
-                      task.status === 'not-completed'
-                        ? 'bg-theme-error border-theme-error text-white'
-                        : 'border-theme-border text-theme-text-muted hover:border-theme-error hover:bg-theme-error/10'
-                    }`}
-                    title={t('work.notComplete')}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-
-                {/* Task text */}
-                <div className="flex-1">
-                  <span className={`text-lg break-words leading-snug ${
-                    task.status === 'completed' 
-                      ? 'line-through text-theme-text-muted' 
+              <div key={task.id} className="space-y-2">
+                <div
+                  className={`flex items-center gap-3 p-4 rounded-lg border transition-all w-full ${
+                    task.status === 'completed'
+                      ? 'bg-theme-accent/10 border-theme-accent'
                       : task.status === 'not-completed'
-                      ? 'text-theme-error'
-                      : 'text-theme-text-primary'
-                  }`}>
-                    {task.text}
-                  </span>
-                  {task.isCustom && (
-                    <span className="ml-2 text-xs text-theme-accent bg-theme-accent/20 px-2 py-1 rounded">
-                      {t('work.custom')}
+                      ? 'bg-theme-error/10 border-theme-error'
+                      : 'bg-theme-bg-tertiary border-theme-border hover:border-theme-accent/50'
+                  }`}
+                >
+                  {/* Task action buttons */}
+                  <div className="flex items-center gap-2">
+                    {/* Complete button */}
+                    <button
+                      onClick={() => handleTaskComplete(task.id)}
+                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
+                        task.status === 'completed'
+                          ? 'bg-theme-accent border-theme-accent text-white'
+                          : 'border-theme-border text-theme-text-muted hover:border-theme-accent hover:bg-theme-accent/10'
+                      }`}
+                      title={t('work.complete')}
+                    >
+                      <Check className="h-4 w-4" />
+                    </button>
+
+                    {/* Not complete button */}
+                    <button
+                      onClick={() => handleTaskNotComplete(task.id)}
+                      className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-all ${
+                        task.status === 'not-completed'
+                          ? 'bg-theme-error border-theme-error text-white'
+                          : 'border-theme-border text-theme-text-muted hover:border-theme-error hover:bg-theme-error/10'
+                      }`}
+                      title={t('work.notComplete')}
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  {/* Task text */}
+                  <div className="flex-1">
+                    <span className={`text-lg break-words leading-snug ${
+                      task.status === 'completed' 
+                        ? 'line-through text-theme-text-muted' 
+                        : task.status === 'not-completed'
+                        ? 'text-theme-error'
+                        : 'text-theme-text-primary'
+                    }`}>
+                      {task.text}
                     </span>
+                    {task.isCustom && (
+                      <span className="ml-2 text-xs text-theme-accent bg-theme-accent/20 px-2 py-1 rounded">
+                        {t('work.custom')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Delete button for custom tasks */}
+                  {task.isCustom && (
+                    <button
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-theme-error hover:text-theme-error/80 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   )}
                 </div>
 
-                {/* Delete button for custom tasks */}
-                {task.isCustom && (
-                  <button
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-theme-error hover:text-theme-error/80 transition-colors"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                {/* Task photos */}
+                {!task.isCustom && task.photo_url && (
+                  <ImageViewer images={[task.photo_url]} thumbnailClassName="w-28 h-28 object-cover rounded border border-theme-border" containerClassName="grid grid-cols-4 gap-2" />
                 )}
               </div>
             ))}
@@ -335,7 +398,21 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           </div>
         </div>
 
+        {/* Work comment */}
+        {!embedded && (
+        <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+          <h3 className="text-lg font-semibold text-theme-text-primary mb-4">{t('work.commentsAboutWork')}</h3>
+          <textarea
+            className="w-full min-h-24 px-4 py-3 bg-theme-bg-tertiary border border-theme-border rounded-lg text-theme-text-primary placeholder-theme-text-muted focus:outline-none focus:border-theme-accent"
+            placeholder={t('work.commentPlaceholder')}
+            value={workComment}
+            onChange={(e) => setWorkComment(e.target.value)}
+          />
+        </div>
+        )}
+
         {/* Object Completion Checkbox */}
+        {!embedded && (
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
           <div className="flex items-center gap-3">
             <input
@@ -350,15 +427,19 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             </label>
           </div>
         </div>
+        )}
 
         {/* Navigation */}
-        <div className="flex flex-col sm:flex-row justify-between gap-3">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 px-6 py-3 border border-theme-border text-theme-text-secondary rounded-lg hover:bg-theme-bg-hover transition-colors w-full sm:w-auto"
-          >
-            {t('work.back')}
-          </button>
+        {!embedded && (
+        <div className={`flex flex-col sm:flex-row ${hideBack ? 'justify-end' : 'justify-between'} gap-3`}>
+          {!hideBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 px-6 py-3 border border-theme-border text-theme-text-secondary rounded-lg hover:bg-theme-bg-hover transition-colors w-full sm:w-auto"
+            >
+              {t('work.back')}
+            </button>
+          )}
           
           <button
             onClick={handleCompleteWork}
@@ -382,9 +463,10 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             )}
           </button>
         </div>
+        )}
 
         {/* Completion message */}
-        {allTasksMarked && (
+        {!embedded && allTasksMarked && (
           <div className="mt-6 bg-theme-accent/10 border border-theme-accent rounded-lg p-4 text-center">
             <div className="text-theme-accent font-semibold text-lg">
               {t('work.allTasksMarked')}

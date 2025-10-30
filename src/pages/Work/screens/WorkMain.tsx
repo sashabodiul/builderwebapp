@@ -7,6 +7,7 @@ import { FacilityOut } from '../../../requests/facility/types';
 import { startWork, getActiveWorkProcess } from '../../../requests/work';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
+import TodoList from './TodoList';
 
 interface WorkMainProps {
   onStartWork: (objectId: string) => void;
@@ -47,7 +48,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       if (!user?.id) return;
 
       const response = await getActiveWorkProcess(user.id);
-      
+
       if (response.error) {
         console.error('Failed to check active work:', response);
         return;
@@ -80,14 +81,14 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     }
 
     setIsStartingWork(true);
-    
+
     try {
       toastSuccess(t('work.requestingGeolocation'));
-      
+
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         navigator.geolocation.getCurrentPosition(resolve, reject, {
           enableHighAccuracy: true,
-          timeout: 30000, 
+          timeout: 30000,
           maximumAge: 60000
         });
       });
@@ -103,7 +104,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       };
 
       const response = await startWork(startWorkData);
-      
+
       if (response.error) {
         console.error('Failed to start work:', response);
         toastError(t('work.startWorkError'));
@@ -118,11 +119,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     } catch (error) {
       console.error('Error starting work:', error);
       if (error instanceof GeolocationPositionError) {
-        const errorMessage = error.code === 1 
+        const errorMessage = error.code === 1
           ? t('work.geolocationDenied')
-          : error.code === 2 
-          ? t('work.geolocationUnavailable')
-          : t('work.geolocationTimeout');
+          : error.code === 2
+            ? t('work.geolocationUnavailable')
+            : t('work.geolocationTimeout');
         toastError(errorMessage);
       } else {
         toastError(t('work.startWorkError'));
@@ -170,8 +171,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 <div
                   key={facility.id}
                   className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedObject === facility.id.toString()
-                      ? 'border-theme-accent bg-theme-accent/10'
-                      : 'border-theme-border hover:border-theme-accent/50'
+                    ? 'border-theme-accent bg-theme-accent/10'
+                    : 'border-theme-border hover:border-theme-accent/50'
                     }`}
                   onClick={() => onObjectSelect(facility.id.toString())}
                 >
@@ -197,9 +198,9 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           )}
         </div>
 
-        <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6">
-          <div className="text-center">
-            {!isWorking ? (
+        {!isWorking ? (
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6">
+            <div className="text-center">
               <div>
                 <h2 className="text-2xl font-bold text-theme-text-primary mb-4">
                   {t('work.readyToStart')}
@@ -208,8 +209,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   onClick={handleStartWork}
                   disabled={!selectedObject || isStartingWork}
                   className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject && !isStartingWork
-                      ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
-                      : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
+                    ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
+                    : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
                     }`}
                 >
                   {isStartingWork ? (
@@ -230,7 +231,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   </p>
                 )}
               </div>
-            ) : (
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="bg-theme-bg-card border border-theme-border rounded-xl text-center p-6">
               <div>
                 <h2 className="text-2xl font-bold text-theme-text-primary mb-4">
                   {t('work.working')}
@@ -258,9 +263,20 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   </button>
                 </div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+            <div className="bg-theme-bg-card mt-6 border border-theme-border text-center rounded-xl p-6">
+              <div className="text-xl font-semibold text-theme-text-primary mb-3">{t('work.todoList')}</div>
+              <TodoList
+                embedded
+                workPhotos={[]}
+                toolsPhotos={[]}
+                videoFile={null}
+                facilityId={selectedObject ? Number(selectedObject) : null}
+                facilityTypeId={facilities.find(f => f.id.toString() === selectedObject)?.facility_type_id ?? null}
+              />
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

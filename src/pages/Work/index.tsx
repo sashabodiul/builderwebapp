@@ -1,6 +1,6 @@
 import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-// import { useSelector } from 'react-redux';
+import { useSelector } from 'react-redux';
 import WorkMain from './screens/WorkMain';
 import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
@@ -11,7 +11,7 @@ type WorkScreen = 'main' | 'completion' | 'todo' | 'summary';
 
 const Work: FC = () => {
   const { t } = useTranslation();
-  // const user = useSelector((state: any) => state.data.user);
+  const user = useSelector((state: any) => state.data.user);
   const [currentScreen, setCurrentScreen] = useState<WorkScreen>('main');
   const [selectedObject, setSelectedObject] = useState<string>('');
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
@@ -46,7 +46,18 @@ const Work: FC = () => {
   };
 
   const handleStopWork = () => {
-    setCurrentScreen('completion');
+    const workerType: string | undefined = user?.worker_type;
+    const canUploadMedia = workerType === 'master' || workerType === 'admin';
+
+    if (canUploadMedia) {
+      setCurrentScreen('completion');
+    } else {
+      // skip media steps for other roles
+      setWorkPhotos([]);
+      setToolsPhotos([]);
+      setVideoFile(null);
+      setCurrentScreen('todo');
+    }
   };
 
   const handleCompletionBack = () => {
@@ -102,6 +113,9 @@ const Work: FC = () => {
       );
     
     case 'todo':
+      {
+        const workerType: string | undefined = user?.worker_type;
+        const canUploadMedia = workerType === 'master' || workerType === 'admin';
       return (
         <TodoList
           onComplete={handleTodoListComplete}
@@ -111,8 +125,10 @@ const Work: FC = () => {
           videoFile={videoFile}
           facilityId={selectedObject ? Number(selectedObject) : null}
           facilityTypeId={facilities.find(f => f.id.toString() === selectedObject)?.facility_type_id ?? null}
+          hideBack={!canUploadMedia}
         />
       );
+      }
     
     case 'summary':
       return workSummaryData ? (

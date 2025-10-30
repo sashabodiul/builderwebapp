@@ -168,6 +168,8 @@
     "required": "Обов'язково",
     "todoList": "Список завдань",
     "todoDescription": "Виконайте всі необхідні завдання для завершення роботи",
+    "commentsAboutWork": "Коментарі щодо роботи",
+    "commentPlaceholder": "Введіть коментар...",
     "progress": "Прогрес",
     "custom": "Власне",
     "addNewTask": "Додати нове завдання",

@@ -189,6 +189,8 @@
     "required": "Required",
     "todoList": "Task List",
     "todoDescription": "Complete all necessary tasks to finish work",
+    "commentsAboutWork": "Comments about the work",
+    "commentPlaceholder": "Enter a comment...",
     "progress": "Progress",
     "custom": "Custom",
     "addNewTask": "Add new task",

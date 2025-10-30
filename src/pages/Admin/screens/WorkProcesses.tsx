@@ -3,10 +3,9 @@ import { getWorkProcesses } from "@/requests/work";
 import { WorkProcessStartOut, WorkProcessEndOut } from "@/requests/work/types";
 import { getComments, createComment, updateComment, deleteComment } from "@/requests/comment";
 import { getWorkTasks, createWorkTask, updateWorkTask, deleteWorkTask } from "@/requests/work-task";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Card } from "@/components/ui/card";
-import { ZoomIn, ZoomOut, ExternalLink } from "lucide-react";
+import { ExternalLink } from "lucide-react";
+import ImageViewer from "@/components/ui/ImageViewer";
 import { useTranslation } from "react-i18next";
 import routes from "@/consts/pageRoutes";
 import useBackButton from "@/hooks/useBackButton";
@@ -23,11 +22,6 @@ const WorkProcesses: FC = () => {
   const [processes, setProcesses] = useState<Process[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [scale, setScale] = useState(1);
-  const [isPanning, setIsPanning] = useState(false);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
 
   const [filters] = useState<{
     worker_id?: number | null;
@@ -55,15 +49,7 @@ const WorkProcesses: FC = () => {
 
   const endedProcesses = useMemo(() => processes.filter(isEnded), [processes]);
 
-  const openImage = (url: string) => {
-    setSelectedImage(url);
-    setScale(1);
-    setPan({ x: 0, y: 0 });
-  };
-
-  const closeImage = () => {
-    setSelectedImage(null);
-  };
+  // images handled by ImageViewer
 
   const formatDateTime = (isoString: string) => {
     const d = new Date(isoString);
@@ -133,13 +119,8 @@ const WorkProcesses: FC = () => {
                 </div>
 
                 {(p.done_work_photos_url && p.done_work_photos_url.length > 0) || (p.instrument_photos_url && p.instrument_photos_url.length > 0) ? (
-                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-3">
-                    {[...(p.done_work_photos_url || []), ...(p.instrument_photos_url || [])].map((url, idx) => (
-                      <button key={idx} className="relative group" onClick={() => openImage(url)}>
-                        <img src={url} alt="photo" className="w-full h-28 object-cover rounded border border-theme-border" />
-                        <span className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition" />
-                      </button>
-                    ))}
+                  <div className="mt-3">
+                    <ImageViewer images={[...(p.done_work_photos_url || []), ...(p.instrument_photos_url || [])]} />
                   </div>
                 ) : (
                   <div className="text-theme-text-muted text-base">{t('admin.workProcesses.noPhotos')}</div>
@@ -157,43 +138,7 @@ const WorkProcesses: FC = () => {
           ))}
         </div>
 
-        <Dialog open={!!selectedImage} onOpenChange={(o) => !o && closeImage()}>
-          <DialogContent className="max-w-[95vw] md:max-w-[90vw] p-0 bg-black">
-            {selectedImage && (
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2 p-2">
-                  <Button variant="secondary" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <div className="text-white text-sm">{Math.round(scale * 100)}%</div>
-                  <Button variant="secondary" onClick={() => setScale((s) => Math.min(5, s + 0.25))}>
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="w-full h-[80vh] overflow-hidden bg-black">
-                  <div
-                    className={"w-full h-full flex items-center justify-center " + (isPanning ? 'cursor-grabbing' : 'cursor-grab')}
-                    onMouseDown={(e) => { setIsPanning(true); setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y }); }}
-                    onMouseMove={(e) => { if (!isPanning) return; setPan({ x: e.clientX - (panStart?.x || 0), y: e.clientY - (panStart?.y || 0) }); }}
-                    onMouseUp={() => { setIsPanning(false); setPanStart(null); }}
-                    onMouseLeave={() => { setIsPanning(false); setPanStart(null); }}
-                    onTouchStart={(e) => { const t0 = e.touches[0]; setIsPanning(true); setPanStart({ x: t0.clientX - pan.x, y: t0.clientY - pan.y }); }}
-                    onTouchMove={(e) => { if (!isPanning) return; const t0 = e.touches[0]; setPan({ x: t0.clientX - (panStart?.x || 0), y: t0.clientY - (panStart?.y || 0) }); }}
-                    onTouchEnd={() => { setIsPanning(false); setPanStart(null); }}
-                  >
-                    <img
-                      src={selectedImage}
-                      alt="full"
-                      style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: 'center center' }}
-                      className="object-contain max-w-none max-h-none select-none"
-                      draggable={false}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </DialogContent>
-        </Dialog>
+        {/* viewer moved to ImageViewer component */}
       </div>
     </div>
   );
