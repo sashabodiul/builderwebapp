@@ -14,6 +14,7 @@ import FacilityTypes from "./pages/Admin/screens/FacilityTypes";
 import Workers from "./pages/Admin/screens/Workers";
 import Tasks from "./pages/Admin/screens/Tasks";
 import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
+import RoutesPage from "./pages/Routes";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -33,6 +34,18 @@ function App() {
 
   const isAuthPage = location.pathname === '/register';
 
+  const loadingFallback = (
+    <div className="p-6 text-theme-text-muted text-center">loading…</div>
+  );
+
+  const renderProtected = (element: JSX.Element) => (
+    !isDataLoaded ? loadingFallback : (isAuthenticated ? element : <Navigate to="/register" replace />)
+  );
+
+  const renderPublicOnly = (element: JSX.Element) => (
+    !isDataLoaded ? loadingFallback : (!isAuthenticated ? element : <Navigate to="/" replace />)
+  );
+
   return (
     <div className={"App"}>
       {/*{isLoading && <Preloader />}*/}
@@ -40,39 +53,43 @@ function App() {
         <Routes>
           <Route 
             path={routes.WORK} 
-            element={isAuthenticated ? <Work /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Work />)} 
+          />
+          <Route 
+            path={routes.ROUTES} 
+            element={renderProtected(<RoutesPage />)} 
           />
           <Route 
             path={routes.SALARY} 
-            element={isAuthenticated ? <Salary /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Salary />)} 
           />
           <Route 
             path={routes.ADMIN} 
-            element={isAuthenticated ? <Admin /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Admin />)} 
           />
           <Route 
             path={routes.ADMIN_FACILITIES} 
-            element={isAuthenticated ? <Facilities /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Facilities />)} 
           />
           <Route 
             path={routes.ADMIN_FACILITY_TYPES} 
-            element={isAuthenticated ? <FacilityTypes /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<FacilityTypes />)} 
           />
           <Route 
             path={routes.ADMIN_WORKERS} 
-            element={isAuthenticated ? <Workers /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Workers />)} 
           />
           <Route 
             path={routes.ADMIN_TASKS} 
-            element={isAuthenticated ? <Tasks /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<Tasks />)} 
           />
           <Route 
             path={routes.ADMIN_WORK_PROCESSES} 
-            element={isAuthenticated ? <WorkProcesses /> : <Navigate to="/register" replace />} 
+            element={renderProtected(<WorkProcesses />)} 
           />
           <Route 
             path={routes.REGISTER} 
-            element={!isAuthenticated ? <RegisterForm /> : <Navigate to="/" replace />} 
+            element={renderPublicOnly(<RegisterForm />)} 
           />
         </Routes>
       </main>

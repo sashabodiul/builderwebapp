@@ -19,6 +19,7 @@ const Work: FC = () => {
   const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [workSummaryData, setWorkSummaryData] = useState<WorkProcessEndOut | null>(null);
+  window.Telegram.WebApp.BackButton.hide();
 
   // Завантаження об'єктів з API
   useEffect(() => {

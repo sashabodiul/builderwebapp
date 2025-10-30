@@ -394,4 +394,13 @@
     "yes": "Ja",
     "no": "Nein"
   }
+  ,
+  "routes": {
+    "title": "ziel der fahrt wählen",
+    "materials": "materialien",
+    "object": "objekt",
+    "home": "haus",
+    "washFuel": "wäsche / tanken",
+    "personal": "persönlich"
+  }
 }

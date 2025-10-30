@@ -454,4 +454,13 @@
       "deleteError": "Failed to delete adjustment"
     }
   }
+  ,
+  "routes": {
+    "title": "choose trip purpose",
+    "materials": "materials",
+    "object": "site",
+    "home": "home",
+    "washFuel": "wash / fuel",
+    "personal": "personal"
+  }
 }

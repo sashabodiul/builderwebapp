@@ -1,8 +1,9 @@
 import { FC } from 'react';
-import { Link } from 'react-router-dom';
+// link not used directly, shared card handles it
 import { useTranslation } from 'react-i18next';
 import { Building, Building2, Users, CheckSquare, ArrowRight, Clock } from 'lucide-react';
 import useBackButton from '@/hooks/useBackButton';
+import FeatureLinkCard from '@/components/ui/FeatureLinkCard';
 
 const Admin: FC = () => {
   const { t } = useTranslation();
@@ -46,42 +47,7 @@ const Admin: FC = () => {
     }
   ];
 
-  const getCardStyles = (color: string) => {
-    const baseStyles = "group flex items-center gap-4 p-6 bg-theme-bg-card border border-theme-border rounded-xl text-theme-text-primary transition-all duration-300 hover:transform hover:-translate-y-1 hover:shadow-xl relative overflow-hidden";
-    
-    const colorStyles = {
-      blue: "hover:border-blue-400 hover:shadow-blue-400/20",
-      green: "hover:border-green-400 hover:shadow-green-400/20", 
-      orange: "hover:border-theme-accent hover:shadow-theme-accent/20",
-      purple: "hover:border-purple-400 hover:shadow-purple-400/20"
-    };
-
-    return `${baseStyles} ${colorStyles[color as keyof typeof colorStyles]}`;
-  };
-
-  const getIconStyles = (color: string) => {
-    const baseStyles = "flex items-center justify-center w-14 h-14 rounded-xl bg-theme-bg-tertiary flex-shrink-0 transition-colors duration-300";
-    
-    const colorStyles = {
-      blue: "text-blue-400 group-hover:bg-blue-400/10",
-      green: "text-green-400 group-hover:bg-green-400/10",
-      orange: "text-theme-accent group-hover:bg-theme-accent/10", 
-      purple: "text-purple-400 group-hover:bg-purple-400/10"
-    };
-
-    return `${baseStyles} ${colorStyles[color as keyof typeof colorStyles]}`;
-  };
-
-  const getTopBorderStyles = (color: string) => {
-    const colorStyles = {
-      blue: "bg-blue-400",
-      green: "bg-green-400",
-      orange: "bg-theme-accent",
-      purple: "bg-purple-400"
-    };
-
-    return `absolute top-0 left-0 right-0 h-1 ${colorStyles[color as keyof typeof colorStyles]} transition-all duration-300 group-hover:h-1.5`;
-  };
+  // styles moved into FeatureLinkCard
 
   return (
     <div className="page min-h-screen bg-theme-bg-primary p-6">
@@ -99,30 +65,15 @@ const Admin: FC = () => {
         {/* Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
           {adminCards.map((card, index) => (
-            <Link key={index} to={card.link} className={getCardStyles(card.color)}>
-              {/* Top border */}
-              <div className={getTopBorderStyles(card.color)}></div>
-              
-              {/* Icon */}
-              <div className={getIconStyles(card.color)}>
-                {card.icon}
-              </div>
-              
-              {/* Content */}
-              <div className="flex-1">
-                <h3 className="text-xl font-semibold text-theme-text-primary mb-2">
-                  {card.title}
-                </h3>
-                <p className="text-theme-text-muted text-sm leading-relaxed">
-                  {card.description}
-                </p>
-              </div>
-              
-              {/* Arrow */}
-              <div className="text-theme-text-muted transition-all duration-300 group-hover:translate-x-1 group-hover:text-theme-accent">
-                <ArrowRight className="h-5 w-5" />
-              </div>
-            </Link>
+            <FeatureLinkCard
+              key={index}
+              title={card.title}
+              description={card.description}
+              icon={card.icon}
+              color={card.color as any}
+              to={card.link}
+              rightIcon={<ArrowRight className="h-5 w-5" />}
+            />
           ))}
         </div>
       </div>

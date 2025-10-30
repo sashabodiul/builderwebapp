@@ -1,6 +1,7 @@
 export default {
   WORK: "/",
   SALARY: "/salary",
+  ROUTES: "/routes",
   ADMIN: "/admin",
   ADMIN_FACILITIES: "/admin/facilities",
   ADMIN_FACILITY_TYPES: "/admin/facility-types",

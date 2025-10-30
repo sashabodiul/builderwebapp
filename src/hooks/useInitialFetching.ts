@@ -31,6 +31,7 @@ const useInitialFetching = () => {
         return;
       }
       dispatch(setUser(response.data));
+      setIsLoaded(true);
     };
 
     checkAuth();
