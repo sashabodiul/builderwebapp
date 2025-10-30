@@ -55,6 +55,7 @@ const RegisterForm = () => {
   const [pantsWaistCm, setPantsWaistCm] = useState<string>(''); // pants_waist_cm
   const [topWaistCm, setTopWaistCm] = useState<string>('');     // top_waist_cm
   const [headCircumferenceCm, setHeadCircumferenceCm] = useState<string>(''); // head_circumference_cm
+  const [footSizeMm, setFootSizeMm] = useState<string>(''); // foot_size (mm)
 
   // Файлы
   const [passportPhoto, setPassportPhoto] = useState<NullableFile>(null);
@@ -106,6 +107,7 @@ const RegisterForm = () => {
       if (d.pantsWaistCm) setPantsWaistCm(String(d.pantsWaistCm));
       if (d.topWaistCm) setTopWaistCm(String(d.topWaistCm));
       if (d.headCircumferenceCm) setHeadCircumferenceCm(String(d.headCircumferenceCm));
+      if (d.footSizeMm) setFootSizeMm(String(d.footSizeMm));
     } catch {
     }
   }, []);
@@ -115,13 +117,13 @@ const RegisterForm = () => {
     const draft = {
       email, password, firstName, lastName, birthDate, homeAddress,
       emergencyName, emergencyPhone, geoLat, geoLng,
-      heightCm, chestCm, hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm
+      heightCm, chestCm, hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm, footSizeMm
     };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     email, password, firstName, lastName, birthDate, homeAddress,
     emergencyName, emergencyPhone, geoLat, geoLng, heightCm, chestCm,
-    hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm
+    hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm, footSizeMm
   ]);
 
   const registerRequest = async () => {
@@ -150,6 +152,7 @@ const RegisterForm = () => {
       hips_cm: hipsCm ? Number(hipsCm) : undefined,
       inseam_cm: inseamCm ? Number(inseamCm) : undefined,
       head_circumference_cm: headCircumferenceCm ? Number(headCircumferenceCm) : undefined,
+      foot_size: footSizeMm ? Number(footSizeMm) : undefined,
       passport_photo: passportPhoto || undefined,
       driver_license_photo: driverLicensePhoto || undefined,
     };
@@ -446,14 +449,25 @@ const RegisterForm = () => {
                 </div>
               </div>
 
-              <div className="input-group">
-                <label>{t('auth.headCircumference')}</label>
-                <input
-                  type="number"
-                  placeholder={t('auth.headCircumferencePlaceholder')}
-                  value={headCircumferenceCm}
-                  onChange={(e) => setHeadCircumferenceCm(e.target.value)}
-                />
+              <div className="grid-3">
+                <div className="input-group">
+                  <label>{t('auth.headCircumference')}</label>
+                  <input
+                    type="number"
+                    placeholder={t('auth.headCircumferencePlaceholder')}
+                    value={headCircumferenceCm}
+                    onChange={(e) => setHeadCircumferenceCm(e.target.value)}
+                  />
+                </div>
+                <div className="input-group">
+                  <label>{t('auth.footSizeMm')}</label>
+                  <input
+                    type="number"
+                    placeholder={t('auth.footSizeMmPlaceholder')}
+                    value={footSizeMm}
+                    onChange={(e) => setFootSizeMm(e.target.value)}
+                  />
+                </div>
               </div>
 
               <div className="helper-text">

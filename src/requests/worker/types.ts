@@ -65,6 +65,7 @@ export type WorkerRegisterData = {
   hips_cm?: number;
   inseam_cm?: number;
   head_circumference_cm?: number;
+  foot_size?: number; // mm (insole length)
   passport_photo?: File;
   driver_license_photo?: File;
 };

@@ -56,6 +56,8 @@
     "topWaistPlaceholder": "85",
     "headCircumference": "Обхват головы (см)",
     "headCircumferencePlaceholder": "58",
+    "footSizeMm": "Размер стопы (стелька, мм)",
+    "footSizeMmPlaceholder": "например 270",
     "measurementHelper": "Нужна помощь с замерами?",
     "openGuide": "Открыть инструкцию (PDF)",
     "passportPhoto": "Фото паспорта (JPEG/PNG)",

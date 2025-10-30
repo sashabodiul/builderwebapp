@@ -81,6 +81,8 @@
     "topWaistPlaceholder": "Top Waist",
     "headCircumference": "Head Circumference (cm)",
     "headCircumferencePlaceholder": "Head",
+    "footSizeMm": "Foot size (insole, mm)",
+    "footSizeMmPlaceholder": "e.g. 270",
     "measurementHelper": "Need help with measurements?",
     "openGuide": "Open guide (PDF)",
     "passportPhoto": "Passport Photo (JPEG/PNG)",

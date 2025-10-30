@@ -56,6 +56,8 @@
     "topWaistPlaceholder": "85",
     "headCircumference": "Обхват голови (см)",
     "headCircumferencePlaceholder": "58",
+    "footSizeMm": "Розмір стопи (устілка, мм)",
+    "footSizeMmPlaceholder": "наприклад 270",
     "measurementHelper": "Потрібна допомога з вимірами?",
     "openGuide": "Відкрити інструкцію (PDF)",
     "passportPhoto": "Фото паспорта (JPEG/PNG)",
