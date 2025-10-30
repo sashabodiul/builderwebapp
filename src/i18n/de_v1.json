@@ -134,7 +134,10 @@
     "reason": "Grund",
     "date": "Datum",
     "amount": "Betrag",
-    "finalSalary": "Endgehalt"
+    "finalSalary": "Endgehalt",
+    "workProcesses": "Arbeitsprozesse",
+    "loadError": "Gehaltsdaten konnten nicht geladen werden",
+    "noData": "Gehaltsdaten nicht verfügbar"
   },
   "work": {
     "title": "Arbeit",

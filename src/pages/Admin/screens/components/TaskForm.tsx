@@ -27,11 +27,13 @@ import {
 
 import { FacilityOut } from '@/requests/facility/types';
 import { WorkerOut } from '@/requests/worker/types';
+import { FacilityTypeOut } from '@/requests/facility-type/types';
 
 const taskSchema = z.object({
   text: z.string().min(1, 'Description is required'),
-  facility_id: z.string().min(1, 'Facility is required'),
-  worker_id: z.string().min(1, 'Worker is required'),
+  facility_id: z.string().optional(),
+  worker_id: z.string().optional(),
+  facility_type_id: z.string().optional(),
   expires_at: z.string().optional(),
   photo: z.any().optional(),
 });
@@ -41,6 +43,7 @@ type TaskFormData = z.infer<typeof taskSchema>;
 interface TaskFormProps {
   facilities: FacilityOut[];
   workers: WorkerOut[];
+  facilityTypes: FacilityTypeOut[];
   onSubmit: (data: TaskFormData) => void;
   onCancel: () => void;
   isLoading?: boolean;
@@ -51,6 +54,7 @@ interface TaskFormProps {
 const TaskForm: React.FC<TaskFormProps> = ({
   facilities,
   workers,
+  facilityTypes,
   onSubmit,
   onCancel,
   isLoading = false,
@@ -65,6 +69,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       text: '',
       facility_id: '',
       worker_id: 'unassigned',
+      facility_type_id: '',
       expires_at: '',
       photo: undefined,
       ...defaultValues,
@@ -105,7 +110,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Facility */}
           <FormField
             control={form.control}
             name="facility_id"
@@ -130,7 +136,32 @@ const TaskForm: React.FC<TaskFormProps> = ({
               </FormItem>
             )}
           />
-
+          {/* Facility type */}
+          <FormField
+            control={form.control}
+            name="facility_type_id"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('admin.facilities.facilityType')}</FormLabel>
+                <FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={t('admin.facilities.selectFacilityType')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {facilityTypes.map((type) => (
+                        <SelectItem key={type.id} value={type.id.toString()}>
+                          {type.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          {/* Worker */}
           <FormField
             control={form.control}
             name="worker_id"

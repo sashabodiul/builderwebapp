@@ -161,7 +161,14 @@
     "reason": "Reason",
     "date": "Date",
     "amount": "Amount",
-    "finalSalary": "Final salary"
+    "finalSalary": "Final salary",
+    "workProcesses": "Work processes",
+    "loadError": "Failed to load salary data",
+    "noData": "Salary data unavailable",
+    "pickPeriod": "Select period",
+    "periodFrom": "Period from",
+    "periodTo": "Period to",
+    "show": "Show"
   },
   "work": {
     "title": "Work",
@@ -222,6 +229,7 @@
     "workEnded": "Work finished!",
     "endingWork": "Finishing work...",
     "completingWork": "Completing work...",
+    "waitForAdminApproval": "Wait for admin approval",
     "completeWork": "Finish work",
     "goToTasks": "Go to tasks",
     "workDayCompleted": "Work day completed!",

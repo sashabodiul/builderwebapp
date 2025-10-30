@@ -22,6 +22,8 @@ import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import TaskForm from './components/TaskForm';
 import TaskCard from './components/TaskCard';
 import TaskFilters from './components/TaskFilters';
+import { getFacilityTypes } from '@/requests/facility-type';
+import { FacilityTypeOut } from '@/requests/facility-type/types';
 
 const Tasks: React.FC = () => {
   const { t } = useTranslation();
@@ -68,6 +70,18 @@ const Tasks: React.FC = () => {
       const response = await getWorkers();
       if (response.error) {
         toastError('Failed to load workers');
+        return [];
+      }
+      return response.data;
+    },
+  });
+
+  const { data: facilityTypes = [] } = useQuery({
+    queryKey: ['facility-types'],
+    queryFn: async () => {
+      const response = await getFacilityTypes();
+      if (response.error) {
+        toastError('Failed to load facility types');
         return [];
       }
       return response.data;
@@ -152,8 +166,9 @@ const Tasks: React.FC = () => {
   const handleCreate = (data: any) => {
     const taskData: WorkTaskCreate = {
       text: data.text,
-      facility_id: parseInt(data.facility_id),
+      facility_id: data.facility_id ? parseInt(data.facility_id) : null,
       worker_id: data.worker_id && data.worker_id !== 'unassigned' ? parseInt(data.worker_id) : null,
+      facility_type_id: data.facility_type_id ? parseInt(data.facility_type_id) : null,
       expires_at: data.expires_at || null,
       photo: data.photo || null,
     };
@@ -164,8 +179,9 @@ const Tasks: React.FC = () => {
     if (!editingTask) return;
     const taskData: WorkTaskUpdate = {
       text: data.text,
-      facility_id: parseInt(data.facility_id),
+      facility_id: data.facility_id ? parseInt(data.facility_id) : null,
       worker_id: data.worker_id && data.worker_id !== 'unassigned' ? parseInt(data.worker_id) : null,
+      facility_type_id: data.facility_type_id ? parseInt(data.facility_type_id) : null,
       expires_at: data.expires_at || null,
       photo: data.photo || null,
     };
@@ -294,6 +310,7 @@ const Tasks: React.FC = () => {
             <TaskForm
               facilities={facilities}
               workers={workers}
+              facilityTypes={facilityTypes}
               onSubmit={handleCreate}
               onCancel={() => setIsCreateDialogOpen(false)}
               isLoading={createMutation.isPending}
@@ -310,6 +327,7 @@ const Tasks: React.FC = () => {
             <TaskForm
               facilities={facilities}
               workers={workers}
+              facilityTypes={facilityTypes}
               onSubmit={handleEdit}
               onCancel={() => {
                 setIsEditDialogOpen(false);
@@ -321,6 +339,7 @@ const Tasks: React.FC = () => {
                 text: editingTask.text || '',
                 facility_id: editingTask.facility_id?.toString() || '',
                 worker_id: editingTask.worker_id?.toString() || 'unassigned',
+                facility_type_id: editingTask.facility_type_id?.toString() || '',
                 expires_at: editingTask.expires_at ? new Date(editingTask.expires_at).toISOString().slice(0, 16) : '',
                 photo: undefined,
               } : undefined}

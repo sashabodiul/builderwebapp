@@ -24,6 +24,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [isLoading, setIsLoading] = useState(true);
   const [, setActiveWorkProcess] = useState<WorkProcessStartOut | null>(null);
   const [isStartingWork, setIsStartingWork] = useState(false);
+  const isRestricted = (user?.worker_type === 'student') || !user?.rate;
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -155,48 +156,50 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </div>
         </div>
 
-        <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
-          <h2 className="text-2xl font-bold text-theme-text-primary mb-4">{t('work.selectObject')}</h2>
-          {isLoading ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
-            </div>
-          ) : facilities.length === 0 ? (
-            <div className="flex justify-center items-center py-8">
-              <div className="text-theme-text-secondary text-lg">{t('work.noObjects')}</div>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
-              {facilities.map((facility) => (
-                <div
-                  key={facility.id}
-                  className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedObject === facility.id.toString()
-                    ? 'border-theme-accent bg-theme-accent/10'
-                    : 'border-theme-border hover:border-theme-accent/50'
-                    }`}
-                  onClick={() => onObjectSelect(facility.id.toString())}
-                >
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-theme-accent mt-1 flex-shrink-0" />
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-theme-text-primary mb-1">
-                        {facility.name || t('work.unnamedObject')}
-                      </h3>
-                      {facility.latitude && facility.longitude && (
-                        <p className="text-theme-text-secondary">
-                          {facility.latitude.toFixed(6)}, {facility.longitude.toFixed(6)}
-                        </p>
+        {!isWorking && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+            <h2 className="text-2xl font-bold text-theme-text-primary mb-4">{t('work.selectObject')}</h2>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-theme-text-secondary text-lg">{t('common.loading')}</div>
+              </div>
+            ) : facilities.length === 0 ? (
+              <div className="flex justify-center items-center py-8">
+                <div className="text-theme-text-secondary text-lg">{t('work.noObjects')}</div>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar">
+                {facilities.map((facility) => (
+                  <div
+                    key={facility.id}
+                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${selectedObject === facility.id.toString()
+                      ? 'border-theme-accent bg-theme-accent/10'
+                      : 'border-theme-border hover:border-theme-accent/50'
+                      }`}
+                    onClick={() => onObjectSelect(facility.id.toString())}
+                  >
+                    <div className="flex items-start gap-3">
+                      <MapPin className="h-5 w-5 text-theme-accent mt-1 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-theme-text-primary mb-1">
+                          {facility.name || t('work.unnamedObject')}
+                        </h3>
+                        {facility.latitude && facility.longitude && (
+                          <p className="text-theme-text-secondary">
+                            {facility.latitude.toFixed(6)}, {facility.longitude.toFixed(6)}
+                          </p>
+                        )}
+                      </div>
+                      {selectedObject === facility.id.toString() && (
+                        <div className="w-4 h-4 bg-theme-accent rounded-full flex-shrink-0 mt-1"></div>
                       )}
                     </div>
-                    {selectedObject === facility.id.toString() && (
-                      <div className="w-4 h-4 bg-theme-accent rounded-full flex-shrink-0 mt-1"></div>
-                    )}
                   </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {!isWorking ? (
           <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6">
@@ -205,30 +208,36 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 <h2 className="text-2xl font-bold text-theme-text-primary mb-4">
                   {t('work.readyToStart')}
                 </h2>
-                <button
-                  onClick={handleStartWork}
-                  disabled={!selectedObject || isStartingWork}
-                  className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject && !isStartingWork
-                    ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
-                    : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
-                    }`}
-                >
-                  {isStartingWork ? (
-                    <>
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                      {t('work.startingWork')}
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-6 w-6" />
-                      {t('work.startWork')}
-                    </>
-                  )}
-                </button>
-                {!selectedObject && (
-                  <p className="text-theme-text-muted mt-3">
-                    {t('work.selectObjectFirst')}
-                  </p>
+                {isRestricted ? (
+                  <p className="text-theme-text-secondary text-lg font-medium">Wait for admin approvement</p>
+                ) : (
+                  <>
+                    <button
+                      onClick={handleStartWork}
+                      disabled={!selectedObject || isStartingWork}
+                      className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject && !isStartingWork
+                        ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
+                        : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
+                        }`}
+                    >
+                      {isStartingWork ? (
+                        <>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                          {t('work.startingWork')}
+                        </>
+                      ) : (
+                        <>
+                          <Play className="h-6 w-6" />
+                          {t('work.startWork')}
+                        </>
+                      )}
+                    </button>
+                    {!selectedObject && (
+                      <p className="text-theme-text-muted mt-3">
+                        {t('work.selectObjectFirst')}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             </div>

@@ -38,7 +38,7 @@ const ImageViewer: FC<ImageViewerProps> = ({ images, thumbnailClassName = "w-ful
       </div>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && close()}>
-        <DialogContent className="max-w-[95vw] md:max-w-[90vw] p-0 bg-black">
+        <DialogContent className="max-w-[95vw] md:max-w-[90vw] p-0 bg-black" style={{paddingTop: 'var(--safe-area-height)'}}>
           {selected && (
             <div className="flex flex-col gap-3">
               <div className="flex items-center gap-2 p-2">

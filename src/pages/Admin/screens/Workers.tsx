@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import routes from '@/consts/pageRoutes';
 import useBackButton from '@/hooks/useBackButton';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -25,6 +26,8 @@ const Workers: React.FC = () => {
   const { t } = useTranslation();
   useBackButton(routes.ADMIN);
   const queryClient = useQueryClient();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -148,6 +151,26 @@ const Workers: React.FC = () => {
     setIsAdjustmentOpen(true);
   };
 
+  // open edit dialog if query param id is present
+  useEffect(() => {
+    if (isLoading) return;
+    const searchParams = new URLSearchParams(location.search);
+    const idParam = searchParams.get('id');
+    if (!idParam) return;
+    const workerId = Number(idParam);
+    if (!Number.isFinite(workerId)) return;
+    // avoid re-opening if already open for same worker
+    if (isEditDialogOpen && editingWorker?.id === workerId) return;
+    const workerToEdit = workers.find(w => w.id === workerId);
+    if (workerToEdit) {
+      openEditDialog(workerToEdit);
+      // remove id from query to allow closing modal normally and avoid loops
+      const nextSearch = new URLSearchParams(location.search);
+      nextSearch.delete('id');
+      navigate({ pathname: location.pathname, search: nextSearch.toString() ? `?${nextSearch.toString()}` : '' }, { replace: true });
+    }
+  }, [location.search, isLoading, workers, isEditDialogOpen, editingWorker]);
+
   if (isLoading) {
     return (
       <div className="page min-h-screen bg-theme-bg-primary p-4">
@@ -231,7 +254,7 @@ const Workers: React.FC = () => {
                 telegram_id: editingWorker.telegram_id?.toString() || '',
                 worker_type: editingWorker.worker_type || 'student',
                 rate: editingWorker.rate?.toString() || '',
-                birthday: editingWorker.birthday || '',
+                birthday: editingWorker.birthday ? editingWorker.birthday.split('T')[0] : '',
               } : undefined}
             />
           </DialogContent>

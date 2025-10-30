@@ -152,7 +152,7 @@ const FacilityForm: React.FC<FacilityFormProps> = ({
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="group_id"
@@ -180,7 +180,7 @@ const FacilityForm: React.FC<FacilityFormProps> = ({
               </FormItem>
             )}
           />
-        </div>
+        </div> */}
 
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
