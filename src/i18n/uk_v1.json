@@ -307,6 +307,7 @@
       "edit": "Редагувати",
       "deleteTitle": "Видалити працівника",
       "deleteDescription": "Ви впевнені, що хочете видалити цього працівника? Цю дію неможливо скасувати.",
+      "deleteConfirmText": "Ви дійсно хочете видалити {{name}}?",
       "firstName": "Ім'я",
       "firstNamePlaceholder": "Введіть ім'я",
       "lastName": "Прізвище",

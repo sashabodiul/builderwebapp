@@ -136,6 +136,7 @@
   },
   "salary": {
     "title": "Salary Calculation",
+    "salary": "Salary",
     "period": "Period",
     "periodSubtitle": "By selected filters",
     "overtime": "Overtime (hours)",
@@ -333,6 +334,7 @@
       "edit": "Edit",
       "deleteTitle": "Delete Worker",
       "deleteDescription": "Are you sure you want to delete this worker? This action cannot be undone.",
+      "deleteConfirmText": "Are you sure you want to delete {{name}}?",
       "firstName": "First Name",
       "firstNamePlaceholder": "Enter first name",
       "lastName": "Last Name",

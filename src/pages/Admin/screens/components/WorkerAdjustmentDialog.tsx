@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Euro, Trash2 } from 'lucide-react';
@@ -9,10 +9,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { WorkerOut } from '@/requests/worker/types';
+import { WorkerOut, WorkerPayrollOut } from '@/requests/worker/types';
+import { getWorkerPayroll } from '@/requests/worker';
 import { getAdjustments, createAdjustment, deleteAdjustment } from '@/requests/adjustment';
 import { AdjustmentOut, AdjustmentTypeEnum } from '@/requests/adjustment/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
+import { DateInput } from '@/components/ui/date-input';
 
 type Props = {
   open: boolean;
@@ -30,6 +32,10 @@ const WorkerAdjustmentDialog: React.FC<Props> = ({ open, onOpenChange, worker })
   const [photo, setPhoto] = useState<File | null>(null);
   const [sendNotification, setSendNotification] = useState(false);
 
+  // payroll filters
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
+
   const workerId = worker?.id ?? 0;
 
   const listKey = useMemo(() => ['adjustments', workerId, type], [workerId, type]);
@@ -46,6 +52,31 @@ const WorkerAdjustmentDialog: React.FC<Props> = ({ open, onOpenChange, worker })
       return res.data;
     }
   });
+
+  // worker payroll
+  const { data: payrollData, isFetching: isPayrollLoading, refetch: refetchPayroll } = useQuery({
+    queryKey: ['workerPayroll', workerId, dateFrom, dateTo],
+    enabled: open && !!workerId,
+    queryFn: async (): Promise<WorkerPayrollOut | null> => {
+      const params: any = {};
+      if (dateFrom) params.date_from = dateFrom;
+      if (dateTo) params.date_to = dateTo;
+      const res = await getWorkerPayroll(workerId, params);
+      if (res.error) {
+        toastError(t('salary.loadError'));
+        return null;
+      }
+      return res.data;
+    }
+  });
+
+  useEffect(() => {
+    if (open && workerId) {
+      refetchPayroll();
+    }
+  }, [dateFrom, dateTo, open, workerId, refetchPayroll]);
+
+  const formatCurrency = (amount: number) => `${amount.toFixed(2).replace('.', ',')} €`;
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -96,6 +127,31 @@ const WorkerAdjustmentDialog: React.FC<Props> = ({ open, onOpenChange, worker })
             {t('admin.adjustments.title')} {worker ? `— ${worker.first_name || ''} ${worker.last_name || ''}` : ''}
           </DialogTitle>
         </DialogHeader>
+
+        {/* payroll summary */}
+        <div className="mb-4 border border-theme-border rounded-lg p-4 bg-theme-bg-card">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-theme-text-secondary">{t('salary.periodFrom')}</span>
+              <DateInput type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} placeholder="YYYY-MM-DD" />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs text-theme-text-secondary">{t('salary.periodTo')}</span>
+              <DateInput type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} placeholder="YYYY-MM-DD" />
+            </label>
+          </div>
+          {payrollData && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="bg-theme-bg-tertiary rounded p-3 text-center md:col-span-1">
+                <div className="text-sm text-theme-text-secondary">{t('salary.salary')}</div>
+                <div className="text-2xl font-bold text-theme-accent">{formatCurrency(payrollData.base_calculation.base_salary)}</div>
+              </div>
+            </div>
+          )}
+          {!payrollData && isPayrollLoading && (
+            <div className="text-sm text-theme-text-muted">{t('common.loading')}</div>
+          )}
+        </div>
 
         {/* Create form */}
         <div className="space-y-4">

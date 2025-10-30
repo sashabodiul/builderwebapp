@@ -17,7 +17,7 @@ import {
 import { getWorkers, createWorker, updateWorker, deleteWorker } from '@/requests/worker';
 import { WorkerOut, WorkerCreate, WorkerUpdate } from '@/requests/worker/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
-import DeleteConfirmDialog from './components/DeleteConfirmDialog';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import WorkerForm from './components/WorkerForm';
 import WorkerCard from './components/WorkerCard';
 import WorkerAdjustmentDialog from './components/WorkerAdjustmentDialog.tsx';
@@ -261,7 +261,7 @@ const Workers: React.FC = () => {
         </Dialog>
 
         {/* Delete Dialog */}
-        <DeleteConfirmDialog
+        <ConfirmDialog
           open={isDeleteDialogOpen}
           onClose={() => {
             setIsDeleteDialogOpen(false);
@@ -269,7 +269,9 @@ const Workers: React.FC = () => {
           }}
           onConfirm={handleDelete}
           title={t('admin.workers.deleteTitle')}
-          description={t('admin.workers.deleteDescription')}
+          description={deletingWorker ? t('admin.workers.deleteConfirmText', {
+            name: `${deletingWorker.first_name || ''} ${deletingWorker.last_name || ''}`.trim() || (deletingWorker.username ? `@${deletingWorker.username}` : String(deletingWorker.id))
+          }) : ''}
           isLoading={deleteMutation.isPending}
         />
 
