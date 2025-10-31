@@ -43,6 +43,11 @@ interface FacilityFormProps {
   isLoading?: boolean;
   defaultValues?: Partial<FacilityFormData>;
   submitLabel?: string;
+  // budget controls (only for edit)
+  facilityId?: number;
+  initialBudget?: { total_budget: number | null; salary_budget: number | null; vehicle_budget: number | null; budget_id?: number | null };
+  onBudgetSave?: (payload: { total_budget: number | null; salary_budget: number | null; vehicle_budget: number | null; budget_id?: number | null }) => void;
+  budgetLoading?: boolean;
 }
 
 const FacilityForm: React.FC<FacilityFormProps> = ({
@@ -52,6 +57,10 @@ const FacilityForm: React.FC<FacilityFormProps> = ({
   isLoading = false,
   defaultValues,
   submitLabel = 'Create',
+  facilityId,
+  initialBudget,
+  onBudgetSave,
+  budgetLoading,
 }) => {
   const { t } = useTranslation();
 
@@ -151,6 +160,56 @@ const FacilityForm: React.FC<FacilityFormProps> = ({
             )}
           />
         </div>
+
+        {/* Budget section */}
+        {facilityId && (
+          <div className="border-t border-theme-border pt-4">
+            <div className="text-theme-text-primary text-lg font-semibold mb-3">{t('admin.facilities.budget.title')}</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="text-sm font-medium text-theme-text-primary">{t('admin.facilities.budget.total')}</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  defaultValue={initialBudget?.total_budget ?? ''}
+                  onChange={(e) => (initialBudget && (initialBudget.total_budget = e.target.value === '' ? null : Number(e.target.value)))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-theme-text-primary">{t('admin.facilities.budget.salary')}</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  defaultValue={initialBudget?.salary_budget ?? ''}
+                  onChange={(e) => (initialBudget && (initialBudget.salary_budget = e.target.value === '' ? null : Number(e.target.value)))}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-theme-text-primary">{t('admin.facilities.budget.vehicle')}</label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  defaultValue={initialBudget?.vehicle_budget ?? ''}
+                  onChange={(e) => (initialBudget && (initialBudget.vehicle_budget = e.target.value === '' ? null : Number(e.target.value)))}
+                />
+              </div>
+            </div>
+            <div className="flex justify-end mt-3">
+              <Button
+                type="button"
+                onClick={() => onBudgetSave && onBudgetSave({
+                  total_budget: initialBudget?.total_budget ?? null,
+                  salary_budget: initialBudget?.salary_budget ?? null,
+                  vehicle_budget: initialBudget?.vehicle_budget ?? null,
+                  budget_id: initialBudget?.budget_id ?? null,
+                })}
+                disabled={!!budgetLoading}
+              >
+                {initialBudget?.budget_id ? t('admin.facilities.budget.update') : t('admin.facilities.budget.create')}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField

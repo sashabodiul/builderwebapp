@@ -111,6 +111,7 @@
   },
   "salary": {
     "title": "Розрахунок зарплати",
+    "salary": "Зарплата",
     "period": "Період",
     "periodSubtitle": "За обраними фільтрами",
     "overtime": "Переробка (години)",
@@ -256,6 +257,18 @@
       "groupIdPlaceholder": "Введіть ID Telegram групи",
       "inviteLink": "Посилання-запрошення",
       "inviteLinkPlaceholder": "Введіть посилання-запрошення Telegram",
+      "budget": {
+        "title": "Бюджет",
+        "total": "Загальний бюджет",
+        "salary": "Бюджет на зарплати",
+        "vehicle": "Бюджет на авто",
+        "create": "Створити бюджет",
+        "update": "Оновити бюджет",
+        "createSuccess": "Бюджет створено успішно",
+        "createError": "Не вдалося створити бюджет",
+        "updateSuccess": "Бюджет оновлено успішно",
+        "updateError": "Не вдалося оновити бюджет"
+      },
       "searchPlaceholder": "Пошук об'єктів...",
       "filterByStatus": "Фільтр за статусом",
       "allStatuses": "Всі статуси",

@@ -15,6 +15,7 @@ import { getAdjustments, createAdjustment, deleteAdjustment } from '@/requests/a
 import { AdjustmentOut, AdjustmentTypeEnum } from '@/requests/adjustment/types';
 import { toastError, toastSuccess } from '@/lib/toasts';
 import { DateInput } from '@/components/ui/date-input';
+import ImageViewer from '@/components/ui/ImageViewer';
 
 type Props = {
   open: boolean;
@@ -217,7 +218,13 @@ const WorkerAdjustmentDialog: React.FC<Props> = ({ open, onOpenChange, worker })
                 </div>
                 <div className="flex items-center gap-2">
                   {adj.photo_url && (
-                    <a href={adj.photo_url} target="_blank" rel="noreferrer" className="text-theme-accent underline text-sm">{t('admin.adjustments.viewPhoto')}</a>
+                    <div className="flex items-center gap-2">
+                      <ImageViewer
+                        images={[adj.photo_url]}
+                        containerClassName="grid grid-cols-1"
+                        thumbnailClassName="w-12 h-12 object-cover rounded border border-theme-border"
+                      />
+                    </div>
                   )}
                   <Button variant="outline" size="sm" className="text-red-500 hover:text-red-700" onClick={() => deleteMut.mutate(adj.id)}>
                     <Trash2 className="h-4 w-4" />

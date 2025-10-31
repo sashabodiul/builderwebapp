@@ -248,6 +248,18 @@
       "groupIdPlaceholder": "Geben Sie die Telegram-Gruppen-ID ein",
       "inviteLink": "Einladungslink",
       "inviteLinkPlaceholder": "Geben Sie den Telegram-Einladungslink ein",
+      "budget": {
+        "title": "Budget",
+        "total": "Gesamtbudget",
+        "salary": "Gehaltsbudget",
+        "vehicle": "Fahrzeugbudget",
+        "create": "Budget erstellen",
+        "update": "Budget aktualisieren",
+        "createSuccess": "Budget erfolgreich erstellt",
+        "createError": "Fehler beim Erstellen des Budgets",
+        "updateSuccess": "Budget erfolgreich aktualisiert",
+        "updateError": "Fehler beim Aktualisieren des Budgets"
+      },
       "searchPlaceholder": "Einrichtungen suchen...",
       "filterByStatus": "Nach Status filtern",
       "allStatuses": "Alle Status",

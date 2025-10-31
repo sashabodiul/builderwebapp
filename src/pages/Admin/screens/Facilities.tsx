@@ -22,6 +22,8 @@ import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import FacilityForm from './components/FacilityForm';
 import FacilityCard from './components/FacilityCard';
 import FacilityFilters from './components/FacilityFilters';
+import { createFacilityBudget, updateFacilityBudget } from '@/requests/facility-budget';
+import { FacilityBudgetCreate, FacilityBudgetUpdate } from '@/requests/facility-budget/types';
 
 const Facilities: React.FC = () => {
   const { t } = useTranslation();
@@ -96,6 +98,41 @@ const Facilities: React.FC = () => {
     },
     onError: () => {
       toastError(t('admin.facilities.updateError'));
+    },
+  });
+
+  // Budget mutations
+  const createBudgetMutation = useMutation({
+    mutationFn: async (data: FacilityBudgetCreate) => {
+      const response = await createFacilityBudget(data);
+      if (response.error) {
+        throw new Error('Failed to create facility budget');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facilities'] });
+      toastSuccess(t('admin.facilities.budget.createSuccess'));
+    },
+    onError: () => {
+      toastError(t('admin.facilities.budget.createError'));
+    },
+  });
+
+  const updateBudgetMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: number; data: FacilityBudgetUpdate }) => {
+      const response = await updateFacilityBudget(id, data);
+      if (response.error) {
+        throw new Error('Failed to update facility budget');
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facilities'] });
+      toastSuccess(t('admin.facilities.budget.updateSuccess'));
+    },
+    onError: () => {
+      toastError(t('admin.facilities.budget.updateError'));
     },
   });
 
@@ -263,6 +300,31 @@ const Facilities: React.FC = () => {
             <FacilityForm
               facilityTypes={facilityTypes}
               onSubmit={handleEdit}
+              facilityId={editingFacility?.id}
+              initialBudget={{
+                total_budget: editingFacility?.budget?.total_budget ?? null,
+                salary_budget: editingFacility?.budget?.salary_budget ?? null,
+                vehicle_budget: editingFacility?.budget?.vehicle_budget ?? null,
+                budget_id: editingFacility?.budget?.id ?? null,
+              }}
+              onBudgetSave={(payload) => {
+                if (!editingFacility) return;
+                if (payload.budget_id) {
+                  updateBudgetMutation.mutate({ id: payload.budget_id, data: {
+                    total_budget: payload.total_budget ?? null,
+                    salary_budget: payload.salary_budget ?? null,
+                    vehicle_budget: payload.vehicle_budget ?? null,
+                  }});
+                } else {
+                  createBudgetMutation.mutate({
+                    facility_id: editingFacility.id,
+                    total_budget: payload.total_budget ?? null,
+                    salary_budget: payload.salary_budget ?? null,
+                    vehicle_budget: payload.vehicle_budget ?? null,
+                  });
+                }
+              }}
+              budgetLoading={createBudgetMutation.isPending || updateBudgetMutation.isPending}
               onCancel={() => {
                 setIsEditDialogOpen(false);
                 setEditingFacility(null);
