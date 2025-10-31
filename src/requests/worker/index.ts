@@ -31,8 +31,9 @@ export const createWorker = async (data: WorkerCreate): Promise<ApiResponse<Work
   return await apiRequest<WorkerOut>("POST", "/worker/", {}, data);
 };
 
-export const updateWorker = async (worker_id: number, data: WorkerUpdate): Promise<ApiResponse<WorkerOut>> => {
-  return await apiRequest<WorkerOut>("PUT", `/worker/${worker_id}`, {}, data);
+export const updateWorker = async (worker_id: number, data: WorkerUpdate, approve?: boolean): Promise<ApiResponse<WorkerOut>> => {
+  const url = approve ? `/worker/${worker_id}?approve=true` : `/worker/${worker_id}`;
+  return await apiRequest<WorkerOut>("PUT", url, {}, data);
 };
 
 export const deleteWorker = async (worker_id: number): Promise<ApiResponse<void>> => {

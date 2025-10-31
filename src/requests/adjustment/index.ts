@@ -27,7 +27,7 @@ export const createAdjustment = async (data: AdjustmentCreate): Promise<ApiRespo
   formData.append('adjustment_type', data.adjustment_type);
   formData.append('amount', data.amount.toString());
   formData.append('reason', data.reason);
-  if (data.send_notification !== undefined) formData.append('send_notification', data.send_notification.toString());
+  formData.append('send_notification', 'true');
   if (data.photo) formData.append('photo', data.photo);
 
   return await apiRequest<AdjustmentOut>("POST", "/adjustment/", {

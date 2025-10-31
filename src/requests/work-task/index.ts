@@ -28,7 +28,7 @@ export const createWorkTask = async (data: WorkTaskCreate): Promise<ApiResponse<
   if (data.finished !== undefined) formData.append('finished', data.finished.toString());
   if (data.worker_id) formData.append('worker_id', data.worker_id.toString());
   if (data.expires_at) formData.append('expires_at', data.expires_at);
-  if (data.send_notification !== undefined) formData.append('send_notification', data.send_notification.toString());
+  formData.append('send_notification', 'true');
   if (data.photo) formData.append('photo', data.photo);
 
   return await apiRequest<WorkTaskOut>("POST", "/work_task/", {

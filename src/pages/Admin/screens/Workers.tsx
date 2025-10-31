@@ -35,6 +35,7 @@ const Workers: React.FC = () => {
   const [deletingWorker, setDeletingWorker] = useState<WorkerOut | null>(null);
   const [adjustmentWorker, setAdjustmentWorker] = useState<WorkerOut | null>(null);
   const [isAdjustmentOpen, setIsAdjustmentOpen] = useState(false);
+  const [shouldApprove, setShouldApprove] = useState(false);
 
   // Query
   const { data: workers = [], isLoading } = useQuery({
@@ -69,8 +70,8 @@ const Workers: React.FC = () => {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: number; data: WorkerUpdate }) => {
-      const response = await updateWorker(id, data);
+    mutationFn: async ({ id, data, approve }: { id: number; data: WorkerUpdate; approve?: boolean }) => {
+      const response = await updateWorker(id, data, approve);
       if (response.error) {
         throw new Error('Failed to update worker');
       }
@@ -81,6 +82,7 @@ const Workers: React.FC = () => {
       toastSuccess(t('admin.workers.updateSuccess'));
       setIsEditDialogOpen(false);
       setEditingWorker(null);
+      setShouldApprove(false);
     },
     onError: () => {
       toastError(t('admin.workers.updateError'));
@@ -127,7 +129,7 @@ const Workers: React.FC = () => {
       telegram_id: data.telegram_id ? parseInt(data.telegram_id) : undefined,
       birthday: data.birthday ? new Date(data.birthday).toISOString() : undefined,
     };
-    updateMutation.mutate({ id: editingWorker.id, data: workerData });
+    updateMutation.mutate({ id: editingWorker.id, data: workerData, approve: shouldApprove });
   };
 
   const handleDelete = () => {
@@ -156,6 +158,7 @@ const Workers: React.FC = () => {
     if (isLoading) return;
     const searchParams = new URLSearchParams(location.search);
     const idParam = searchParams.get('id');
+    const approveParam = searchParams.get('approve');
     if (!idParam) return;
     const workerId = Number(idParam);
     if (!Number.isFinite(workerId)) return;
@@ -163,12 +166,15 @@ const Workers: React.FC = () => {
     if (isEditDialogOpen && editingWorker?.id === workerId) return;
     const workerToEdit = workers.find(w => w.id === workerId);
     if (workerToEdit) {
+      setShouldApprove(approveParam === 'true');
       openEditDialog(workerToEdit);
-      // remove id from query to allow closing modal normally and avoid loops
+      // remove id and approve from query to allow closing modal normally and avoid loops
       const nextSearch = new URLSearchParams(location.search);
       nextSearch.delete('id');
+      nextSearch.delete('approve');
       navigate({ pathname: location.pathname, search: nextSearch.toString() ? `?${nextSearch.toString()}` : '' }, { replace: true });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search, isLoading, workers, isEditDialogOpen, editingWorker]);
 
   if (isLoading) {
@@ -233,7 +239,13 @@ const Workers: React.FC = () => {
         </Dialog>
 
         {/* Edit Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          if (!open) {
+            setEditingWorker(null);
+            setShouldApprove(false);
+          }
+        }}>
           <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>{t('admin.workers.edit')}</DialogTitle>
@@ -243,6 +255,7 @@ const Workers: React.FC = () => {
               onCancel={() => {
                 setIsEditDialogOpen(false);
                 setEditingWorker(null);
+                setShouldApprove(false);
               }}
               isLoading={updateMutation.isPending}
               submitLabel={t('common.update')}
