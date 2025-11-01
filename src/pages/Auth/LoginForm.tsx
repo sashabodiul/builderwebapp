@@ -70,7 +70,7 @@ const LoginForm = () => {
         </div>
         <div className="login-header">
           <h2>
-            <span>{t('auth.loginTitle')}</span>
+            <span className="text-3xl">{t('auth.loginTitle')}</span>
           </h2>
           <p>{t('auth.loginSubtitle')}</p>
         </div>

@@ -1,5 +1,5 @@
 // src/pages/Auth/RegisterForm.tsx
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useMemo, useState, useRef} from 'react';
 import {useNavigate, Link} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import {useDispatch} from 'react-redux';
@@ -52,8 +52,7 @@ const RegisterForm = () => {
   const [chestCm, setChestCm] = useState<string>('');   // chest_cm
   const [hipsCm, setHipsCm] = useState<string>('');     // hips_cm
   const [inseamCm, setInseamCm] = useState<string>(''); // inseam_cm
-  const [pantsWaistCm, setPantsWaistCm] = useState<string>(''); // pants_waist_cm
-  const [topWaistCm, setTopWaistCm] = useState<string>('');     // top_waist_cm
+  const [waistCm, setWaistCm] = useState<string>(''); // waist for both pants and top
   const [headCircumferenceCm, setHeadCircumferenceCm] = useState<string>(''); // head_circumference_cm
   const [footSizeMm, setFootSizeMm] = useState<string>(''); // foot_size (mm)
 
@@ -66,6 +65,20 @@ const RegisterForm = () => {
   const [mapOpen, setMapOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
+
+  const [showPhoneError, setShowPhoneError] = useState(false);
+  const [showMeasurementErrors, setShowMeasurementErrors] = useState({
+    height: false,
+    chest: false,
+    hips: false,
+    inseam: false,
+    waist: false,
+    headCircumference: false,
+    footSize: false
+  });
+
+  const phoneErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const measurementErrorTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize Telegram data
   useEffect(() => {
@@ -104,8 +117,8 @@ const RegisterForm = () => {
       if (d.chestCm) setChestCm(String(d.chestCm));
       if (d.hipsCm) setHipsCm(String(d.hipsCm));
       if (d.inseamCm) setInseamCm(String(d.inseamCm));
-      if (d.pantsWaistCm) setPantsWaistCm(String(d.pantsWaistCm));
-      if (d.topWaistCm) setTopWaistCm(String(d.topWaistCm));
+      if (d.waistCm) setWaistCm(String(d.waistCm));
+      else if (d.pantsWaistCm || d.topWaistCm) setWaistCm(String(d.pantsWaistCm || d.topWaistCm));
       if (d.headCircumferenceCm) setHeadCircumferenceCm(String(d.headCircumferenceCm));
       if (d.footSizeMm) setFootSizeMm(String(d.footSizeMm));
     } catch {
@@ -117,14 +130,69 @@ const RegisterForm = () => {
     const draft = {
       email, password, firstName, lastName, birthDate, homeAddress,
       emergencyName, emergencyPhone, geoLat, geoLng,
-      heightCm, chestCm, hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm, footSizeMm
+      heightCm, chestCm, hipsCm, inseamCm, waistCm, headCircumferenceCm, footSizeMm
     };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
   }, [
     email, password, firstName, lastName, birthDate, homeAddress,
     emergencyName, emergencyPhone, geoLat, geoLng, heightCm, chestCm,
-    hipsCm, inseamCm, pantsWaistCm, topWaistCm, headCircumferenceCm, footSizeMm
+    hipsCm, inseamCm, waistCm, headCircumferenceCm, footSizeMm
   ]);
+
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) return true;
+    const cleanPhone = phone.replace(/\s/g, '');
+    const phoneRegex = /^\+?\d{10,15}$/;
+    return phoneRegex.test(cleanPhone);
+  };
+
+  const validateMeasurement = (value: string): boolean => {
+    if (!value) return true;
+    const num = Number(value);
+    return !isNaN(num) && num >= 20 && num <= 1000;
+  };
+
+  useEffect(() => {
+    if (phoneErrorTimeoutRef.current) {
+      clearTimeout(phoneErrorTimeoutRef.current);
+    }
+    phoneErrorTimeoutRef.current = setTimeout(() => {
+      if (emergencyPhone && !validatePhone(emergencyPhone)) {
+        setShowPhoneError(true);
+      } else {
+        setShowPhoneError(false);
+      }
+    }, 1000);
+
+    return () => {
+      if (phoneErrorTimeoutRef.current) {
+        clearTimeout(phoneErrorTimeoutRef.current);
+      }
+    };
+  }, [emergencyPhone]);
+
+  useEffect(() => {
+    if (measurementErrorTimeoutRef.current) {
+      clearTimeout(measurementErrorTimeoutRef.current);
+    }
+    measurementErrorTimeoutRef.current = setTimeout(() => {
+      setShowMeasurementErrors({
+        height: !!(heightCm && !validateMeasurement(heightCm)),
+        chest: !!(chestCm && !validateMeasurement(chestCm)),
+        hips: !!(hipsCm && !validateMeasurement(hipsCm)),
+        inseam: !!(inseamCm && !validateMeasurement(inseamCm)),
+        waist: !!(waistCm && !validateMeasurement(waistCm)),
+        headCircumference: !!(headCircumferenceCm && !validateMeasurement(headCircumferenceCm)),
+        footSize: !!(footSizeMm && !validateMeasurement(footSizeMm))
+      });
+    }, 1000);
+
+    return () => {
+      if (measurementErrorTimeoutRef.current) {
+        clearTimeout(measurementErrorTimeoutRef.current);
+      }
+    };
+  }, [heightCm, chestCm, hipsCm, inseamCm, waistCm, headCircumferenceCm, footSizeMm]);
 
   const registerRequest = async () => {
     if (!telegramId) {
@@ -146,9 +214,9 @@ const RegisterForm = () => {
       geo_lng: geoLng ? Number(geoLng) : undefined,
       birth_date: birthDate || undefined,
       height_cm: heightCm ? Number(heightCm) : undefined,
-      top_waist_cm: topWaistCm ? Number(topWaistCm) : undefined,
+      top_waist_cm: waistCm ? Number(waistCm) : undefined,
       chest_cm: chestCm ? Number(chestCm) : undefined,
-      pants_waist_cm: pantsWaistCm ? Number(pantsWaistCm) : undefined,
+      pants_waist_cm: waistCm ? Number(waistCm) : undefined,
       hips_cm: hipsCm ? Number(hipsCm) : undefined,
       inseam_cm: inseamCm ? Number(inseamCm) : undefined,
       head_circumference_cm: headCircumferenceCm ? Number(headCircumferenceCm) : undefined,
@@ -186,19 +254,56 @@ const RegisterForm = () => {
     setIsLoading(false);
   };
 
+  const handleDocumentPrint = (file: File | null) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = url;
+    document.body.appendChild(iframe);
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.contentWindow?.print();
+        URL.revokeObjectURL(url);
+        setTimeout(() => document.body.removeChild(iframe), 500);
+      }, 250);
+    };
+  };
+
+  const handleDocumentDownload = (file: File | null) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const canNext = useMemo(() => {
     if (step === 1) {
       return Boolean(email && password);
     }
     if (step === 2) {
-      return Boolean(firstName && lastName && birthDate);
+      const phoneValid = !emergencyPhone || validatePhone(emergencyPhone);
+      return Boolean(firstName && lastName && birthDate && phoneValid);
     }
     if (step === 3) {
-      // Выбор точки на карте не делаем обязательным, чтобы не блокировать
-      return true;
+      const measurementsValid = 
+        (!heightCm || validateMeasurement(heightCm)) &&
+        (!chestCm || validateMeasurement(chestCm)) &&
+        (!hipsCm || validateMeasurement(hipsCm)) &&
+        (!inseamCm || validateMeasurement(inseamCm)) &&
+        (!waistCm || validateMeasurement(waistCm)) &&
+        (!headCircumferenceCm || validateMeasurement(headCircumferenceCm)) &&
+        (!footSizeMm || validateMeasurement(footSizeMm));
+      return measurementsValid;
     }
     return false;
-  }, [step, email, password, firstName, lastName, birthDate]);
+  }, [step, email, password, firstName, lastName, birthDate, emergencyPhone, 
+      heightCm, chestCm, hipsCm, inseamCm, waistCm, headCircumferenceCm, footSizeMm]);
 
   const progressPct = useMemo(() => (step / 4) * 100, [step]);
 
@@ -342,11 +447,16 @@ const RegisterForm = () => {
                 <div className="input-group">
                   <label>{t('auth.emergencyContactPhone')}</label>
                   <input
-                    type="text"
-                    placeholder={t('auth.emergencyContactPhonePlaceholder')}
+                    type="tel"
+                    placeholder="+380787438473"
                     value={emergencyPhone}
                     onChange={(e) => setEmergencyPhone(e.target.value)}
                   />
+                  {showPhoneError && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
               </div>
             </>
@@ -387,28 +497,52 @@ const RegisterForm = () => {
                   <label>{t('auth.height')}</label>
                   <input
                     type="number"
+                    step="any"
+                    min="20"
+                    max="1000"
                     placeholder={t('auth.heightPlaceholder')}
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
                   />
+                  {showMeasurementErrors.height && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
                 <div className="input-group">
                   <label>{t('auth.chest')}</label>
                   <input
                     type="number"
+                    step="any"
+                    min="20"
+                    max="1000"
                     placeholder={t('auth.chestPlaceholder')}
                     value={chestCm}
                     onChange={(e) => setChestCm(e.target.value)}
                   />
+                  {showMeasurementErrors.chest && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
                 <div className="input-group">
                   <label>{t('auth.hips')}</label>
                   <input
                     type="number"
+                    step="any"
+                    min="20"
+                    max="1000"
                     placeholder={t('auth.hipsPlaceholder')}
                     value={hipsCm}
                     onChange={(e) => setHipsCm(e.target.value)}
                   />
+                  {showMeasurementErrors.hips && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -417,49 +551,72 @@ const RegisterForm = () => {
                   <label>{t('auth.inseam')}</label>
                   <input
                     type="number"
+                    step="any"
+                    min="20"
+                    max="1000"
                     placeholder={t('auth.inseamPlaceholder')}
                     value={inseamCm}
                     onChange={(e) => setInseamCm(e.target.value)}
                   />
+                  {showMeasurementErrors.inseam && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
                 <div className="input-group">
-                  <label>{t('auth.pantsWaist')}</label>
+                  <label>{t('auth.waist')}</label>
                   <input
                     type="number"
-                    placeholder={t('auth.pantsWaistPlaceholder')}
-                    value={pantsWaistCm}
-                    onChange={(e) => setPantsWaistCm(e.target.value)}
+                    step="any"
+                    min="20"
+                    max="1000"
+                    placeholder={t('auth.waistPlaceholder')}
+                    value={waistCm}
+                    onChange={(e) => setWaistCm(e.target.value)}
                   />
+                  {showMeasurementErrors.waist && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
                 <div className="input-group">
-                  <label>{t('auth.topWaist')}</label>
+                  <label>{t('auth.headCircumference')}</label>
                   <input
                     type="number"
-                    placeholder={t('auth.topWaistPlaceholder')}
-                    value={topWaistCm}
-                    onChange={(e) => setTopWaistCm(e.target.value)}
+                    step="any"
+                    min="20"
+                    max="1000"
+                    placeholder={t('auth.headCircumferencePlaceholder')}
+                    value={headCircumferenceCm}
+                    onChange={(e) => setHeadCircumferenceCm(e.target.value)}
                   />
+                  {showMeasurementErrors.headCircumference && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="grid-3">
                 <div className="input-group">
-                  <label>{t('auth.headCircumference')}</label>
-                  <input
-                    type="number"
-                    placeholder={t('auth.headCircumferencePlaceholder')}
-                    value={headCircumferenceCm}
-                    onChange={(e) => setHeadCircumferenceCm(e.target.value)}
-                  />
-                </div>
-                <div className="input-group">
                   <label>{t('auth.footSizeMm')}</label>
                   <input
                     type="number"
+                    step="any"
+                    min="20"
+                    max="1000"
                     placeholder={t('auth.footSizeMmPlaceholder')}
                     value={footSizeMm}
                     onChange={(e) => setFootSizeMm(e.target.value)}
                   />
+                  {showMeasurementErrors.footSize && (
+                    <div className="helper-text" style={{ color: 'rgba(255,93,93,.8)' }}>
+                      {t('auth.measurementInvalid', 'Value is incorrect')}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -489,7 +646,25 @@ const RegisterForm = () => {
                     />
                   </label>
                   {passportPhoto && (
-                    <div className="helper-text">{t('auth.fileSelectedText', {filename: passportPhoto.name})}</div>
+                    <div className="helper-text">
+                      {t('auth.fileSelectedText', {filename: passportPhoto.name})}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentPrint(passportPhoto)}
+                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
+                        >
+                          🖨️ {t('auth.print')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentDownload(passportPhoto)}
+                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
+                        >
+                          💾 {t('auth.save')}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
                 <div className="input-group">
@@ -502,7 +677,25 @@ const RegisterForm = () => {
                     />
                   </label>
                   {driverLicensePhoto && (
-                    <div className="helper-text">{t('auth.fileSelectedText', {filename: driverLicensePhoto.name})}</div>
+                    <div className="helper-text">
+                      {t('auth.fileSelectedText', {filename: driverLicensePhoto.name})}
+                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentPrint(driverLicensePhoto)}
+                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
+                        >
+                          🖨️ {t('auth.print')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDocumentDownload(driverLicensePhoto)}
+                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
+                        >
+                          💾 {t('auth.save')}
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
