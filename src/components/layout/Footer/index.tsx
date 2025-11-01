@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import {Link, useLocation} from "react-router-dom";
+import { useSelector } from "react-redux";
 import pageRoutes from "../../../consts/pageRoutes.ts";
 import styles from "./Footer.module.scss";
 import classNames from "classnames";
@@ -8,6 +9,7 @@ import LanguageSwitcher from "../LanguageSwitcher";
 
 const Footer: FC = () => {
   const location = useLocation();
+  const user = useSelector((state: any) => state.data.user);
 
   const footerLinks = [
     {
@@ -20,12 +22,15 @@ const Footer: FC = () => {
       route: pageRoutes.SALARY,
       icon: <DollarSign />
     },
-    {
+  ];
+
+  if (user?.worker_type === "admin") {
+    footerLinks.push({
       name: "Admin",
       route: pageRoutes.ADMIN,
       icon: <Settings />
-    },
-  ];
+    });
+  }
 
   return (
     <footer className={classNames(styles.footer, "bg-bg")}>

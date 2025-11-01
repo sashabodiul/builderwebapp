@@ -23,6 +23,7 @@ function App() {
   const isDataLoaded = useInitialFetching();
   const location = useLocation();
   const isAuthenticated = useSelector((state: any) => state.data.isAuthenticated);
+  const user = useSelector((state: any) => state.data.user);
   
   useTelegramWebApp();
 
@@ -43,6 +44,10 @@ function App() {
 
   const renderProtected = (element: JSX.Element) => (
     !isDataLoaded ? loadingFallback : (isAuthenticated ? element : <Navigate to="/login" replace />)
+  );
+
+  const renderAdminOnly = (element: JSX.Element) => (
+    !isDataLoaded ? loadingFallback : (isAuthenticated && user?.worker_type === "admin" ? element : <Navigate to="/" replace />)
   );
 
   const renderPublicOnly = (element: JSX.Element) => (
@@ -72,27 +77,27 @@ function App() {
           />
           <Route 
             path={routes.ADMIN} 
-            element={renderProtected(<Admin />)} 
+            element={renderAdminOnly(<Admin />)} 
           />
           <Route 
             path={routes.ADMIN_FACILITIES} 
-            element={renderProtected(<Facilities />)} 
+            element={renderAdminOnly(<Facilities />)} 
           />
           <Route 
             path={routes.ADMIN_FACILITY_TYPES} 
-            element={renderProtected(<FacilityTypes />)} 
+            element={renderAdminOnly(<FacilityTypes />)} 
           />
           <Route 
             path={routes.ADMIN_WORKERS} 
-            element={renderProtected(<Workers />)} 
+            element={renderAdminOnly(<Workers />)} 
           />
           <Route 
             path={routes.ADMIN_TASKS} 
-            element={renderProtected(<Tasks />)} 
+            element={renderAdminOnly(<Tasks />)} 
           />
           <Route 
             path={routes.ADMIN_WORK_PROCESSES} 
-            element={renderProtected(<WorkProcesses />)} 
+            element={renderAdminOnly(<WorkProcesses />)} 
           />
           <Route 
             path="/login" 
