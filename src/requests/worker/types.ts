@@ -44,6 +44,12 @@ export type WorkerUpdate = {
   birthday?: string | UNSET;
 };
 
+export type WorkerLoginData = {
+  email: string;
+  password: string;
+  telegram_id?: number;
+};
+
 export type WorkerRegisterData = {
   email: string;
   password: string;

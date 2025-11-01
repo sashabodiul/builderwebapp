@@ -11,6 +11,13 @@ const useInitialFetching = () => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      // skip auth check if already on login or register page
+      const currentPath = window.location.pathname;
+      if (currentPath === '/login' || currentPath === '/register') {
+        setIsLoaded(true);
+        return;
+      }
+
       // Extract telegram_id from Telegram WebApp or use debug value
       let telegram_id: number;
 
@@ -26,7 +33,7 @@ const useInitialFetching = () => {
       if (response?.error && !import.meta.env.VITE_DISABLE_AUTH) {
         console.error('Auth check failed:', response.error);
         dispatch(clearUser());
-        navigate('/register');
+        navigate('/login');
         setIsLoaded(true);
         return;
       }

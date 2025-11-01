@@ -1,13 +1,13 @@
 // src/pages/Auth/RegisterForm.tsx
 import {useEffect, useMemo, useState} from 'react';
-import {useNavigate} from 'react-router-dom';
+import {useNavigate, Link} from 'react-router-dom';
 import {useTranslation} from 'react-i18next';
 import {useDispatch} from 'react-redux';
 import './RegisterForm.css';
 import MapSelector from './MapSelector/MapSelector';
 import LanguageSwitcher from '../../components/layout/LanguageSwitcher';
 import 'leaflet/dist/leaflet.css';
-import {registerWorker, getWorkerByTelegramId} from '../../requests/worker';
+import {registerWorker} from '../../requests/worker';
 import {setUser} from '../../store/slice';
 import {WorkerRegisterData} from '../../requests/worker/types';
 import {toastError} from '../../lib/toasts';
@@ -176,16 +176,9 @@ const RegisterForm = () => {
       return;
     }
     
-    // After successful registration, fetch the worker data and set it in store
-    if (telegramId) {
-      const response = await getWorkerByTelegramId(telegramId);
-      if (response?.error) {
-        console.error("Failed to fetch user data after registration:", response);
-        toastError('Failed to fetch user data after registration');
-        setIsLoading(false);
-        return;
-      }
-      dispatch(setUser(response.data));
+    // After successful registration, use the returned worker data and set it in store
+    if (registerResponse.data) {
+      dispatch(setUser(registerResponse.data));
       sessionStorage.removeItem(DRAFT_KEY);
       navigate('/');
     }
@@ -530,6 +523,11 @@ const RegisterForm = () => {
               >
                 {t('auth.back')}
               </button>
+            )}
+            {step === 1 && (
+              <Link to="/login" className="btn-secondary">
+                {t('auth.loginLink')}
+              </Link>
             )}
             {step < 4 && (
               <button

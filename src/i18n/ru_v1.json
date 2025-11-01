@@ -15,6 +15,7 @@
     "loginButton": "Войти",
     "loggingIn": "Вход...",
     "loginError": "Ошибка входа. Проверьте ваши данные.",
+    "loginSuccess": "Успешно вошли",
     "registerError": "Ошибка регистрации. Проверьте ваши данные.",
     "logoutSuccess": "Успешно вышли",
     "sessionExpired": "Сессия истекла. Войдите снова.",

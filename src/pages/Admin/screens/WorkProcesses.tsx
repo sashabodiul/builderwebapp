@@ -1,8 +1,8 @@
 import { FC, useEffect, useMemo, useState } from "react";
 import { getWorkProcesses } from "@/requests/work";
 import { WorkProcessStartOut, WorkProcessEndOut } from "@/requests/work/types";
-import { getComments, createComment, updateComment, deleteComment } from "@/requests/comment";
-import { getWorkTasks, createWorkTask, updateWorkTask, deleteWorkTask } from "@/requests/work-task";
+import { createComment, updateComment, deleteComment } from "@/requests/comment";
+import { createWorkTask, updateWorkTask, deleteWorkTask } from "@/requests/work-task";
 import { Card } from "@/components/ui/card";
 import { ExternalLink } from "lucide-react";
 import ImageViewer from "@/components/ui/ImageViewer";
@@ -132,7 +132,7 @@ const WorkProcesses: FC = () => {
                   </a>
                 )}
 
-                <ProcessDetails processId={p.id} facilityId={p.facility_id ?? null} workerId={p.worker_id ?? null} />
+                <ProcessDetails process={p} />
               </div>
             </Card>
           ))}
@@ -144,34 +144,28 @@ const WorkProcesses: FC = () => {
   );
 };
 
-const ProcessDetails: FC<{ processId: number; facilityId: number | null; workerId: number | null }> = ({ processId, facilityId, workerId }) => {
+const ProcessDetails: FC<{ process: WorkProcessEndOut }> = ({ process }) => {
   const { t } = useTranslation();
-  const [comments, setComments] = useState<string[]>([]);
-  const [commentIds, setCommentIds] = useState<number[]>([]);
+  const [comments, setComments] = useState<string[]>(process.comments?.map((x) => x.text || "") || []);
+  const [commentIds, setCommentIds] = useState<number[]>(process.comments?.map((x) => x.id) || []);
   const [newComment, setNewComment] = useState("");
   const [editingCommentId, setEditingCommentId] = useState<number | null>(null);
   const [editingCommentText, setEditingCommentText] = useState("");
-  const [tasks, setTasks] = useState<{ id: number; text: string | null; finished: boolean | null }[]>([]);
+  const [tasks, setTasks] = useState<{ id: number; text: string | null; finished: boolean | null }[]>(
+    (process.tasks || []).map((t) => ({ id: t.id, text: t.text, finished: t.finished }))
+  );
   const [newTaskText, setNewTaskText] = useState("");
 
   useEffect(() => {
-    const load = async () => {
-      const [c, tasksRes] = await Promise.all([
-        getComments({ worker_process_id: processId, limit: 50, offset: 0 }),
-        getWorkTasks({ limit: 50, offset: 0, facility_id: facilityId ?? undefined, worker_id: workerId ?? undefined }),
-      ]);
-      const cData = (c.data || []);
-      setComments(cData.map((x) => x.text || ""));
-      setCommentIds(cData.map((x) => x.id));
-      setTasks((tasksRes.data || []).map((t) => ({ id: t.id, text: t.text, finished: t.finished })));
-    };
-    load();
-  }, [processId, facilityId, workerId]);
+    setComments(process.comments?.map((x) => x.text || "") || []);
+    setCommentIds(process.comments?.map((x) => x.id) || []);
+    setTasks((process.tasks || []).map((t) => ({ id: t.id, text: t.text, finished: t.finished })));
+  }, [process.comments, process.tasks]);
 
   const handleAddComment = async () => {
     const text = newComment.trim();
     if (!text) return;
-    const res = await createComment({ worker_process_id: processId, text });
+    const res = await createComment({ worker_process_id: process.id, text });
     if (!res.error && res.data) {
       setComments((prev) => [...prev, res.data.text || ""]);
       setCommentIds((prev) => [...prev, res.data.id]);
@@ -210,7 +204,7 @@ const ProcessDetails: FC<{ processId: number; facilityId: number | null; workerI
   const handleAddTask = async () => {
     const text = newTaskText.trim();
     if (!text) return;
-    const res = await createWorkTask({ text, facility_id: facilityId ?? undefined, worker_id: workerId ?? undefined });
+    const res = await createWorkTask({ text, facility_id: process.facility_id ?? undefined, worker_id: process.worker_id ?? undefined });
     if (!res.error && res.data) {
       setTasks((prev) => [{ id: res.data.id, text: res.data.text, finished: res.data.finished }, ...prev]);
       setNewTaskText("");

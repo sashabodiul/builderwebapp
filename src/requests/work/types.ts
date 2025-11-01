@@ -1,3 +1,8 @@
+import { WorkerOut } from "../worker/types.ts";
+import { FacilityOut } from "../facility/types.ts";
+import { CommentOut } from "../comment/types.ts";
+import { WorkTaskOut } from "../work-task/types.ts";
+
 export type WorkProcessStartOut = {
   worker_id: number;
   facility_id: number | null;
@@ -5,6 +10,10 @@ export type WorkProcessStartOut = {
   start_latitude: number;
   start_longitude: number;
   id: number;
+  worker?: WorkerOut | null;
+  facility?: FacilityOut | null;
+  comments?: CommentOut[];
+  tasks?: WorkTaskOut[];
   created_at: string;
   updated_at: string;
 };
@@ -16,6 +25,10 @@ export type WorkProcessEndOut = {
   start_latitude: number;
   start_longitude: number;
   id: number;
+  worker?: WorkerOut | null;
+  facility?: FacilityOut | null;
+  comments?: CommentOut[];
+  tasks?: WorkTaskOut[];
   end_time: string;
   end_latitude: number;
   end_longitude: number;

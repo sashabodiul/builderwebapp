@@ -15,6 +15,7 @@
     "loginButton": "Anmelden",
     "loggingIn": "Anmeldung läuft...",
     "loginError": "Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Zugangsdaten.",
+    "loginSuccess": "Erfolgreich angemeldet",
     "registerError": "Registrierung fehlgeschlagen. Bitte überprüfen Sie Ihre Daten.",
     "logoutSuccess": "Erfolgreich abgemeldet",
     "sessionExpired": "Sitzung abgelaufen. Bitte melden Sie sich erneut an.",

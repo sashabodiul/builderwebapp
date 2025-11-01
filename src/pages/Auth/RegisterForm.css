@@ -33,9 +33,12 @@
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
+  background:
+    radial-gradient(1200px 600px at 100% -10%, rgba(255,107,53,0.08), transparent 60%),
+    radial-gradient(900px 500px at -10% 110%, rgba(255,163,127,0.06), transparent 60%),
+    var(--dark-gray);
   position: relative;
   isolation: isolate;
-  z-index: 10;
 }
 
 .login-card {
@@ -260,13 +263,6 @@ form { margin-top: .25rem; }
 .login-button:active { transform: translateY(0); }
 
 .login-button:focus-visible { outline: none; box-shadow: var(--ring); }
-
-/* Secondary (для ссылок-переключателей, если решишь сделать кнопками) */
-.btn-secondary {
-  background: rgba(255,255,255,.06);
-  color: #e8e8e8;
-  border: 1px solid rgba(255,255,255,.12);
-}
 
 .spinner {
   width: 22px;
@@ -521,6 +517,8 @@ form { margin-top: .25rem; }
   border: 1px solid transparent;
   cursor: pointer;
   font-weight: 700;
+  text-decoration: none;
+  display: inline-block;
 }
 .btn-primary {
   background: var(--orange-primary);
@@ -619,18 +617,24 @@ form { margin-top: .25rem; }
   color: rgba(224,224,224,.6);
 }
 
+.login-decoration {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 /* Language switcher on auth page */
 .login-container .language-switcher {
   position: absolute;
-  top: calc(var(--safe-area-height) + 20px);
+  top: 20px;
   right: 20px;
   z-index: 20;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-gray);
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.4);
-  }
+}
+
+.login-container .language-switcher:hover {
+  background: rgba(0, 0, 0, 0.4);
 }

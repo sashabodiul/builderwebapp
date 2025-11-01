@@ -8,6 +8,7 @@ import { useTelegramWebApp } from "./hooks/useTelegramWebApp";
 import Work from "./pages/Work";
 import Salary from "./pages/Salary";
 import Admin from "./pages/Admin";
+import LoginForm from "./pages/Auth/LoginForm";
 import RegisterForm from "./pages/Auth/RegisterForm";
 import Facilities from "./pages/Admin/screens/Facilities";
 import FacilityTypes from "./pages/Admin/screens/FacilityTypes";
@@ -38,7 +39,7 @@ function App() {
     }
   }, [isDataLoaded]);
 
-  const isAuthPage = location.pathname === '/register';
+  const isAuthPage = location.pathname === '/register' || location.pathname === '/login';
   const isRoutesPage = location.pathname.startsWith('/routes');
 
   const loadingFallback = (
@@ -46,7 +47,7 @@ function App() {
   );
 
   const renderProtected = (element: JSX.Element) => (
-    !isDataLoaded ? loadingFallback : (isAuthenticated ? element : <Navigate to="/register" replace />)
+    !isDataLoaded ? loadingFallback : (isAuthenticated ? element : <Navigate to="/login" replace />)
   );
 
   const renderPublicOnly = (element: JSX.Element) => (
@@ -117,6 +118,10 @@ function App() {
           <Route 
             path={routes.ADMIN_WORK_PROCESSES} 
             element={renderProtected(<WorkProcesses />)} 
+          />
+          <Route 
+            path="/login" 
+            element={renderPublicOnly(<LoginForm />)} 
           />
           <Route 
             path={routes.REGISTER} 

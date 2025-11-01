@@ -4,6 +4,7 @@ import {
   WorkerOut, 
   WorkerCreate, 
   WorkerUpdate, 
+  WorkerLoginData,
   WorkerRegisterData, 
   WorkerPayrollOut, 
   WorkerPayrollParams 
@@ -53,6 +54,19 @@ export const getWorkerPayroll = async (
   
   const url = queryParams.toString() ? `/worker/${worker_id}/payroll?${queryParams.toString()}` : `/worker/${worker_id}/payroll`;
   return await apiRequest<WorkerPayrollOut>("GET", url);
+};
+
+export const loginWorker = async (data: WorkerLoginData): Promise<ApiResponse<WorkerOut>> => {
+  const formData = new URLSearchParams();
+  formData.append('email', data.email);
+  formData.append('password', data.password);
+  if (data.telegram_id) formData.append('telegram_id', data.telegram_id.toString());
+
+  return await apiRequest<WorkerOut>("POST", "/worker/login", {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }, formData);
 };
 
 export const registerWorker = async (data: WorkerRegisterData): Promise<ApiResponse<WorkerOut>> => {
