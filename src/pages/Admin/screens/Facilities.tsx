@@ -311,9 +311,9 @@ const Facilities: React.FC = () => {
                 if (!editingFacility) return;
                 if (payload.budget_id) {
                   updateBudgetMutation.mutate({ id: payload.budget_id, data: {
-                    total_budget: payload.total_budget ?? null,
-                    salary_budget: payload.salary_budget ?? null,
-                    vehicle_budget: payload.vehicle_budget ?? null,
+                    total_budget: payload.total_budget ?? undefined,
+                    salary_budget: payload.salary_budget ?? undefined,
+                    vehicle_budget: payload.vehicle_budget ?? undefined,
                   }});
                 } else {
                   createBudgetMutation.mutate({

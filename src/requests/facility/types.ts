@@ -1,5 +1,8 @@
 // facility types based on OpenAPI schema
 import { UNSET } from "../shared/types.ts";
+import { FacilityBudgetNestedOut } from "../facility-budget/types.ts";
+import { FacilityTypeOut } from "../facility-type/types.ts";
+import { WorkTaskOut } from "../work-task/types.ts";
 
 export type FacilityOut = {
   id: number;
@@ -10,6 +13,9 @@ export type FacilityOut = {
   latitude: number | null;
   longitude: number | null;
   facility_type_id: number | null;
+  facility_type?: FacilityTypeOut | null;
+  budget?: FacilityBudgetNestedOut | null;
+  tasks?: WorkTaskOut[];
   created_at: string; // ISO date string
   updated_at: string; // ISO date string
 };

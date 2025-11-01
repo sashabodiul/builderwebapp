@@ -1,6 +1,15 @@
 // facility budget types based on OpenAPI schema
 import { UNSET } from "../shared/types.ts";
 
+export type FacilityBudgetNestedOut = {
+  id: number;
+  total_budget: number | null;
+  salary_budget: number | null;
+  vehicle_budget: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type FacilityBudgetOut = {
   id: number;
   facility_id: number | null;

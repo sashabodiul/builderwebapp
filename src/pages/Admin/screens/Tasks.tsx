@@ -23,7 +23,6 @@ import TaskForm from './components/TaskForm';
 import TaskCard from './components/TaskCard';
 import TaskFilters from './components/TaskFilters';
 import { getFacilityTypes } from '@/requests/facility-type';
-import { FacilityTypeOut } from '@/requests/facility-type/types';
 
 const Tasks: React.FC = () => {
   const { t } = useTranslation();
@@ -181,7 +180,6 @@ const Tasks: React.FC = () => {
       text: data.text,
       facility_id: data.facility_id ? parseInt(data.facility_id) : null,
       worker_id: data.worker_id && data.worker_id !== 'unassigned' ? parseInt(data.worker_id) : null,
-      facility_type_id: data.facility_type_id ? parseInt(data.facility_type_id) : null,
       expires_at: data.expires_at || null,
       photo: data.photo || null,
     };
