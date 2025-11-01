@@ -12,9 +12,6 @@
     "update": "Update",
     "confirm": "Confirm",
     "loading": "Loading...",
-    "creating": "Creating...",
-    "updating": "Updating...",
-    "deleting": "Deleting...",
     "name": "Name",
     "description": "Description",
     "active": "Active",
@@ -22,7 +19,8 @@
     "status": "Status",
     "actions": "Actions",
     "back": "Back",
-    "close": "Close"
+    "close": "Close",
+    "next": "Next"
   },
   "auth": {
     "loginTitle": "Login",
@@ -482,6 +480,7 @@
   ,
   "routes": {
     "title": "Choose Trip Purpose",
+    "subtitle": "Add route points to your trip",
     "materials": "Materials",
     "object": "Site",
     "home": "Home",
@@ -493,12 +492,26 @@
     "siteAskTitle": "Specify Site",
     "washFuelAskTitle": "Specify Wash or Fuel Address",
     "chooseReason": "Choose Route Reason",
+    "reasonPresetShopping": "Shopping",
+    "reasonPresetDelivery": "Delivery",
+    "reasonPresetReturn": "Return",
+    "reasonPresetOther": "Other",
+    "reasonCustomPlaceholder": "Other reason",
+    "reasonAddButton": "Add",
+    "reasonNoReason": "No reason",
     "inputs": {
       "shopName": "Shop Name",
       "siteName": "Site Name",
       "address": "Address"
     },
     "personalConfirmTitle": "Confirm Personal Trip",
-    "personalNoRoute": "No route or arbitrary point"
+    "personalNoRoute": "No route or arbitrary point",
+    "routePoints": "Route Points",
+    "addressLabel": "Address",
+    "description": "Description",
+    "descriptionPlaceholder": "Additional details (optional)",
+    "siteDetailsLabel": "Site Details",
+    "skipToResult": "Skip to Result",
+    "viewRoute": "View Route"
   }
 }

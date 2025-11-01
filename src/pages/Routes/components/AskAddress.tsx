@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 type AskAddressProps = {
   title?: string;
@@ -9,7 +10,7 @@ type AskAddressProps = {
   nextScreen?: string;
 };
 
-const AskAddress: FC<AskAddressProps> = ({ title = 'Вкажіть Адресу', nextPath, placeholder = 'Адреса', nextScreen }) => {
+const AskAddress: FC<AskAddressProps> = ({ title, nextPath, placeholder, nextScreen }) => {
   const navigate = useNavigate();
   const location = useLocation() as any;
   const { t } = useTranslation();
@@ -25,6 +26,9 @@ const AskAddress: FC<AskAddressProps> = ({ title = 'Вкажіть Адресу'
   return (
     <div className="page min-h-screen bg-theme-bg-primary p-6">
       <div className="max-w-xl mx-auto w-full">
+        <div className="flex justify-end mb-4">
+          <LanguageSwitcher />
+        </div>
         <h2 className="text-2xl font-semibold mb-4 text-theme-text-primary">{title}</h2>
         <div className="space-y-3">
           <input

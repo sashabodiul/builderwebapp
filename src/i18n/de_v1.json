@@ -413,10 +413,38 @@
   ,
   "routes": {
     "title": "Ziel der fahrt wählen",
+    "subtitle": "Routenpunkte zu Ihrer Fahrt hinzufügen",
     "materials": "Materialien",
     "object": "Objekt",
     "home": "Haus",
     "washFuel": "Wäsche / tanken",
-    "personal": "Persönlich"
+    "personal": "Persönlich",
+    "confirmTitle": "Route bestätigen",
+    "emptyPoints": "Noch keine Routenpunkte",
+    "materialsAskTitle": "Materialienfahrt angeben",
+    "siteAskTitle": "Objekt angeben",
+    "washFuelAskTitle": "Adresse für Wäsche oder Tanken angeben",
+    "chooseReason": "Grund für Route wählen",
+    "reasonPresetShopping": "Einkaufen",
+    "reasonPresetDelivery": "Lieferung",
+    "reasonPresetReturn": "Rückgabe",
+    "reasonPresetOther": "Anderes",
+    "reasonCustomPlaceholder": "Anderer Grund",
+    "reasonAddButton": "Hinzufügen",
+    "reasonNoReason": "Kein Grund",
+    "inputs": {
+      "shopName": "Geschäftsname",
+      "siteName": "Objektname",
+      "address": "Adresse"
+    },
+    "personalConfirmTitle": "Persönliche Fahrt bestätigen",
+    "personalNoRoute": "Keine Route oder beliebiger Punkt",
+    "routePoints": "Routenpunkte",
+    "addressLabel": "Adresse",
+    "description": "Beschreibung",
+    "descriptionPlaceholder": "Zusätzliche Details (optional)",
+    "siteDetailsLabel": "Objektdetails",
+    "skipToResult": "Zum Ergebnis überspringen",
+    "viewRoute": "Route anzeigen"
   }
 }

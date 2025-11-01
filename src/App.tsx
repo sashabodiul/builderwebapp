@@ -16,12 +16,7 @@ import Workers from "./pages/Admin/screens/Workers";
 import Tasks from "./pages/Admin/screens/Tasks";
 import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
 import RoutesPage from "./pages/Routes";
-import MaterialsFlow from "@/pages/Routes/MaterialsFlow";
-import SiteFlow from "@/pages/Routes/SiteFlow";
-import HomeFlow from "@/pages/Routes/HomeFlow";
-import WashFuelFlow from "@/pages/Routes/WashFuelFlow";
-import PersonalFlow from "@/pages/Routes/PersonalFlow";
-import ReasonSelector from "@/pages/Routes/ReasonSelector";
+import RouteResultScreen from "@/pages/Routes/components/RouteResultScreen";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -68,28 +63,8 @@ function App() {
             element={renderProtected(<RoutesPage />)} 
           />
           <Route 
-            path={"/routes/materials"}
-            element={renderProtected(<MaterialsFlow />)}
-          />
-          <Route 
-            path={"/routes/site"}
-            element={renderProtected(<SiteFlow />)}
-          />
-          <Route 
-            path={"/routes/home"}
-            element={renderProtected(<HomeFlow />)}
-          />
-          <Route 
-            path={"/routes/wash-fuel"}
-            element={renderProtected(<WashFuelFlow />)}
-          />
-          <Route 
-            path={"/routes/personal"}
-            element={renderProtected(<PersonalFlow />)}
-          />
-          <Route 
-            path={"/routes/reason"}
-            element={renderProtected(<ReasonSelector />)}
+            path={"/routes/result"}
+            element={renderProtected(<RouteResultScreen />)}
           />
           <Route 
             path={routes.SALARY} 

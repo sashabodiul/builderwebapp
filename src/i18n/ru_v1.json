@@ -430,10 +430,38 @@
   ,
   "routes": {
     "title": "Выберите цель поездки",
+    "subtitle": "Добавьте маршрутные точки к вашей поездке",
     "materials": "Материалы",
     "object": "Объект",
     "home": "Дом",
     "washFuel": "Мойка / заправка",
-    "personal": "Личное"
+    "personal": "Личное",
+    "confirmTitle": "Подтверждение Маршрута",
+    "emptyPoints": "Пока нет маршрутных точек",
+    "materialsAskTitle": "Укажите Поездку За Материалами",
+    "siteAskTitle": "Укажите Объект",
+    "washFuelAskTitle": "Укажите Адрес Мойки или Заправки",
+    "chooseReason": "Выберите Причину Маршрута",
+    "reasonPresetShopping": "Закупка",
+    "reasonPresetDelivery": "Доставка",
+    "reasonPresetReturn": "Возврат",
+    "reasonPresetOther": "Другое",
+    "reasonCustomPlaceholder": "Другая причина",
+    "reasonAddButton": "Добавить",
+    "reasonNoReason": "Без причины",
+    "inputs": {
+      "shopName": "Название Магазина",
+      "siteName": "Название Объекта",
+      "address": "Адрес"
+    },
+    "personalConfirmTitle": "Подтвердить Личную Поездку",
+    "personalNoRoute": "Без маршрута или с произвольной точкой",
+    "routePoints": "Маршрутные Точки",
+    "addressLabel": "Адрес",
+    "description": "Описание",
+    "descriptionPlaceholder": "Дополнительные детали (необязательно)",
+    "siteDetailsLabel": "Детали Объекта",
+    "skipToResult": "Пропустить к Результату",
+    "viewRoute": "Посмотреть Маршрут"
   }
 }

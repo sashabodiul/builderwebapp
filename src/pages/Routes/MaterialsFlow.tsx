@@ -2,6 +2,7 @@ import { FC, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ConfirmRoute from './components/ConfirmRoute';
 import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const MaterialsFlow: FC = () => {
   const location = useLocation() as any;
@@ -16,6 +17,9 @@ const MaterialsFlow: FC = () => {
     return (
       <div className="page min-h-screen bg-theme-bg-primary p-6">
         <div className="max-w-xl mx-auto w-full">
+          <div className="flex justify-end mb-4">
+            <LanguageSwitcher />
+          </div>
           <h2 className="text-2xl font-semibold mb-4 text-theme-text-primary">{t('routes.materialsAskTitle', 'Specify Materials Trip')}</h2>
           <div className="space-y-3">
             <input

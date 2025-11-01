@@ -478,6 +478,7 @@
   ,
   "routes": {
     "title": "Оберіть Мету Поїздки",
+    "subtitle": "Додайте маршрутні точки до вашої поїздки",
     "materials": "Матеріали",
     "object": "Обʼєкт",
     "home": "Дім",
@@ -489,12 +490,26 @@
     "siteAskTitle": "Вкажіть Обʼєкт",
     "washFuelAskTitle": "Вкажіть Адресу Мийки або Заправки",
     "chooseReason": "Оберіть Причину Маршруту",
+    "reasonPresetShopping": "Закупівля",
+    "reasonPresetDelivery": "Доставка",
+    "reasonPresetReturn": "Повернення",
+    "reasonPresetOther": "Інше",
+    "reasonCustomPlaceholder": "Інша причина",
+    "reasonAddButton": "Додати",
+    "reasonNoReason": "Без причини",
     "inputs": {
       "shopName": "Назва Магазину",
       "siteName": "Назва Обʼєкту",
       "address": "Адреса"
     },
     "personalConfirmTitle": "Підтвердити Особисту Поїздку",
-    "personalNoRoute": "Без маршруту або з довільною точкою"
+    "personalNoRoute": "Без маршруту або з довільною точкою",
+    "routePoints": "Маршрутні Точки",
+    "addressLabel": "Адреса",
+    "description": "Опис",
+    "descriptionPlaceholder": "Додаткові деталі (необовʼязково)",
+    "siteDetailsLabel": "Деталі Обʼєкту",
+    "skipToResult": "Пропустити до Результату",
+    "viewRoute": "Переглянути Маршрут"
   }
 }

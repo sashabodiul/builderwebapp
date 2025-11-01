@@ -3,7 +3,7 @@ import {Link, useLocation} from "react-router-dom";
 import pageRoutes from "../../../consts/pageRoutes.ts";
 import styles from "./Footer.module.scss";
 import classNames from "classnames";
-import {Hammer, DollarSign, Settings } from "lucide-react";
+import {Hammer, DollarSign, Settings, Route } from "lucide-react";
 import LanguageSwitcher from "../LanguageSwitcher";
 
 const Footer: FC = () => {
@@ -14,6 +14,11 @@ const Footer: FC = () => {
       name: "Work",
       route: pageRoutes.WORK,
       icon: <Hammer />
+    },
+    {
+      name: "Routes",
+      route: pageRoutes.ROUTES,
+      icon: <Route />
     },
     {
       name: "Salary",

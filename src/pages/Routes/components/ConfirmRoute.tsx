@@ -2,6 +2,7 @@ import { FC } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Save } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 type RoutePoint = {
   from: string;
@@ -33,6 +34,9 @@ const ConfirmRoute: FC<ConfirmRouteProps> = ({ title, initialPoints = [] }) => {
   return (
     <div className="page min-h-screen bg-theme-bg-primary pb-28 p-6">
       <div className="max-w-2xl mx-auto w-full">
+        <div className="flex justify-end mb-4">
+          <LanguageSwitcher />
+        </div>
         <h2 className="text-2xl font-semibold mb-4 text-theme-text-primary">{title}</h2>
 
         <div className="space-y-3">
