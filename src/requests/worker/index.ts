@@ -61,6 +61,8 @@ export const loginWorker = async (data: WorkerLoginData): Promise<ApiResponse<Wo
   formData.append('email', data.email);
   formData.append('password', data.password);
   if (data.telegram_id) formData.append('telegram_id', data.telegram_id.toString());
+  if (data.username) formData.append('username', data.username.toString());
+  if (data.language_code) formData.append('language_code', data.language_code.toString());
 
   return await apiRequest<WorkerOut>("POST", "/worker/login", {
     headers: {

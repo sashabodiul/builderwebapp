@@ -48,6 +48,8 @@ export type WorkerLoginData = {
   email: string;
   password: string;
   telegram_id?: number;
+  username?: string;
+  language_code?: string;
 };
 
 export type WorkerRegisterData = {

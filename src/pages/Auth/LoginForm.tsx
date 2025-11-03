@@ -20,27 +20,25 @@ const LoginForm = () => {
   const [showPass, setShowPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  const [telegramId, setTelegramId] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (import.meta.env.VITE_DEBUG) {
-      setTelegramId(1359929127);
-    } else {
-      const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (telegramUser) {
-        setTelegramId(telegramUser.id);
-      }
-    }
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    let telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (import.meta.env.VITE_DEBUG) {
+      telegramUser = {
+        id: 1359929127,
+        username: 'testuser',
+        language_code: 'en',
+      };
+    }
 
     const loginData: WorkerLoginData = {
       email,
       password,
-      telegram_id: telegramId || undefined,
+      telegram_id: telegramUser?.id || undefined,
+      username: telegramUser?.username || undefined,
+      language_code: telegramUser?.language_code || undefined,
     };
 
     const response = await loginWorker(loginData);
