@@ -626,15 +626,18 @@ form { margin-top: .25rem; }
 /* Language switcher on auth page */
 .login-container .language-switcher {
   position: absolute;
-  top: 20px;
+  top: var(--safe-area-height);
   right: 20px;
   z-index: 20;
   background: rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--orange-primary);
   color: var(--text-gray);
+  box-shadow: 0 0 0 1px var(--orange-primary), 0 0 12px rgba(255, 107, 53, 0.3);
 }
 
 .login-container .language-switcher:hover {
   background: rgba(0, 0, 0, 0.4);
+  border-color: var(--orange-accent);
+  box-shadow: 0 0 0 1px var(--orange-accent), 0 0 16px rgba(255, 107, 53, 0.4);
 }

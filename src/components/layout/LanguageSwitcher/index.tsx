@@ -10,10 +10,10 @@ const LanguageSwitcher: FC = () => {
   };
 
   const languages = [
-    { code: 'en', label: 'EN' },
-    { code: 'de', label: 'DE' },
-    { code: 'uk', label: 'UK' },
-    { code: 'ru', label: 'RU' },
+    { code: 'en', label: '🇬🇧 EN' },
+    { code: 'de', label: '🇩🇪 DE' },
+    { code: 'uk', label: '🇺🇦 UK' },
+    { code: 'ru', label: '🇷🇺 RU' },
   ];
 
   return (
