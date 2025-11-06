@@ -11,6 +11,7 @@ import {registerWorker} from '../../requests/worker';
 import {setUser} from '../../store/slice';
 import {WorkerRegisterData} from '../../requests/worker/types';
 import {toastError} from '../../lib/toasts';
+import i18n from '../../i18n/config';
 
 import guidePdf from '../../assets/measure-guide.pdf';
 
@@ -86,16 +87,19 @@ const RegisterForm = () => {
       // Hardcoded values for development
       setTelegramId(1359929127);
       setUsername('tweeedlex');
-      setLanguageCode('en');
     } else {
       const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       if (telegramUser) {
         setTelegramId(telegramUser.id);
         setUsername(telegramUser.username || '');
-        setLanguageCode(telegramUser.language_code || '');
       }
     }
   }, []);
+
+  // sync language code with i18n language
+  useEffect(() => {
+    setLanguageCode(i18n.language);
+  }, [i18n.language]);
 
   // Восстановление черновика регистрации
   useEffect(() => {
@@ -206,7 +210,7 @@ const RegisterForm = () => {
       last_name: lastName,
       telegram_id: telegramId,
       username: username || undefined,
-      language_code: languageCode || undefined,
+      language_code: i18n.language || undefined,
       emergency_relative_phone: emergencyPhone || undefined,
       emergency_relative_name: emergencyName || undefined,
       home_address: homeAddress || undefined,

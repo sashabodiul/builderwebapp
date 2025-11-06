@@ -9,6 +9,7 @@ import { loginWorker } from '../../requests/worker';
 import { setUser } from '../../store/slice';
 import { WorkerLoginData } from '../../requests/worker/types';
 import { toastError, toastSuccess } from '../../lib/toasts';
+import i18n from '../../i18n/config';
 
 const LoginForm = () => {
   const { t } = useTranslation();
@@ -38,7 +39,7 @@ const LoginForm = () => {
       password,
       telegram_id: telegramUser?.id || undefined,
       username: telegramUser?.username || undefined,
-      language_code: telegramUser?.language_code || undefined,
+      language_code: i18n.language || undefined,
     };
 
     const response = await loginWorker(loginData);
