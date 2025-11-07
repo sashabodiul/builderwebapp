@@ -24,7 +24,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [isLoading, setIsLoading] = useState(true);
   const [, setActiveWorkProcess] = useState<WorkProcessStartOut | null>(null);
   const [isStartingWork, setIsStartingWork] = useState(false);
-  const isRestricted = (user?.worker_type === 'student') || !user?.rate;
+  const isRestricted = !user?.rate || user?.worker_type == null;
 
   useEffect(() => {
     const fetchFacilities = async () => {
