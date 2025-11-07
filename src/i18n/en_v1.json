@@ -20,7 +20,8 @@
     "actions": "Actions",
     "back": "Back",
     "close": "Close",
-    "next": "Next"
+    "next": "Next",
+    "optional": "optional"
   },
   "auth": {
     "loginTitle": "Login",

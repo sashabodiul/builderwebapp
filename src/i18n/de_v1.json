@@ -412,7 +412,8 @@
     "close": "Schließen",
     "confirm": "Bestätigen",
     "yes": "Ja",
-    "no": "Nein"
+    "no": "Nein",
+    "optional": "optional"
   }
   ,
   "routes": {

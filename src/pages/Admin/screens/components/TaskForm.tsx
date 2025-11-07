@@ -88,6 +88,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
   };
 
   const selectedFile = form.watch('photo');
+  const facilityId = form.watch('facility_id');
+  const workerId = form.watch('worker_id');
+  const facilityTypeId = form.watch('facility_type_id');
 
   const truncateFileName = (name: string, maxLength: number = 20) => {
     if (name.length <= maxLength) return name;
@@ -96,6 +99,16 @@ const TaskForm: React.FC<TaskFormProps> = ({
     const truncatedName = nameWithoutExt.substring(0, maxLength - (extension ? extension.length + 4 : 3));
     return extension ? `${truncatedName}...${extension}` : `${truncatedName}...`;
   };
+
+  // check if any field is selected
+  const hasFacility = facilityId && facilityId !== '';
+  const hasWorker = workerId && workerId !== 'unassigned' && workerId !== '';
+  const hasFacilityType = facilityTypeId && facilityTypeId !== '';
+
+  // determine which fields are optional (only show for unselected fields)
+  const isFacilityOptional = !hasFacility && (hasWorker || hasFacilityType);
+  const isWorkerOptional = !hasWorker && (hasFacility || hasFacilityType);
+  const isFacilityTypeOptional = !hasFacilityType && (hasFacility || hasWorker);
 
   return (
     <Form {...form}>
@@ -119,82 +132,97 @@ const TaskForm: React.FC<TaskFormProps> = ({
         />
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Facility */}
-          <FormField
-            control={form.control}
-            name="facility_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('admin.tasks.facility')}</FormLabel>
-                <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('admin.tasks.selectFacility')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facilities.map((facility) => (
-                        <SelectItem key={facility.id} value={facility.id.toString()}>
-                          {facility.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {/* Facility type */}
-          <FormField
-            control={form.control}
-            name="facility_type_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('admin.facilities.facilityType')}</FormLabel>
-                <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('admin.facilities.selectFacilityType')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {facilityTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.id.toString()}>
-                          {type.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          {/* Worker */}
-          <FormField
-            control={form.control}
-            name="worker_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>{t('admin.tasks.worker')}</FormLabel>
-                <FormControl>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <SelectTrigger>
-                      <SelectValue placeholder={t('admin.tasks.selectWorker')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">{t('admin.tasks.unassigned')}</SelectItem>
-                      {workers.map((worker) => (
-                        <SelectItem key={worker.id} value={worker.id.toString()}>
-                          {`${worker.first_name || ''} ${worker.last_name || ''}`.trim() || 'Unknown Worker'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+           {/* Facility */}
+           <FormField
+             control={form.control}
+             name="facility_id"
+             render={({ field }) => (
+               <FormItem>
+                 <FormLabel>
+                   {t('admin.tasks.facility')}
+                   {isFacilityOptional && (
+                     <span className="text-theme-text-muted font-normal"> ({t('common.optional')})</span>
+                   )}
+                 </FormLabel>
+                 <FormControl>
+                   <Select onValueChange={field.onChange} value={field.value}>
+                     <SelectTrigger>
+                       <SelectValue placeholder={t('admin.tasks.selectFacility')} />
+                     </SelectTrigger>
+                     <SelectContent>
+                       {facilities.map((facility) => (
+                         <SelectItem key={facility.id} value={facility.id.toString()}>
+                           {facility.name}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </FormControl>
+                 <FormMessage />
+               </FormItem>
+             )}
+           />
+           {/* Facility type */}
+           <FormField
+             control={form.control}
+             name="facility_type_id"
+             render={({ field }) => (
+               <FormItem>
+                 <FormLabel>
+                   {t('admin.facilities.facilityType')}
+                   {isFacilityTypeOptional && (
+                     <span className="text-theme-text-muted font-normal"> ({t('common.optional')})</span>
+                   )}
+                 </FormLabel>
+                 <FormControl>
+                   <Select onValueChange={field.onChange} value={field.value}>
+                     <SelectTrigger>
+                       <SelectValue placeholder={t('admin.facilities.selectFacilityType')} />
+                     </SelectTrigger>
+                     <SelectContent>
+                       {facilityTypes.map((type) => (
+                         <SelectItem key={type.id} value={type.id.toString()}>
+                           {type.name}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </FormControl>
+                 <FormMessage />
+               </FormItem>
+             )}
+           />
+           {/* Worker */}
+           <FormField
+             control={form.control}
+             name="worker_id"
+             render={({ field }) => (
+               <FormItem>
+                 <FormLabel>
+                   {t('admin.tasks.worker')}
+                   {isWorkerOptional && (
+                     <span className="text-theme-text-muted font-normal"> ({t('common.optional')})</span>
+                   )}
+                 </FormLabel>
+                 <FormControl>
+                   <Select onValueChange={field.onChange} value={field.value}>
+                     <SelectTrigger>
+                       <SelectValue placeholder={t('admin.tasks.selectWorker')} />
+                     </SelectTrigger>
+                     <SelectContent>
+                       <SelectItem value="unassigned">{t('admin.tasks.unassigned')}</SelectItem>
+                       {workers.map((worker) => (
+                         <SelectItem key={worker.id} value={worker.id.toString()}>
+                           {`${worker.first_name || ''} ${worker.last_name || ''}`.trim() || 'Unknown Worker'}
+                         </SelectItem>
+                       ))}
+                     </SelectContent>
+                   </Select>
+                 </FormControl>
+                 <FormMessage />
+               </FormItem>
+             )}
+           />
         </div>
 
         <FormField
