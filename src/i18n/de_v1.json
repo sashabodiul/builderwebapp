@@ -345,6 +345,7 @@
       "title": "Aufgaben",
       "subtitle": "Verwalten Sie Arbeitsaufgaben und Zuweisungen",
       "createTitle": "Aufgabe erstellen",
+      "edit": "Bearbeiten",
       "editTitle": "Aufgabe bearbeiten",
       "deleteTitle": "Aufgabe löschen",
       "deleteDescription": "Sind Sie sicher, dass Sie diese Aufgabe löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
@@ -366,6 +367,7 @@
       "expiresAt": "Ablaufdatum",
       "expiresAtPlaceholder": "Ablaufdatum auswählen",
       "photo": "Foto",
+      "photoAttached": "Foto angehängt",
       "markFinished": "Als erledigt markieren",
       "markPending": "Als ausstehend markieren",
       "statusOptions": {

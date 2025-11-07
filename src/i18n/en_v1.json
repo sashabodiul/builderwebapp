@@ -380,6 +380,7 @@
       "title": "Tasks",
       "subtitle": "Manage work tasks and assignments",
       "createTitle": "Create Task",
+      "edit": "Edit",
       "editTitle": "Edit Task",
       "deleteTitle": "Delete Task",
       "deleteDescription": "Are you sure you want to delete this task? This action cannot be undone.",
@@ -401,6 +402,7 @@
       "expiresAt": "Expires At",
       "expiresAtPlaceholder": "Select expiration date",
       "photo": "Photo",
+      "photoAttached": "Photo Attached",
       "markFinished": "Mark as finished",
       "markPending": "Mark as pending",
       "statusOptions": {

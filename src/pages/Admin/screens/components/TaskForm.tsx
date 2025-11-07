@@ -89,6 +89,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const selectedFile = form.watch('photo');
 
+  const truncateFileName = (name: string, maxLength: number = 20) => {
+    if (name.length <= maxLength) return name;
+    const extension = name.split('.').pop();
+    const nameWithoutExt = name.substring(0, name.lastIndexOf('.'));
+    const truncatedName = nameWithoutExt.substring(0, maxLength - (extension ? extension.length + 4 : 3));
+    return extension ? `${truncatedName}...${extension}` : `${truncatedName}...`;
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -226,8 +234,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
                   </div>
                   {selectedFile && (
                     <div className="flex items-center gap-2 p-2 bg-theme-bg-tertiary rounded-md">
-                      <span className="text-sm text-theme-text-primary truncate">
-                        {selectedFile.name}
+                      <span className="text-sm text-theme-text-primary truncate" title={selectedFile.name}>
+                        {truncateFileName(selectedFile.name, 20)}
                       </span>
                       <Button
                         type="button"
