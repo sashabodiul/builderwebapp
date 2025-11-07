@@ -1,7 +1,7 @@
-import { FC, useState, useEffect } from 'react';
+import { FC, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks } from 'lucide-react';
+import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock, Loader2 } from 'lucide-react';
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
 import { startWork, getActiveWorkProcess } from '../../../requests/work';
@@ -9,6 +9,17 @@ import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import TodoList from './TodoList';
 import { Button } from '@/components/ui/button';
+import { getVehicles, assignVehicle } from '../../../requests/vehicle';
+import { Vehicle } from '../../../requests/vehicle/types';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import type { RootState } from '@/store/config';
 
 interface WorkMainProps {
   onStartWork: (objectId: string) => void;
@@ -20,13 +31,23 @@ interface WorkMainProps {
 
 const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, onObjectSelect, onShowHistory }) => {
   const { t } = useTranslation();
-  const user = useSelector((state: any) => state.data.user);
+  const user = useSelector((state: RootState) => state.data.user);
   const [isWorking, setIsWorking] = useState<boolean>(false);
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [, setActiveWorkProcess] = useState<WorkProcessStartOut | null>(null);
   const [isStartingWork, setIsStartingWork] = useState(false);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [reservedVehicle, setReservedVehicle] = useState<Vehicle | null>(null);
+  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [isVehiclesLoading, setIsVehiclesLoading] = useState(false);
+  const [isVehicleActionLoading, setIsVehicleActionLoading] = useState(false);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const isRestricted = !user?.rate || user?.worker_type == null;
+  const availableVehicles = useMemo(
+    () => vehicles.filter(vehicle => vehicle.owner_id == null),
+    [vehicles]
+  );
 
   useEffect(() => {
     const fetchFacilities = async () => {
@@ -45,6 +66,45 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
     fetchFacilities();
   }, [t]);
+
+  const fetchVehicles = useCallback(async () => {
+    if (!user?.id || isRestricted) {
+      setVehicles([]);
+      setReservedVehicle(null);
+      setSelectedVehicleId(null);
+      setIsVehiclesLoading(false);
+      return;
+    }
+
+    setIsVehiclesLoading(true);
+    try {
+      const response = await getVehicles();
+
+      if (response.error) {
+        console.error('Failed to fetch vehicles:', response);
+        toastError(t('work.vehicle.loadError'));
+        return;
+      }
+
+      const vehiclesList = response.data ?? [];
+      setVehicles(vehiclesList);
+
+      const ownedVehicle = vehiclesList.find(vehicle => vehicle.owner_id === user.id) || null;
+      setReservedVehicle(ownedVehicle);
+
+      if (ownedVehicle) {
+        setSelectedVehicleId(ownedVehicle.id);
+      } else {
+        const firstAvailable = vehiclesList.find(vehicle => vehicle.owner_id == null);
+        setSelectedVehicleId(firstAvailable ? firstAvailable.id : null);
+      }
+    } catch (error) {
+      console.error('Error fetching vehicles:', error);
+      toastError(t('work.vehicle.loadError'));
+    } finally {
+      setIsVehiclesLoading(false);
+    }
+  }, [user?.id, isRestricted, t]);
 
   useEffect(() => {
     const checkActiveWork = async () => {
@@ -66,6 +126,10 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
     checkActiveWork();
   }, [user?.id, onStartWork]);
+
+  useEffect(() => {
+    fetchVehicles();
+  }, [fetchVehicles]);
 
   const formatToday = () => {
     const today = new Date();
@@ -140,6 +204,71 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     onStopWork();
   };
 
+  const handleOpenVehicleModal = () => {
+    if (isVehicleActionLoading) return;
+    setIsVehicleModalOpen(true);
+    if (!reservedVehicle && availableVehicles.length > 0) {
+      setSelectedVehicleId(availableVehicles[0].id);
+    }
+    fetchVehicles();
+  };
+
+  const handleReserveVehicle = async () => {
+    if (!selectedVehicleId) {
+      toastError(t('work.vehicle.selectVehicleFirst'));
+      return;
+    }
+
+    setIsVehicleActionLoading(true);
+    try {
+      const response = await assignVehicle(selectedVehicleId, {
+        owner_id: user?.id ?? null,
+      });
+
+      if (response.error) {
+        console.error('Failed to reserve vehicle:', response);
+        toastError(t('work.vehicle.actionError'));
+        return;
+      }
+
+      toastSuccess(t('work.vehicle.reserveSuccess'));
+      setIsVehicleModalOpen(false);
+      await fetchVehicles();
+    } catch (error) {
+      console.error('Error reserving vehicle:', error);
+      toastError(t('work.vehicle.actionError'));
+    } finally {
+      setIsVehicleActionLoading(false);
+    }
+  };
+
+  const handleReleaseVehicle = async () => {
+    if (!reservedVehicle) {
+      return;
+    }
+
+    setIsVehicleActionLoading(true);
+    try {
+      const response = await assignVehicle(reservedVehicle.id, {
+        owner_id: null,
+      });
+
+      if (response.error) {
+        console.error('Failed to release vehicle:', response);
+        toastError(t('work.vehicle.actionError'));
+        return;
+      }
+
+      toastSuccess(t('work.vehicle.releaseSuccess'));
+      await fetchVehicles();
+    } catch (error) {
+      console.error('Error releasing vehicle:', error);
+      toastError(t('work.vehicle.actionError'));
+    } finally {
+      setIsVehicleActionLoading(false);
+    }
+  };
+
   const handleTelegramGroup = () => {
     const selectedFacility = facilities.find(facility => facility.id.toString() === selectedObject);
     const telegramGroupUrl = selectedFacility?.invite_link || 'https://t.me/skybud_workers';
@@ -211,6 +340,85 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {!isRestricted && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h2 className="text-2xl font-bold text-theme-text-primary">
+                  {reservedVehicle ? t('work.vehicle.alreadyReservedTitle') : t('work.vehicle.sectionTitle')}
+                </h2>
+                <p className="text-theme-text-secondary text-lg mt-2">
+                  {reservedVehicle ? t('work.vehicle.alreadyReservedSubtitle') : t('work.vehicle.sectionSubtitle')}
+                </p>
+              </div>
+              {isVehiclesLoading ? (
+                <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
+                  {t('common.loading')}
+                </div>
+              ) : reservedVehicle ? (
+                <>
+                  <div className="bg-theme-accent/15 border border-theme-accent rounded-xl p-5 flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <Car className="h-8 w-8 text-theme-accent" />
+                      <span className="text-2xl font-semibold text-theme-text-primary">
+                        {reservedVehicle.model || t('work.vehicle.unknownModel')}
+                      </span>
+                    </div>
+                    <span className="text-lg text-theme-text-secondary">
+                      {reservedVehicle.license_plate
+                        ? t('work.vehicle.licensePlate', { plate: reservedVehicle.license_plate })
+                        : t('work.vehicle.noLicensePlate')}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+                    <Button
+                      variant="destructive"
+                      size="lg"
+                      className="text-lg font-semibold px-6 py-4 h-auto"
+                      onClick={handleReleaseVehicle}
+                      disabled={isVehicleActionLoading}
+                    >
+                      {isVehicleActionLoading ? (
+                        <>
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          {t('work.vehicle.releaseLoading')}
+                        </>
+                      ) : (
+                        <>
+                          <Unlock className="h-6 w-6" />
+                          {t('work.vehicle.releaseButton')}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="bg-theme-bg-tertiary border border-theme-border rounded-xl p-5 flex items-center gap-3">
+                    <Car className="h-8 w-8 text-theme-accent flex-shrink-0" />
+                    <span className="text-xl text-theme-text-primary font-semibold">
+                      {availableVehicles.length > 0
+                        ? t('work.vehicle.availableCount', { count: availableVehicles.length })
+                        : t('work.vehicle.noAvailable')}
+                    </span>
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
+                    <Button
+                      size="lg"
+                      className="text-lg font-semibold px-6 py-4 h-auto"
+                      onClick={handleOpenVehicleModal}
+                      disabled={availableVehicles.length === 0}
+                    >
+                      <Car className="h-6 w-6" />
+                      {t('work.vehicle.reserveButton')}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
 
@@ -300,6 +508,92 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </>
         )}
       </div>
+
+      <Dialog
+        open={isVehicleModalOpen}
+        onOpenChange={(open) => {
+          setIsVehicleModalOpen(open);
+          if (!open) {
+            setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-2xl bg-theme-bg-card border border-theme-border text-theme-text-primary">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-theme-text-primary">
+              {t('work.vehicle.modalTitle')}
+            </DialogTitle>
+            <DialogDescription className="text-lg text-theme-text-secondary">
+              {t('work.vehicle.modalDescription')}
+            </DialogDescription>
+          </DialogHeader>
+          {isVehiclesLoading ? (
+            <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
+              {t('common.loading')}
+            </div>
+          ) : availableVehicles.length === 0 ? (
+            <div className="text-theme-text-secondary text-lg">
+              {t('work.vehicle.noAvailable')}
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar">
+              {availableVehicles.map((vehicle) => (
+                <button
+                  type="button"
+                  key={vehicle.id}
+                  onClick={() => setSelectedVehicleId(vehicle.id)}
+                  className={`w-full text-left p-5 border-2 rounded-xl transition-all ${selectedVehicleId === vehicle.id
+                    ? 'border-theme-accent bg-theme-accent/10 shadow-lg'
+                    : 'border-theme-border hover:border-theme-accent/40'
+                    }`}
+                >
+                  <div className="flex flex-col gap-2">
+                    <span className="text-xl font-semibold text-theme-text-primary">
+                      {vehicle.model || t('work.vehicle.unknownModel')}
+                    </span>
+                    <span className="text-lg text-theme-text-secondary">
+                      {vehicle.license_plate
+                        ? t('work.vehicle.licensePlate', { plate: vehicle.license_plate })
+                        : t('work.vehicle.noLicensePlate')}
+                    </span>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+          <DialogFooter className="gap-3 sm:justify-end">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="text-lg font-semibold px-6 py-4 h-auto"
+              onClick={() => {
+                setIsVehicleModalOpen(false);
+                setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
+              }}
+            >
+              {t('work.cancel')}
+            </Button>
+            <Button
+              size="lg"
+              className="text-lg font-semibold px-6 py-4 h-auto"
+              onClick={handleReserveVehicle}
+              disabled={!selectedVehicleId || isVehicleActionLoading}
+            >
+              {isVehicleActionLoading ? (
+                <>
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  {t('work.vehicle.reserveLoading')}
+                </>
+              ) : (
+                <>
+                  <Car className="h-6 w-6" />
+                  {t('work.vehicle.reserveAction')}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

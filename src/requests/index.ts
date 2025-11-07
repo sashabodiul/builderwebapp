@@ -25,3 +25,7 @@ export * from "./shared/types.ts";
 
 // config
 export { default as apiRequest } from "./config.ts";
+
+// vehicles
+export * from "./vehicle/index.ts";
+export * from "./vehicle/types.ts";
