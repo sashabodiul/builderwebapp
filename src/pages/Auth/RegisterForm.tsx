@@ -29,7 +29,7 @@ const RegisterForm = () => {
   // Telegram data
   const [telegramId, setTelegramId] = useState<number | null>(null);
   const [username, setUsername] = useState('');
-  const [languageCode, setLanguageCode] = useState('');
+  const [, setLanguageCode] = useState('');
 
   // Required fields
   const [email, setEmail] = useState('');
