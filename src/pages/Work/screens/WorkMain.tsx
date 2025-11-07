@@ -1,22 +1,24 @@
 import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { Play, Square, MapPin, Calendar, MessageCircle } from 'lucide-react';
+import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks } from 'lucide-react';
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
 import { startWork, getActiveWorkProcess } from '../../../requests/work';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import TodoList from './TodoList';
+import { Button } from '@/components/ui/button';
 
 interface WorkMainProps {
   onStartWork: (objectId: string) => void;
   onStopWork: () => void;
   selectedObject: string;
   onObjectSelect: (objectId: string) => void;
+  onShowHistory: () => void;
 }
 
-const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, onObjectSelect }) => {
+const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, onObjectSelect, onShowHistory }) => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [isWorking, setIsWorking] = useState<boolean>(false);
@@ -148,12 +150,23 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   return (
     <div className="min-h-screen page bg-theme-bg-primary p-6">
       <div className="max-w-4xl mx-auto w-full">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-theme-text-primary mb-2">{t('work.title')}</h1>
-          <div className="flex items-center gap-2 text-theme-text-secondary text-lg">
-            <Calendar className="h-5 w-5" />
-            <span>{t('work.today')}: {formatToday()}</span>
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold text-theme-text-primary">{t('work.title')}</h1>
+            <div className="flex items-center gap-2 text-theme-text-secondary text-lg">
+              <Calendar className="h-5 w-5" />
+              <span>{t('work.today')}: {formatToday()}</span>
+            </div>
           </div>
+          <Button
+            variant="default"
+            size="lg"
+            className="w-full md:w-auto text-lg font-semibold gap-3 px-6 py-4"
+            onClick={onShowHistory}
+          >
+            <ListChecks className="h-6 w-6" />
+            {t('work.history.viewButton')}
+          </Button>
         </div>
 
         {!isWorking && (

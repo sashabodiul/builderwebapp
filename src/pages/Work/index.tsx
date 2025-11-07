@@ -5,9 +5,10 @@ import WorkMain from './screens/WorkMain';
 import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
 import WorkSummary from './screens/WorkSummary';
+import WorkHistory from './screens/WorkHistory';
 import { getFacilities, FacilityOut, WorkProcessEndOut } from '@/requests';
 
-type WorkScreen = 'main' | 'completion' | 'todo' | 'summary';
+type WorkScreen = 'main' | 'completion' | 'todo' | 'summary' | 'history';
 
 const Work: FC = () => {
   const { t } = useTranslation();
@@ -98,6 +99,14 @@ const Work: FC = () => {
     setCurrentScreen('todo');
   };
 
+  const handleShowHistory = () => {
+    setCurrentScreen('history');
+  };
+
+  const handleHistoryBack = () => {
+    setCurrentScreen('main');
+  };
+
   const getSelectedObjectName = () => {
     const facility = facilities.find(facility => facility.id.toString() === selectedObject);
     return facility?.name || t('work.unnamedObject');
@@ -112,11 +121,10 @@ const Work: FC = () => {
           objectName={getSelectedObjectName()}
         />
       );
-    
-    case 'todo':
-      {
-        const workerType: string | undefined = user?.worker_type;
-        const canUploadMedia = workerType === 'master' || workerType === 'admin';
+
+    case 'todo': {
+      const workerType: string | undefined = user?.worker_type;
+      const canUploadMedia = workerType === 'master' || workerType === 'admin';
       return (
         <TodoList
           onComplete={handleTodoListComplete}
@@ -129,8 +137,8 @@ const Work: FC = () => {
           hideBack={!canUploadMedia}
         />
       );
-      }
-    
+    }
+
     case 'summary':
       return workSummaryData ? (
         <WorkSummary
@@ -138,7 +146,14 @@ const Work: FC = () => {
           onComplete={handleSummaryComplete}
         />
       ) : null;
-    
+
+    case 'history':
+      return (
+        <WorkHistory
+          onBack={handleHistoryBack}
+        />
+      );
+
     default:
       return (
         <WorkMain
@@ -146,6 +161,7 @@ const Work: FC = () => {
           onStopWork={handleStopWork}
           selectedObject={selectedObject}
           onObjectSelect={handleObjectSelect}
+          onShowHistory={handleShowHistory}
         />
       );
   }
