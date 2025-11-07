@@ -14,8 +14,41 @@ const resources = {
   uk: { translation: uk },
 };
 
-// get language from start params or default to 'en'
+const SUPPORTED_LANGUAGES = ['en', 'de', 'uk', 'ru'];
+const LANGUAGE_STORAGE_KEY = 'skybud_language';
+
+const isSupportedLanguage = (lang: string | null | undefined): lang is string => {
+  return typeof lang === 'string' && SUPPORTED_LANGUAGES.includes(lang);
+};
+
+const getStoredLanguage = (): string | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const storedLanguage = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (isSupportedLanguage(storedLanguage)) {
+      return storedLanguage;
+    }
+  } catch (error) {
+    console.error('failed to read language from storage', error);
+  }
+
+  return null;
+};
+
+// get language from storage, start params or default to 'en'
 const getInitialLanguage = (): string => {
+  const storedLanguage = getStoredLanguage();
+  if (storedLanguage) {
+    return storedLanguage;
+  }
+
+  if (typeof window === 'undefined') {
+    return 'en';
+  }
+
   // check start_param from Telegram WebApp (multiple ways to access it)
   const startParam = window.Telegram?.WebApp?.startParam || 
                      window.Telegram?.WebApp?.initDataUnsafe?.start_param;
@@ -25,7 +58,7 @@ const getInitialLanguage = (): string => {
     const langMatch = startParam.match(/lang=([a-z]{2})/i) || startParam.match(/^([a-z]{2})$/i);
     if (langMatch) {
       const lang = langMatch[1].toLowerCase();
-      if (['en', 'de', 'uk', 'ru'].includes(lang)) {
+      if (SUPPORTED_LANGUAGES.includes(lang)) {
         return lang;
       }
     }
@@ -34,8 +67,11 @@ const getInitialLanguage = (): string => {
   // check URL params as fallback
   const urlParams = new URLSearchParams(window.location.search);
   const langFromUrl = urlParams.get('lang');
-  if (langFromUrl && ['en', 'de', 'uk', 'ru'].includes(langFromUrl.toLowerCase())) {
-    return langFromUrl.toLowerCase();
+  if (langFromUrl) {
+    const langLowercase = langFromUrl.toLowerCase();
+    if (SUPPORTED_LANGUAGES.includes(langLowercase)) {
+      return langLowercase;
+    }
   }
   
   return 'en';
@@ -53,5 +89,21 @@ i18n
       escapeValue: false, // react already does escaping
     },
   });
+
+i18n.on('languageChanged', (language) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!isSupportedLanguage(language)) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  } catch (error) {
+    console.error('failed to save language to storage', error);
+  }
+});
 
 export default i18n;
