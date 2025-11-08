@@ -14,7 +14,6 @@ import { Vehicle } from '../../../requests/vehicle/types';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -43,6 +42,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [isVehiclesLoading, setIsVehiclesLoading] = useState(false);
   const [isVehicleActionLoading, setIsVehicleActionLoading] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
+  const [dateFrom, setDateFrom] = useState<string>('');
+  const [dateTo, setDateTo] = useState<string>('');
   const isRestricted = !user?.rate || user?.worker_type == null;
   const availableVehicles = useMemo(
     () => vehicles.filter(vehicle => vehicle.owner_id == null),
@@ -87,15 +88,18 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       }
 
       const vehiclesList = response.data ?? [];
-      setVehicles(vehiclesList);
-
       const ownedVehicle = vehiclesList.find(vehicle => vehicle.owner_id === user.id) || null;
       setReservedVehicle(ownedVehicle);
+
+      const visibleVehicles = vehiclesList.filter(
+        vehicle => !(vehicle.external_id === null && vehicle.owner_id !== null)
+      );
+      setVehicles(visibleVehicles);
 
       if (ownedVehicle) {
         setSelectedVehicleId(ownedVehicle.id);
       } else {
-        const firstAvailable = vehiclesList.find(vehicle => vehicle.owner_id == null);
+        const firstAvailable = visibleVehicles.find(vehicle => vehicle.owner_id == null);
         setSelectedVehicleId(firstAvailable ? firstAvailable.id : null);
       }
     } catch (error) {
@@ -207,10 +211,19 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const handleOpenVehicleModal = () => {
     if (isVehicleActionLoading) return;
     setIsVehicleModalOpen(true);
+    setDateFrom('');
+    setDateTo('');
     if (!reservedVehicle && availableVehicles.length > 0) {
       setSelectedVehicleId(availableVehicles[0].id);
     }
     fetchVehicles();
+  };
+
+  const formatDatePayload = (dateString: string) => {
+    if (!dateString) return null;
+    const [year, month, day] = dateString.split('-');
+    if (!year || !month || !day) return null;
+    return `${day}.${month}.${year}`;
   };
 
   const handleReserveVehicle = async () => {
@@ -219,10 +232,25 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       return;
     }
 
+    if (!dateFrom || !dateTo) {
+      toastError(t('work.vehicle.selectDatesFirst'));
+      return;
+    }
+
+    const formattedDateFrom = formatDatePayload(dateFrom);
+    const formattedDateTo = formatDatePayload(dateTo);
+
+    if (!formattedDateFrom || !formattedDateTo) {
+      toastError(t('work.vehicle.selectDatesFirst'));
+      return;
+    }
+
     setIsVehicleActionLoading(true);
     try {
       const response = await assignVehicle(selectedVehicleId, {
         owner_id: user?.id ?? null,
+        date_from: formattedDateFrom,
+        date_to: formattedDateTo,
       });
 
       if (response.error) {
@@ -233,6 +261,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       toastSuccess(t('work.vehicle.reserveSuccess'));
       setIsVehicleModalOpen(false);
+      setDateFrom('');
+      setDateTo('');
       await fetchVehicles();
     } catch (error) {
       console.error('Error reserving vehicle:', error);
@@ -251,6 +281,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     try {
       const response = await assignVehicle(reservedVehicle.id, {
         owner_id: null,
+        date_from: null,
+        date_to: null,
       });
 
       if (response.error) {
@@ -350,9 +382,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 <h2 className="text-2xl font-bold text-theme-text-primary">
                   {reservedVehicle ? t('work.vehicle.alreadyReservedTitle') : t('work.vehicle.sectionTitle')}
                 </h2>
-                <p className="text-theme-text-secondary text-lg mt-2">
-                  {reservedVehicle ? t('work.vehicle.alreadyReservedSubtitle') : t('work.vehicle.sectionSubtitle')}
-                </p>
               </div>
               {isVehiclesLoading ? (
                 <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
@@ -515,18 +544,37 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           setIsVehicleModalOpen(open);
           if (!open) {
             setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
+            setDateFrom('');
+            setDateTo('');
           }
         }}
       >
-        <DialogContent className="max-w-2xl bg-theme-bg-card border border-theme-border text-theme-text-primary">
+        <DialogContent className="max-w-2xl bg-theme-bg-card border border-theme-border text-theme-text-primary max-h-[100vh] overflow-y-auto sm:max-h-[80vh]">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-theme-text-primary">
               {t('work.vehicle.modalTitle')}
             </DialogTitle>
-            <DialogDescription className="text-lg text-theme-text-secondary">
-              {t('work.vehicle.modalDescription')}
-            </DialogDescription>
           </DialogHeader>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label className="flex flex-col gap-2 text-lg text-theme-text-primary">
+              <span className="font-semibold text-xl">{t('work.vehicle.dateFrom')}</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(event) => setDateFrom(event.target.value)}
+                className="w-full rounded-xl border-2 border-theme-border bg-theme-bg-tertiary px-4 py-3 text-lg text-theme-text-primary focus:border-theme-accent focus:outline-none"
+              />
+            </label>
+            <label className="flex flex-col gap-2 text-lg text-theme-text-primary">
+              <span className="font-semibold text-xl">{t('work.vehicle.dateTo')}</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(event) => setDateTo(event.target.value)}
+                className="w-full rounded-xl border-2 border-theme-border bg-theme-bg-tertiary px-4 py-3 text-lg text-theme-text-primary focus:border-theme-accent focus:outline-none"
+              />
+            </label>
+          </div>
           {isVehiclesLoading ? (
             <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
               {t('common.loading')}
@@ -565,10 +613,12 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
             <Button
               variant="ghost"
               size="lg"
-              className="text-lg font-semibold px-6 py-4 h-auto"
+              className="text-lg font-semibold px-6 py-4 h-auto border-2 border-theme-border hover:border-theme-accent"
               onClick={() => {
                 setIsVehicleModalOpen(false);
                 setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
+                setDateFrom('');
+                setDateTo('');
               }}
             >
               {t('work.cancel')}

@@ -244,7 +244,11 @@
       "releaseSuccess": "Vehicle released",
       "loadError": "Failed to load vehicles",
       "actionError": "Could not update vehicle booking",
-      "selectVehicleFirst": "Please select a vehicle first"
+      "selectVehicleFirst": "Please select a vehicle first",
+      "selectDatesFirst": "Please choose the start and end date",
+      "dateFrom": "Start date",
+      "dateTo": "End date",
+      "dateHint": "Pick the period in which you need the vehicle. Dates are required."
     },
     "required": "Required",
     "todoList": "Task List",

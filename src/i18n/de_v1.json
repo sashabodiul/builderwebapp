@@ -213,7 +213,11 @@
       "releaseSuccess": "Fahrzeug freigegeben",
       "loadError": "Fahrzeuge konnten nicht geladen werden",
       "actionError": "Reservierung konnte nicht aktualisiert werden",
-      "selectVehicleFirst": "Bitte zuerst ein Fahrzeug auswählen"
+      "selectVehicleFirst": "Bitte zuerst ein Fahrzeug auswählen",
+      "selectDatesFirst": "Bitte Start- und Enddatum wählen",
+      "dateFrom": "Startdatum",
+      "dateTo": "Enddatum",
+      "dateHint": "Wähle den Zeitraum, in dem du das Fahrzeug brauchst. Beide Daten sind erforderlich."
     },
     "required": "Erforderlich",
     "todoList": "Aufgabenliste",
