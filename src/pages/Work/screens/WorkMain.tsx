@@ -45,7 +45,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const isRestricted = !user?.rate || user?.worker_type == null;
   const availableVehicles = useMemo(
-    () => vehicles.filter(vehicle => vehicle.owner_id == null),
+    () => vehicles.filter(vehicle => vehicle.owner_id == null && vehicle.external_id == null),
     [vehicles]
   );
 
