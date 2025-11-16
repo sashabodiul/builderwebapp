@@ -95,8 +95,16 @@ export const registerWorker = async (data: WorkerRegisterData): Promise<ApiRespo
   if (data.hips_cm) formData.append('hips_cm', data.hips_cm.toString());
   if (data.inseam_cm) formData.append('inseam_cm', data.inseam_cm.toString());
   if (data.head_circumference_cm) formData.append('head_circumference_cm', data.head_circumference_cm.toString());
-  if (data.passport_photo) formData.append('passport_photo', data.passport_photo);
-  if (data.driver_license_photo) formData.append('driver_license_photo', data.driver_license_photo);
+  if (data.passport_photos) {
+    data.passport_photos.forEach((photo) => {
+      formData.append('passport_photos', photo);
+    });
+  }
+  if (data.driver_license_photos) {
+    data.driver_license_photos.forEach((photo) => {
+      formData.append('driver_license_photos', photo);
+    });
+  }
 
   return await apiRequest<WorkerOut>("POST", "/worker/register", {
     headers: {

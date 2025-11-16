@@ -102,6 +102,8 @@
     "measurementGuideLink": "інструкцію з вимірів",
     "passportFile": "Фото паспорта",
     "driverLicenseFile": "Фото водійських прав",
+    "addPhoto": "Додати фото",
+    "maxFilesError": "Максимальна кількість файлів: ",
     "fileSelectedText": "Обрано файл: {{filename}}",
     "phoneInvalid": "Телефон повинен бути у форматі +380XXXXXXXXX",
     "measurementInvalid": "Значення некоректне",

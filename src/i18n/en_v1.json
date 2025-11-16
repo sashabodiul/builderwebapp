@@ -126,6 +126,8 @@
     "measurementGuideLink": "measurement guide",
     "passportFile": "Passport Photo",
     "driverLicenseFile": "Driver License Photo",
+    "addPhoto": "Add photo",
+    "maxFilesError": "Maximum files: ",
     "fileSelectedText": "File selected: {{filename}}",
     "phoneInvalid": "Phone must be in format +380XXXXXXXXX",
     "measurementInvalid": "Value is incorrect",

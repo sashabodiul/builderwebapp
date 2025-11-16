@@ -15,7 +15,8 @@ import i18n from '../../i18n/config';
 
 import guidePdf from '../../assets/measure-guide.pdf';
 
-type NullableFile = File | null;
+
+const MAX_FILES = 5;
 type Step = 1 | 2 | 3 | 4;
 
 const DRAFT_KEY = 'registerDraft_v1';
@@ -58,8 +59,59 @@ const RegisterForm = () => {
   const [footSizeMm, setFootSizeMm] = useState<string>(''); // foot_size (mm)
 
   // Файлы
-  const [passportPhoto, setPassportPhoto] = useState<NullableFile>(null);
-  const [driverLicensePhoto, setDriverLicensePhoto] = useState<NullableFile>(null);
+  const [passportPhotos, setPassportPhotos] = useState<File[]>([]);
+  const [driverLicensePhotos, setDriverLicensePhotos] = useState<File[]>([]);
+
+  const [passportPreviews, setPassportPreviews] = useState<string[]>([]);
+  const [driverLicensePreviews, setDriverLicensePreviews] = useState<string[]>([]);
+
+  // Create previews for passport photos
+  useEffect(() => {
+    const previews = passportPhotos.map(file => URL.createObjectURL(file));
+    setPassportPreviews(previews);
+
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [passportPhotos]);
+
+  // Create previews for driver license photos
+  useEffect(() => {
+    const previews = driverLicensePhotos.map(file => URL.createObjectURL(file));
+    setDriverLicensePreviews(previews);
+
+    return () => {
+      previews.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [driverLicensePhotos]);
+
+  const handlePassportUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (passportPhotos.length + files.length > MAX_FILES) {
+      toastError(`${t('auth.maxFilesError')} ${MAX_FILES}`);
+      return;
+    }
+    setPassportPhotos(prev => [...prev, ...files]);
+    event.target.value = '';
+  };
+
+  const handleDriverLicenseUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (driverLicensePhotos.length + files.length > MAX_FILES) {
+      toastError(`${t('auth.maxFilesError')} ${MAX_FILES}`);
+      return;
+    }
+    setDriverLicensePhotos(prev => [...prev, ...files]);
+    event.target.value = '';
+  };
+
+  const handleRemovePassportPhoto = (index: number) => {
+    setPassportPhotos(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleRemoveDriverLicensePhoto = (index: number) => {
+    setDriverLicensePhotos(prev => prev.filter((_, i) => i !== index));
+  };
 
   // Модалки
   const [pdfOpen, setPdfOpen] = useState(false);
@@ -225,8 +277,8 @@ const RegisterForm = () => {
       inseam_cm: inseamCm ? Number(inseamCm) : undefined,
       head_circumference_cm: headCircumferenceCm ? Number(headCircumferenceCm) : undefined,
       foot_size: footSizeMm ? Number(footSizeMm) : undefined,
-      passport_photo: passportPhoto || undefined,
-      driver_license_photo: driverLicensePhoto || undefined,
+      passport_photos: passportPhotos || undefined,
+      driver_license_photos: driverLicensePhotos || undefined,
     };
 
     return await registerWorker(registerData);
@@ -258,34 +310,7 @@ const RegisterForm = () => {
     setIsLoading(false);
   };
 
-  const handleDocumentPrint = (file: File | null) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = url;
-    document.body.appendChild(iframe);
-    iframe.onload = () => {
-      setTimeout(() => {
-        iframe.contentWindow?.print();
-        URL.revokeObjectURL(url);
-        setTimeout(() => document.body.removeChild(iframe), 500);
-      }, 250);
-    };
-  };
-
-  const handleDocumentDownload = (file: File | null) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
+  
   const canNext = useMemo(() => {
     if (step === 1) {
       return Boolean(email && password);
@@ -640,65 +665,80 @@ const RegisterForm = () => {
           {step === 4 && (
             <>
               <div className="grid-2">
-                <div className="input-group">
-                  <label className="file-label">
-                    {t('auth.passportFile')}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setPassportPhoto(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  {passportPhoto && (
-                    <div className="helper-text">
-                      {t('auth.fileSelectedText', {filename: passportPhoto.name})}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleDocumentPrint(passportPhoto)}
-                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
-                        >
-                          🖨️ {t('auth.print')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDocumentDownload(passportPhoto)}
-                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
-                        >
-                          💾 {t('auth.save')}
-                        </button>
-                      </div>
+                {/* Passport Photos Upload */}
+                <div className="form-group">
+                  <div className="file-header">
+                    <label>{t('auth.passportFile')}</label>
+                    <label className="btn-primary file-upload-btn">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handlePassportUpload}
+                        style={{ display: 'none' }}
+                        disabled={passportPhotos.length >= MAX_FILES}
+                      />
+                      + {t('auth.addPhoto')}
+                    </label>
+                  </div>
+                  {passportPhotos.length > 0 && (
+                    <div className="file-preview-grid">
+                      {passportPhotos.map((photo, index) => (
+                        <div key={index} className="file-preview-item">
+                          <img
+                            src={passportPreviews[index]}
+                            alt={`Passport ${index + 1}`}
+                            className="file-preview-img"
+                          />
+                          <div className="file-preview-name" title={photo.name}>{photo.name}</div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemovePassportPhoto(index)}
+                            className="file-preview-remove"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
-                <div className="input-group">
-                  <label className="file-label">
-                    {t('auth.driverLicenseFile')}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setDriverLicensePhoto(e.target.files?.[0] ?? null)}
-                    />
-                  </label>
-                  {driverLicensePhoto && (
-                    <div className="helper-text">
-                      {t('auth.fileSelectedText', {filename: driverLicensePhoto.name})}
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => handleDocumentPrint(driverLicensePhoto)}
-                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
-                        >
-                          🖨️ {t('auth.print')}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDocumentDownload(driverLicensePhoto)}
-                          style={{ padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid #666', background: 'transparent', color: '#fff', cursor: 'pointer' }}
-                        >
-                          💾 {t('auth.save')}
-                        </button>
-                      </div>
+
+                {/* Driver License Photos Upload */}
+                <div className="form-group">
+                  <div className="file-header">
+                    <label>{t('auth.driverLicenseFile')}</label>
+                    <label className="btn-primary file-upload-btn">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleDriverLicenseUpload}
+                        style={{ display: 'none' }}
+                        disabled={driverLicensePhotos.length >= MAX_FILES}
+                      />
+                      + {t('auth.addPhoto')}
+                    </label>
+                  </div>
+                  {driverLicensePhotos.length > 0 && (
+                    <div className="file-preview-grid">
+                      {driverLicensePhotos.map((photo, index) => (
+                        <div key={index} className="file-preview-item">
+                          <img
+                            src={driverLicensePreviews[index]}
+                            alt={`Driver License ${index + 1}`}
+                            className="file-preview-img"
+                          />
+                          <div className="file-preview-name" title={photo.name}>{photo.name}</div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDriverLicensePhoto(index)}
+                            className="file-preview-remove"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>

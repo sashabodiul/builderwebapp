@@ -100,6 +100,8 @@
     "measurementGuideLink": "Messanleitung",
     "passportFile": "Passfoto",
     "driverLicenseFile": "Führerscheinfoto",
+    "addPhoto": "Foto hinzufügen",
+    "maxFilesError": "Maximale Anzahl an Dateien: ",
     "fileSelectedText": "Datei ausgewählt: {{filename}}",
     "phoneInvalid": "Telefonnummer muss im Format +380XXXXXXXXX sein",
     "measurementInvalid": "Wert ist ungültig",

@@ -74,8 +74,8 @@ export type WorkerRegisterData = {
   inseam_cm?: number;
   head_circumference_cm?: number;
   foot_size?: number; // mm (insole length)
-  passport_photo?: File;
-  driver_license_photo?: File;
+  passport_photos?: File[];
+  driver_license_photos?: File[];
 };
 
 // payroll types
