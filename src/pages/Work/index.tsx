@@ -20,7 +20,11 @@ const Work: FC = () => {
   const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [workSummaryData, setWorkSummaryData] = useState<WorkProcessEndOut | null>(null);
-  window.Telegram.WebApp.BackButton.hide();
+
+  // Приховуємо кнопку назад для головного екрану Work
+  useEffect(() => {
+    window.Telegram.WebApp.BackButton.hide();
+  }, []);
 
   // Завантаження об'єктів з API
   useEffect(() => {
@@ -103,9 +107,9 @@ const Work: FC = () => {
     setCurrentScreen('history');
   };
 
-  // const handleHistoryBack = () => {
-  //   setCurrentScreen('main');
-  // };
+  const handleHistoryBack = () => {
+    setCurrentScreen('main');
+  };
 
   const getSelectedObjectName = () => {
     const facility = facilities.find(facility => facility.id.toString() === selectedObject);
@@ -149,7 +153,7 @@ const Work: FC = () => {
 
     case 'history':
       return (
-        <WorkHistory />
+        <WorkHistory onBack={handleHistoryBack} />
       );
 
     default:

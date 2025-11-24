@@ -8,6 +8,7 @@ import ImageViewer from '@/components/ui/ImageViewer';
 import { getWorkProcesses } from '@/requests/work';
 import { WorkProcessEndOut, WorkProcessStartOut } from '@/requests/work/types';
 import { toastError } from '@/lib/toasts';
+import useBackButton from '@/hooks/useBackButton';
 
 type Process = WorkProcessStartOut | WorkProcessEndOut;
 
@@ -17,13 +18,19 @@ const isEndedProcess = (process: Process): process is WorkProcessEndOut => {
   return 'end_time' in process;
 };
 
-const WorkHistory: FC = () => {
+interface WorkHistoryProps {
+  onBack: () => void;
+}
+
+const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [processes, setProcesses] = useState<Process[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasError, setHasError] = useState(false);
   const [page, setPage] = useState(1);
+
+  useBackButton(onBack);
 
   useEffect(() => {
     if (!user?.id) {
