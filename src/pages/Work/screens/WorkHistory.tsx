@@ -17,11 +17,7 @@ const isEndedProcess = (process: Process): process is WorkProcessEndOut => {
   return 'end_time' in process;
 };
 
-interface WorkHistoryProps {
-  onBack: () => void;
-}
-
-const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
+const WorkHistory: FC = () => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [processes, setProcesses] = useState<Process[]>([]);
@@ -185,11 +181,10 @@ const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
           <span className="text-base text-theme-text-muted font-medium">#{process.id}</span>
           <span className="text-2xl font-semibold text-theme-text-primary">{facilityName}</span>
           <span
-            className={`text-sm font-semibold px-3 py-1.5 rounded ${
-              process.status_object_finished
-                ? 'bg-green-500/10 text-green-400'
-                : 'bg-yellow-500/10 text-yellow-400'
-            }`}
+            className={`text-sm font-semibold px-3 py-1.5 rounded ${process.status_object_finished
+              ? 'bg-green-500/10 text-green-400'
+              : 'bg-yellow-500/10 text-yellow-400'
+              }`}
           >
             {process.status_object_finished
               ? t('admin.workProcesses.badges.finished')

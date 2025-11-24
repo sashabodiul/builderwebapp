@@ -26,12 +26,12 @@ const Work: FC = () => {
   useEffect(() => {
     const fetchFacilities = async () => {
       const response = await getFacilities();
-      
+
       if (response.error) {
         console.error('Failed to fetch facilities:', response);
         return;
       }
-      
+
       setFacilities(response.data);
     };
 
@@ -103,9 +103,9 @@ const Work: FC = () => {
     setCurrentScreen('history');
   };
 
-  const handleHistoryBack = () => {
-    setCurrentScreen('main');
-  };
+  // const handleHistoryBack = () => {
+  //   setCurrentScreen('main');
+  // };
 
   const getSelectedObjectName = () => {
     const facility = facilities.find(facility => facility.id.toString() === selectedObject);
@@ -149,9 +149,7 @@ const Work: FC = () => {
 
     case 'history':
       return (
-        <WorkHistory
-          onBack={handleHistoryBack}
-        />
+        <WorkHistory />
       );
 
     default:
