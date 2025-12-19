@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getApiEnvironment, setApiEnvironment, toggleApiEnvironment, type ApiEnvironment } from '../../../lib/apiConfig';
+import { getApiEnvironment, toggleApiEnvironment, type ApiEnvironment } from '../../../lib/apiConfig';
 import { updateApiBaseUrl } from '../../../requests/config';
 import './ApiEnvironmentSwitcher.scss';
 
