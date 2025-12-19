@@ -19,13 +19,22 @@ const useInitialFetching = () => {
       }
 
       // Extract telegram_id from Telegram WebApp or use debug value
-      let telegram_id: number;
+      let telegram_id: number | undefined;
 
       if (import.meta.env.VITE_DEBUG) {
         telegram_id = 1359929127;
       } else {
         const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
         telegram_id = telegramUser?.id;
+      }
+
+      // Skip if telegram_id is not available
+      if (!telegram_id) {
+        console.warn('Telegram ID not available');
+        dispatch(clearUser());
+        navigate('/login');
+        setIsLoaded(true);
+        return;
       }
 
       const response = await getWorkerByTelegramId(telegram_id);

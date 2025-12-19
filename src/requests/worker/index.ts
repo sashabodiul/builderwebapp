@@ -10,6 +10,7 @@ import {
   WorkerPayrollParams 
 } from "./types.ts";
 import { PaginationParams } from "../shared/types.ts";
+import axios from "axios";
 
 export const getWorkers = async (params?: PaginationParams): Promise<ApiResponse<WorkerOut[]>> => {
   const queryParams = new URLSearchParams();
@@ -25,7 +26,29 @@ export const getWorker = async (worker_id: number): Promise<ApiResponse<WorkerOu
 };
 
 export const getWorkerByTelegramId = async (telegram_id: number): Promise<ApiResponse<WorkerOut>> => {
-  return await apiRequest<WorkerOut>("GET", `/worker/telegram/${telegram_id}`);
+  // This endpoint should use bot-api, not api-crm
+  if (!telegram_id || isNaN(telegram_id)) {
+    return { data: {} as WorkerOut, error: new Error('Invalid telegram_id') };
+  }
+  
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const token = localStorage.getItem('authToken');
+  
+  try {
+    const response = await axios.get(`${botApiUrl}/api/v1/worker/telegram/${telegram_id}`, {
+      headers: {
+        'Accept': 'application/json',
+        ...(token && { 'Authorization': token }),
+      },
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkerOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const createWorker = async (data: WorkerCreate): Promise<ApiResponse<WorkerOut>> => {
