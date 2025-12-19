@@ -1,8 +1,24 @@
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
+import { getApiBaseUrl } from "../lib/apiConfig";
+
+// Use environment variable if set, otherwise use the configurable API URL
+const getBaseUrl = (): string => {
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (envUrl) {
+    // If env URL already contains /api/v1, don't add it again
+    return envUrl.endsWith('/api/v1') ? envUrl : envUrl + "/api/v1";
+  }
+  return getApiBaseUrl() + "/api/v1";
+};
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL + "/api/v1",
+  baseURL: getBaseUrl(),
 });
+
+// Update baseURL when environment changes
+export const updateApiBaseUrl = () => {
+  api.defaults.baseURL = getBaseUrl();
+};
 
 api.interceptors.request.use((config) => {
   const apiToken = import.meta.env.VITE_API_TOKEN;

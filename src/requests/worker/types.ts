@@ -59,12 +59,14 @@ export type WorkerRegisterData = {
   last_name: string;
   telegram_id?: number;
   username?: string;
-  language_code?: string;
+  lang_code?: string; // Changed from language_code
+  worker_type?: string;
+  rate?: number;
+  phone_number?: string;
   emergency_relative_phone?: string;
   emergency_relative_name?: string;
   home_address?: string;
-  geo_lat?: number;
-  geo_lng?: number;
+  bank_details?: string; // JSON string
   birth_date?: string; // YYYY-MM-DD
   height_cm?: number;
   top_waist_cm?: number;
@@ -73,7 +75,9 @@ export type WorkerRegisterData = {
   hips_cm?: number;
   inseam_cm?: number;
   head_circumference_cm?: number;
-  foot_size?: number; // mm (insole length)
+  foot_size?: number; // 0-600
+  passport_photo?: File; // Legacy single photo
+  driver_license_photo?: File; // Legacy single photo
   passport_photos?: File[];
   driver_license_photos?: File[];
 };

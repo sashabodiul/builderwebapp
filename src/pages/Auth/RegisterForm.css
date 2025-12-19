@@ -242,6 +242,10 @@ form { margin-top: .25rem; }
   line-height: 1.4;
 }
 
+.input-group .helper-text.error {
+  color: rgba(255, 93, 93, 0.9);
+}
+
 /* Ошибка / Валидность */
 .input-group.error input,
 .input-group.error select,

@@ -2,6 +2,7 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import routes from "./consts/pageRoutes";
 import Footer from "./components/layout/Footer";
+import ApiEnvironmentSwitcher from "./components/layout/ApiEnvironmentSwitcher";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
 import { useTelegramWebApp } from "./hooks/useTelegramWebApp";
@@ -111,6 +112,7 @@ function App() {
       </main>
 
       {!isAuthPage && !isRoutesPage && <Footer />}
+      <ApiEnvironmentSwitcher />
     </div>
   )
 }

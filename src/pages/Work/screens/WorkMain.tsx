@@ -61,7 +61,9 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         return;
       }
 
-      setFacilities(response.data);
+      // Ensure data is an array
+      const facilitiesData = Array.isArray(response.data) ? response.data : [];
+      setFacilities(facilitiesData);
       setIsLoading(false);
     };
 
