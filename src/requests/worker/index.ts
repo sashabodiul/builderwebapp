@@ -32,13 +32,14 @@ export const getWorkerByTelegramId = async (telegram_id: number): Promise<ApiRes
   }
   
   const botApiUrl = 'https://bot-api.skybud.de';
-  const token = localStorage.getItem('authToken');
+  // bot-api uses a static token, not JWT
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
   
   try {
     const response = await axios.get(`${botApiUrl}/api/v1/worker/telegram/${telegram_id}`, {
       headers: {
         'Accept': 'application/json',
-        ...(token && { 'Authorization': token }),
+        'Authorization': botApiToken,
       },
     });
     return { data: response.data };

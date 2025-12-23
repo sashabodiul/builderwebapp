@@ -2,7 +2,7 @@ import { Routes, Route, useLocation, Navigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import routes from "./consts/pageRoutes";
 import Footer from "./components/layout/Footer";
-// import ApiEnvironmentSwitcher from "./components/layout/ApiEnvironmentSwitcher";
+import ApiEnvironmentSwitcher from "./components/layout/ApiEnvironmentSwitcher";
 import {useEffect, useState} from "react";
 import useInitialFetching from "./hooks/useInitialFetching.ts";
 import { useTelegramWebApp } from "./hooks/useTelegramWebApp";
@@ -18,6 +18,7 @@ import Tasks from "./pages/Admin/screens/Tasks";
 import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
 import RoutesPage from "./pages/Routes";
 import RouteResultScreen from "@/pages/Routes/components/RouteResultScreen";
+import InfoRoad from "./pages/InfoRoad";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -38,6 +39,7 @@ function App() {
 
   const isAuthPage = location.pathname === '/register' || location.pathname === '/login';
   const isRoutesPage = location.pathname.startsWith('/routes');
+  const isInfoRoadPage = location.pathname.startsWith('/inforoad');
 
   const loadingFallback = (
     <div className="p-6 text-theme-text-muted text-center">loading…</div>
@@ -108,11 +110,15 @@ function App() {
             path={routes.REGISTER} 
             element={renderPublicOnly(<RegisterForm />)} 
           />
+          <Route 
+            path={routes.INFO_ROAD} 
+            element={<InfoRoad />} 
+          />
         </Routes>
       </main>
 
-      {!isAuthPage && !isRoutesPage && <Footer />}
-      {/* <ApiEnvironmentSwitcher /> */}
+      {!isAuthPage && !isRoutesPage && !isInfoRoadPage && <Footer />}
+      <ApiEnvironmentSwitcher />
     </div>
   )
 }

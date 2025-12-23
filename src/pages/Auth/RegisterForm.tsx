@@ -151,7 +151,15 @@ const RegisterForm = () => {
 
   // Initialize Telegram data - автоматически получаем из Telegram WebApp
   useEffect(() => {
-    if (import.meta.env.VITE_DEBUG) {
+    // Check for override in localStorage (can be quickly disabled by removing the key)
+    const overrideTelegramId = localStorage.getItem('override_telegram_id');
+    if (overrideTelegramId && overrideTelegramId !== 'disabled') {
+      const parsedId = parseInt(overrideTelegramId, 10);
+      if (!isNaN(parsedId)) {
+        setTelegramId(parsedId);
+        console.log(`[DEBUG] Using overridden telegram_id: ${parsedId}`);
+      }
+    } else if (import.meta.env.VITE_DEBUG) {
       // Hardcoded values for development
       setTelegramId(1359929127);
       setUsername('tweeedlex');
@@ -475,13 +483,20 @@ const RegisterForm = () => {
           }
 
           // Use bot-api URL for this request
+          // bot-api uses a static token, not JWT
           const botApiUrl = 'https://bot-api.skybud.de';
-          await axios.post(`${botApiUrl}/api/v1/worker/`, workerData, {
+          const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+          const workerResponse = await axios.post(`${botApiUrl}/api/v1/worker/`, workerData, {
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': registerResponse.access_token,
+              'Authorization': botApiToken,
             },
           });
+          
+          // Save bot-api worker id for future requests
+          if (workerResponse.data?.id) {
+            localStorage.setItem('botApiWorkerId', String(workerResponse.data.id));
+          }
         } catch (workerErr: any) {
           // Log error but don't fail registration if worker creation fails
           console.warn('Failed to create worker record in bot-api:', workerErr);

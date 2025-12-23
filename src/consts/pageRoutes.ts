@@ -9,4 +9,5 @@ export default {
   ADMIN_TASKS: "/admin/tasks",
   ADMIN_WORK_PROCESSES: "/admin/work-processes",
   REGISTER: "/register",
+  INFO_ROAD: "/inforoad/:tg_id",
 }

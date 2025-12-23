@@ -1,6 +1,7 @@
 import { apiRequest } from '../index';
 import { ApiResponse } from '../shared/types';
 import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData } from './types';
+import axios from 'axios';
 
 export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkProcessStartOut>> => {
   const formData = new URLSearchParams();
@@ -55,15 +56,47 @@ export const getWorkProcesses = async (params?: {
   facility_id?: number | null;
   facility_type_id?: number | null;
 }): Promise<ApiResponse<(WorkProcessStartOut | WorkProcessEndOut)[]>> => {
+  // This endpoint should use bot-api, not api-crm
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  
   const queryParams = new URLSearchParams();
   if (params?.limit !== undefined) queryParams.append('limit', params.limit.toString());
   if (params?.offset !== undefined) queryParams.append('offset', params.offset.toString());
-  if (params?.worker_id !== undefined && params.worker_id !== null) queryParams.append('worker_id', params.worker_id.toString());
+  
+  // Use bot-api worker id (numeric id from bot-api response)
+  if (params?.worker_id !== undefined && params.worker_id !== null) {
+    // Get bot-api worker id from localStorage (numeric id from bot-api)
+    const botApiWorkerId = localStorage.getItem('botApiWorkerId');
+    if (botApiWorkerId) {
+      queryParams.append('worker_id', botApiWorkerId);
+    } else {
+      // If bot-api id not available, try to use crm_id as fallback
+      // But ideally bot-api id should be set after registration/login
+      queryParams.append('worker_id', params.worker_id.toString());
+    }
+  }
+  
   if (params?.facility_id !== undefined && params.facility_id !== null) queryParams.append('facility_id', params.facility_id.toString());
   if (params?.facility_type_id !== undefined && params.facility_type_id !== null) queryParams.append('facility_type_id', params.facility_type_id.toString());
   
-  const url = queryParams.toString() ? `/work/?${queryParams.toString()}` : '/work/';
-  return await apiRequest<(WorkProcessStartOut | WorkProcessEndOut)[]>("GET", url);
+  const url = queryParams.toString() ? `/api/v1/work/?${queryParams.toString()}` : '/api/v1/work/';
+  
+  try {
+    const response = await axios.get(`${botApiUrl}${url}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: [] as (WorkProcessStartOut | WorkProcessEndOut)[],
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const getActiveWorkProcess = async (worker_id: number): Promise<ApiResponse<WorkProcessStartOut | null>> => {
