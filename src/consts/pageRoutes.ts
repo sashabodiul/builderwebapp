@@ -8,6 +8,8 @@ export default {
   ADMIN_WORKERS: "/admin/workers",
   ADMIN_TASKS: "/admin/tasks",
   ADMIN_WORK_PROCESSES: "/admin/work-processes",
+  ADMIN_VEHICLE_RESERVATIONS: "/admin/vehicle-reservations",
+  ADMIN_VEHICLE_MANAGEMENT: "/admin/vehicle-management",
   REGISTER: "/register",
   INFO_ROAD: "/inforoad/:tg_id",
 }

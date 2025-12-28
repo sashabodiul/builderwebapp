@@ -16,6 +16,8 @@ import FacilityTypes from "./pages/Admin/screens/FacilityTypes";
 import Workers from "./pages/Admin/screens/Workers";
 import Tasks from "./pages/Admin/screens/Tasks";
 import WorkProcesses from "./pages/Admin/screens/WorkProcesses";
+import VehicleReservations from "./pages/Admin/screens/VehicleReservations";
+import VehicleManagement from "./pages/Admin/screens/VehicleManagement";
 import RoutesPage from "./pages/Routes";
 import RouteResultScreen from "@/pages/Routes/components/RouteResultScreen";
 import InfoRoad from "./pages/InfoRoad";
@@ -101,6 +103,14 @@ function App() {
           <Route 
             path={routes.ADMIN_WORK_PROCESSES} 
             element={renderAdminOnly(<WorkProcesses />)} 
+          />
+          <Route 
+            path={routes.ADMIN_VEHICLE_RESERVATIONS} 
+            element={renderAdminOnly(<VehicleReservations />)} 
+          />
+          <Route 
+            path={routes.ADMIN_VEHICLE_MANAGEMENT} 
+            element={renderAdminOnly(<VehicleManagement />)} 
           />
           <Route 
             path="/login" 

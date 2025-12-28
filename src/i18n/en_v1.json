@@ -250,7 +250,10 @@
       "selectDatesFirst": "Please choose the start and end date",
       "dateFrom": "Start date",
       "dateTo": "End date",
-      "dateHint": "Pick the period in which you need the vehicle. Dates are required."
+      "dateHint": "Pick the period in which you need the vehicle. Dates are required.",
+      "showAll": "Show all",
+      "showLess": "Hide",
+      "available": "Available"
     },
     "required": "Required",
     "todoList": "Task List",

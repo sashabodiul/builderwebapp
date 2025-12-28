@@ -1,7 +1,7 @@
 import { FC, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock, Loader2 } from 'lucide-react';
+import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock, Loader2, Clock, X, AlertCircle } from 'lucide-react';
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
 import { startWork, getActiveWorkProcess } from '../../../requests/work';
@@ -9,15 +9,8 @@ import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import TodoList from './TodoList';
 import { Button } from '@/components/ui/button';
-import { getVehicles, assignVehicle } from '../../../requests/vehicle';
-import { Vehicle } from '../../../requests/vehicle/types';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { getVehicles, unassignVehicle, createVehicleReservationRequest, getWorkerReservedVehicle, getVehicleReservationRequests, cancelVehicleReservationRequest } from '../../../requests/vehicle';
+import { Vehicle, VehicleReservationRequestOut } from '../../../requests/vehicle/types';
 import type { RootState } from '@/store/config';
 
 interface WorkMainProps {
@@ -38,7 +31,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [isStartingWork, setIsStartingWork] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reservedVehicle, setReservedVehicle] = useState<Vehicle | null>(null);
-  const [isVehicleModalOpen, setIsVehicleModalOpen] = useState(false);
+  const [reservationRequest, setReservationRequest] = useState<VehicleReservationRequestOut | null>(null);
   const [isVehiclesLoading, setIsVehiclesLoading] = useState(false);
   const [isVehicleActionLoading, setIsVehicleActionLoading] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
@@ -46,7 +39,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [dateTo, setDateTo] = useState<string>('');
   const isRestricted = !user?.rate || user?.worker_type == null;
   const availableVehicles = useMemo(
-    () => vehicles.filter(vehicle => vehicle.owner_id == null && vehicle.external_id != null),
+    () => vehicles.filter(vehicle => (vehicle.owner_id == null || vehicle.owner_id === 0) && vehicle.external_id != null),
     [vehicles]
   );
 
@@ -90,18 +83,57 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       }
 
       const vehiclesList = response.data ?? [];
-      const ownedVehicle = vehiclesList.find(vehicle => vehicle.owner_id === user.id) || null;
-      setReservedVehicle(ownedVehicle);
+      
+      // Check worker's reservation status
+      // Only check if we don't already have a reservation request in state (to avoid overwriting just-created requests)
+      if (user?.id && !reservationRequest) {
+        // Use the simplified endpoint that returns reservation status for the worker
+        const reservationResponse = await getWorkerReservedVehicle(user.id);
+        if (reservationResponse.data) {
+          if (reservationResponse.data.has_reservation && reservationResponse.data.reservation?.status === 'approved') {
+            setReservedVehicle(reservationResponse.data.vehicle);
+            setReservationRequest(reservationResponse.data.reservation);
+          } else if (reservationResponse.data.reservation) {
+            // Has pending/rejected/cancelled request
+            setReservationRequest(reservationResponse.data.reservation);
+            setReservedVehicle(null);
+          } else {
+            // Check for pending requests using worker_id filter
+            try {
+              const pendingRequestsResponse = await getVehicleReservationRequests({ 
+                worker_id: user.id,
+                status: 'pending',
+                limit: 1,
+                offset: 0
+              });
+              if (pendingRequestsResponse.data && pendingRequestsResponse.data.length > 0) {
+                setReservationRequest(pendingRequestsResponse.data[0]);
+                setReservedVehicle(null);
+              } else {
+                setReservedVehicle(null);
+                setReservationRequest(null);
+              }
+            } catch (error) {
+              console.error('Error checking pending requests:', error);
+              setReservedVehicle(null);
+              setReservationRequest(null);
+            }
+          }
+        } else {
+          setReservedVehicle(null);
+          setReservationRequest(null);
+        }
+      }
 
       const visibleVehicles = vehiclesList.filter(
-        vehicle => !(vehicle.external_id === null && vehicle.owner_id !== null)
+        vehicle => !(vehicle.external_id === null && vehicle.owner_id !== null && vehicle.owner_id !== 0)
       );
       setVehicles(visibleVehicles);
 
-      if (ownedVehicle) {
-        setSelectedVehicleId(ownedVehicle.id);
+      if (reservedVehicle) {
+        setSelectedVehicleId(reservedVehicle.id);
       } else {
-        const firstAvailable = visibleVehicles.find(vehicle => vehicle.owner_id == null);
+        const firstAvailable = visibleVehicles.find(vehicle => vehicle.owner_id == null || vehicle.owner_id === 0);
         setSelectedVehicleId(firstAvailable ? firstAvailable.id : null);
       }
     } catch (error) {
@@ -210,64 +242,84 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     onStopWork();
   };
 
-  const handleOpenVehicleModal = () => {
-    if (isVehicleActionLoading) return;
-    setIsVehicleModalOpen(true);
-    setDateFrom('');
-    setDateTo('');
-    if (!reservedVehicle && availableVehicles.length > 0) {
-      setSelectedVehicleId(availableVehicles[0].id);
-    }
-    fetchVehicles();
-  };
 
-  const formatDatePayload = (dateString: string) => {
-    if (!dateString) return null;
-    const [year, month, day] = dateString.split('-');
-    if (!year || !month || !day) return null;
-    return `${day}.${month}.${year}`;
+  const handleSelectVehicle = (vehicleId: number) => {
+    setSelectedVehicleId(vehicleId);
   };
 
   const handleReserveVehicle = async () => {
-    if (!selectedVehicleId) {
+    if (!selectedVehicleId || !user?.id) {
       toastError(t('work.vehicle.selectVehicleFirst'));
       return;
     }
 
-    if (!dateFrom || !dateTo) {
-      toastError(t('work.vehicle.selectDatesFirst'));
+    // Validate that at least one date is selected
+    if (!dateFrom && !dateTo) {
+      toastError(t('work.vehicle.selectDateFirst', 'Пожалуйста, выберите дату бронирования'));
       return;
     }
 
-    const formattedDateFrom = formatDatePayload(dateFrom);
-    const formattedDateTo = formatDatePayload(dateTo);
-
-    if (!formattedDateFrom || !formattedDateTo) {
-      toastError(t('work.vehicle.selectDatesFirst'));
-      return;
-    }
-
+    // All users create reservation requests, not direct assign
     setIsVehicleActionLoading(true);
     try {
-      const response = await assignVehicle(selectedVehicleId, {
-        owner_id: user?.id ?? null,
-        date_from: formattedDateFrom,
-        date_to: formattedDateTo,
-      });
+      const payload: any = {
+        vehicle_id: selectedVehicleId,
+        worker_id: user.id,
+      };
+      
+      // Add dates if provided
+      if (dateFrom) {
+        payload.date_from = dateFrom;
+      }
+      if (dateTo) {
+        payload.date_to = dateTo;
+      }
+      
+      const response = await createVehicleReservationRequest(payload);
 
       if (response.error) {
-        console.error('Failed to reserve vehicle:', response);
-        toastError(t('work.vehicle.actionError'));
+        console.error('Failed to create reservation request:', response);
+        const errorMsg = (response.error as any)?.response?.data?.detail || t('work.vehicle.actionError');
+        toastError(errorMsg);
         return;
       }
 
-      toastSuccess(t('work.vehicle.reserveSuccess'));
-      setIsVehicleModalOpen(false);
+      // Update reservation request state immediately
+      if (response.data) {
+        setReservationRequest(response.data);
+        setReservedVehicle(null);
+      }
+
+      toastSuccess(t('work.vehicle.requestSent', 'Запрос на бронирование авто успешно отправлен'));
+      setSelectedVehicleId(null);
       setDateFrom('');
       setDateTo('');
-      await fetchVehicles();
+      
+      // Refresh vehicles list, but preserve the reservation request we just created
+      const createdRequest = response.data;
+      
+      // Don't call fetchVehicles immediately - it might overwrite the state
+      // Instead, just refresh the vehicles list without checking reservation status
+      try {
+        const vehiclesResponse = await getVehicles();
+        if (!vehiclesResponse.error && vehiclesResponse.data) {
+          const vehiclesList = vehiclesResponse.data;
+          const visibleVehicles = vehiclesList.filter(
+            vehicle => !(vehicle.external_id === null && vehicle.owner_id !== null && vehicle.owner_id !== 0)
+          );
+          setVehicles(visibleVehicles);
+        }
+      } catch (error) {
+        console.error('Error refreshing vehicles:', error);
+      }
+      
+      // Ensure reservation request is set
+      if (createdRequest) {
+        setReservationRequest(createdRequest);
+        setReservedVehicle(null);
+      }
     } catch (error) {
-      console.error('Error reserving vehicle:', error);
+      console.error('Error creating reservation request:', error);
       toastError(t('work.vehicle.actionError'));
     } finally {
       setIsVehicleActionLoading(false);
@@ -281,22 +333,48 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
     setIsVehicleActionLoading(true);
     try {
-      const response = await assignVehicle(reservedVehicle.id, {
-        owner_id: null,
-        date_from: null,
-        date_to: null,
-      });
+      const response = await unassignVehicle(reservedVehicle.id);
 
       if (response.error) {
         console.error('Failed to release vehicle:', response);
-        toastError(t('work.vehicle.actionError'));
+        const errorMsg = (response.error as any)?.response?.data?.detail || t('work.vehicle.actionError');
+        toastError(errorMsg);
         return;
       }
 
       toastSuccess(t('work.vehicle.releaseSuccess'));
+      setReservedVehicle(null);
+      setReservationRequest(null);
       await fetchVehicles();
     } catch (error) {
       console.error('Error releasing vehicle:', error);
+      toastError(t('work.vehicle.actionError'));
+    } finally {
+      setIsVehicleActionLoading(false);
+    }
+  };
+
+  const handleCancelRequest = async () => {
+    if (!reservationRequest || reservationRequest.status !== 'pending') {
+      return;
+    }
+
+    setIsVehicleActionLoading(true);
+    try {
+      const response = await cancelVehicleReservationRequest(reservationRequest.id);
+
+      if (response.error) {
+        console.error('Failed to cancel request:', response);
+        const errorMsg = (response.error as any)?.response?.data?.detail || t('work.vehicle.actionError');
+        toastError(errorMsg);
+        return;
+      }
+
+      toastSuccess(t('work.vehicle.requestCancelled', 'Запрос отменен'));
+      setReservationRequest(null);
+      await fetchVehicles();
+    } catch (error) {
+      console.error('Error cancelling request:', error);
       toastError(t('work.vehicle.actionError'));
     } finally {
       setIsVehicleActionLoading(false);
@@ -378,75 +456,302 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         )}
 
         {!isRestricted && (
-          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
-            <div className="flex flex-col gap-4">
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-4 mb-4">
+            <div className="flex flex-col gap-3">
               <div>
-                <h2 className="text-2xl font-bold text-theme-text-primary">
-                  {reservedVehicle ? t('work.vehicle.alreadyReservedTitle') : t('work.vehicle.sectionTitle')}
+                <h2 className="text-lg font-bold text-theme-text-primary">
+                  {reservedVehicle && reservationRequest?.status === 'approved' 
+                    ? t('work.vehicle.alreadyReservedTitle') 
+                    : reservationRequest?.status === 'pending'
+                    ? t('work.vehicle.requestPendingTitle', 'Запрос на бронирование')
+                    : t('work.vehicle.sectionTitle')}
                 </h2>
               </div>
               {isVehiclesLoading ? (
-                <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
+                <div className="flex justify-center items-center py-4 text-sm text-theme-text-secondary">
                   {t('common.loading')}
                 </div>
-              ) : reservedVehicle ? (
+              ) : reservedVehicle && reservationRequest?.status === 'approved' ? (
                 <>
-                  <div className="bg-theme-accent/15 border border-theme-accent rounded-xl p-5 flex flex-col gap-2">
-                    <div className="flex items-center gap-3">
-                      <Car className="h-8 w-8 text-theme-accent" />
-                      <span className="text-2xl font-semibold text-theme-text-primary">
-                        {reservedVehicle.model || t('work.vehicle.unknownModel')}
-                      </span>
+                  <div className="bg-theme-accent/15 border border-theme-accent rounded-lg p-3 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Car className="h-5 w-5 text-theme-text-primary flex-shrink-0" />
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-base font-semibold text-theme-text-primary truncate">
+                          {reservedVehicle.model || t('work.vehicle.unknownModel')}
+                        </span>
+                        <span className="text-sm text-theme-text-secondary truncate">
+                          {reservedVehicle.license_plate
+                            ? t('work.vehicle.licensePlate', { plate: reservedVehicle.license_plate })
+                            : t('work.vehicle.noLicensePlate')}
+                        </span>
+                      </div>
                     </div>
-                    <span className="text-lg text-theme-text-secondary">
-                      {reservedVehicle.license_plate
-                        ? t('work.vehicle.licensePlate', { plate: reservedVehicle.license_plate })
-                        : t('work.vehicle.noLicensePlate')}
-                    </span>
                   </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-                    <Button
-                      variant="destructive"
-                      size="lg"
-                      className="text-lg font-semibold px-6 py-4 h-auto"
-                      onClick={handleReleaseVehicle}
-                      disabled={isVehicleActionLoading}
-                    >
-                      {isVehicleActionLoading ? (
-                        <>
-                          <Loader2 className="h-6 w-6 animate-spin" />
-                          {t('work.vehicle.releaseLoading')}
-                        </>
-                      ) : (
-                        <>
-                          <Unlock className="h-6 w-6" />
-                          {t('work.vehicle.releaseButton')}
-                        </>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="w-full text-sm font-semibold py-2.5 h-auto"
+                    onClick={handleReleaseVehicle}
+                    disabled={isVehicleActionLoading}
+                  >
+                    {isVehicleActionLoading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="ml-2">{t('work.vehicle.releaseLoading')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Unlock className="h-4 w-4" />
+                        <span className="ml-2">{t('work.vehicle.releaseButton')}</span>
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : reservationRequest ? (
+                <>
+                  <div className="border border-theme-border rounded-lg p-4 bg-theme-bg-card">
+                    <div className="flex flex-col gap-3">
+                      {/* Vehicle Info */}
+                      <div className="flex items-start gap-3">
+                        <div className={`flex-shrink-0 w-12 h-12 rounded-lg flex items-center justify-center ${
+                          reservationRequest.status === 'pending'
+                            ? 'bg-amber-200 border-2 border-amber-400'
+                            : reservationRequest.status === 'rejected'
+                            ? 'bg-rose-200 border-2 border-rose-400'
+                            : 'bg-theme-accent/20 border-2 border-theme-accent/30'
+                        }`}>
+                          <Car className="h-6 w-6 text-theme-text-primary" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-lg font-bold text-theme-text-primary mb-1">
+                            {vehicles.find(v => v.id === reservationRequest.vehicle_id)?.model || t('work.vehicle.unknownModel')}
+                          </div>
+                          {vehicles.find(v => v.id === reservationRequest.vehicle_id)?.license_plate && (
+                            <div className="text-sm text-theme-text-secondary font-medium">
+                              {vehicles.find(v => v.id === reservationRequest.vehicle_id)?.license_plate}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <div className="flex items-center gap-2">
+                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-semibold ${
+                          reservationRequest.status === 'pending'
+                            ? 'bg-amber-200 text-amber-900 border border-amber-400'
+                            : reservationRequest.status === 'rejected'
+                            ? 'bg-rose-200 text-rose-900 border border-rose-400'
+                            : 'bg-slate-200 text-slate-900 border border-slate-400'
+                        }`}>
+                          {reservationRequest.status === 'pending' && (
+                            <>
+                              <Clock className="h-4 w-4 text-amber-900" />
+                              {t('work.vehicle.awaitingApproval', 'Ожидается подтверждение')}
+                            </>
+                          )}
+                          {reservationRequest.status === 'rejected' && (
+                            <>
+                              <X className="h-4 w-4 text-rose-900" />
+                              {t('work.vehicle.requestRejected', 'Запрос отклонен')}
+                            </>
+                          )}
+                          {reservationRequest.status === 'cancelled' && (
+                            <>
+                              <AlertCircle className="h-4 w-4 text-slate-900" />
+                              {t('work.vehicle.requestCancelled', 'Запрос отменен')}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Dates Info */}
+                      {(reservationRequest.date_from || reservationRequest.date_to) && (
+                        <div className="text-sm text-theme-text-secondary space-y-1">
+                          {reservationRequest.date_from && (
+                            <div>
+                              <span className="font-medium text-theme-text-primary">{t('work.vehicle.dateFrom', 'Дата с')}:</span>{' '}
+                              {new Date(reservationRequest.date_from).toLocaleDateString('ru-RU')}
+                            </div>
+                          )}
+                          {reservationRequest.date_to && (
+                            <div>
+                              <span className="font-medium text-theme-text-primary">{t('work.vehicle.dateTo', 'Дата по')}:</span>{' '}
+                              {new Date(reservationRequest.date_to).toLocaleDateString('ru-RU')}
+                            </div>
+                          )}
+                        </div>
                       )}
-                    </Button>
+
+                      {/* Rejection Reason */}
+                      {reservationRequest.status === 'rejected' && reservationRequest.rejection_reason && (
+                        <div className="bg-rose-50 border border-rose-200 rounded-lg p-3">
+                          <div className="text-sm font-semibold text-rose-900 mb-1">
+                            {t('work.vehicle.rejectionReason', 'Причина отклонения')}:
+                          </div>
+                          <div className="text-sm text-rose-800">
+                            {reservationRequest.rejection_reason}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Date Info */}
+                      <div className="text-sm text-theme-text-secondary">
+                        <span className="font-medium text-theme-text-primary">{t('work.vehicle.requestCreatedAt', 'Запрос создан')}:</span>{' '}
+                        {new Date(reservationRequest.created_at).toLocaleString('ru-RU')}
+                      </div>
+
+                      {/* Cancel Button */}
+                      {reservationRequest.status === 'pending' && (
+                        <div className="flex justify-end pt-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-sm font-semibold px-4 py-2 border-rose-400 text-rose-700 bg-rose-50"
+                            onClick={handleCancelRequest}
+                            disabled={isVehicleActionLoading}
+                          >
+                            {isVehicleActionLoading ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                {t('common.processing', 'Обработка...')}
+                              </>
+                            ) : (
+                              <>
+                                <X className="h-4 w-4 mr-2" />
+                                {t('work.vehicle.cancelRequest', 'Отменить запрос')}
+                              </>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="bg-theme-bg-tertiary border border-theme-border rounded-xl p-5 flex items-center gap-3">
-                    <Car className="h-8 w-8 text-theme-accent flex-shrink-0" />
-                    <span className="text-xl text-theme-text-primary font-semibold">
-                      {availableVehicles.length > 0
-                        ? t('work.vehicle.availableCount', { count: availableVehicles.length })
-                        : t('work.vehicle.noAvailable')}
-                    </span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-                    <Button
-                      size="lg"
-                      className="text-lg font-semibold px-6 py-4 h-auto"
-                      onClick={handleOpenVehicleModal}
-                      disabled={availableVehicles.length === 0}
-                    >
-                      <Car className="h-6 w-6" />
-                      {t('work.vehicle.reserveButton')}
-                    </Button>
-                  </div>
+                  {availableVehicles.length > 0 ? (
+                    <>
+                      <div className="bg-theme-bg-tertiary border border-theme-border rounded-lg p-2.5 flex items-center gap-2 mb-2">
+                        <Car className="h-4 w-4 text-theme-text-primary flex-shrink-0" />
+                        <span className="text-xs font-semibold text-theme-text-primary">
+                          {t('work.vehicle.availableCount', { count: availableVehicles.length })}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2 max-h-[280px] overflow-y-auto custom-scrollbar -mx-1 px-1">
+                        {availableVehicles.map((vehicle) => {
+                          const isSelected = selectedVehicleId === vehicle.id;
+                          return (
+                            <button
+                              key={vehicle.id}
+                              type="button"
+                              onClick={() => handleSelectVehicle(vehicle.id)}
+                              className={`relative group w-full text-left bg-gradient-to-r from-theme-bg-secondary to-theme-bg-tertiary border-2 rounded-xl p-3.5 active:scale-[0.98] transition-all duration-200 shadow-sm hover:shadow-md ${
+                                isSelected
+                                  ? 'border-theme-accent bg-theme-accent/10 shadow-lg shadow-theme-accent/20'
+                                  : 'border-theme-border hover:border-theme-accent/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center border ${
+                                  isSelected
+                                    ? 'bg-theme-accent border-theme-accent'
+                                    : 'bg-theme-accent/20 border-theme-accent/30'
+                                }`}>
+                                  <Car className={`h-5 w-5 ${isSelected ? 'text-white' : 'text-theme-text-primary'}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-base font-bold text-theme-text-primary truncate mb-0.5">
+                                    {vehicle.model || t('work.vehicle.unknownModel')}
+                                  </div>
+                                  <div className="text-xs font-medium text-theme-text-secondary">
+                                    {vehicle.license_plate || t('work.vehicle.noLicensePlate')}
+                                  </div>
+                                </div>
+                                <div className={`flex-shrink-0 text-xs font-semibold px-2 py-1 rounded-md ${
+                                  isSelected
+                                    ? 'text-white bg-theme-accent'
+                                    : 'text-theme-accent bg-theme-accent/10'
+                                }`}>
+                                  {isSelected ? t('work.vehicle.selected', 'Выбрано') : t('work.vehicle.available', 'Доступно')}
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <div className="absolute top-2 right-2 w-2 h-2 bg-theme-accent rounded-full animate-pulse" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      
+                      {/* Date Selection */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-xs font-medium text-theme-text-primary flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {t('work.vehicle.dateFrom', 'Дата с')}
+                          </span>
+                          <input
+                            type="date"
+                            value={dateFrom}
+                            onChange={(e) => setDateFrom(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-theme-border rounded-lg bg-theme-bg-secondary text-theme-text-primary focus:ring-2 focus:ring-theme-accent focus:border-transparent"
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1.5">
+                          <span className="text-xs font-medium text-theme-text-primary flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            {t('work.vehicle.dateTo', 'Дата по')}
+                          </span>
+                          <input
+                            type="date"
+                            value={dateTo}
+                            onChange={(e) => setDateTo(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-theme-border rounded-lg bg-theme-bg-secondary text-theme-text-primary focus:ring-2 focus:ring-theme-accent focus:border-transparent"
+                            min={dateFrom || new Date().toISOString().split('T')[0]}
+                          />
+                        </label>
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        className={`w-full text-sm font-bold py-3 h-auto shadow-lg mt-3 transition-all ${
+                          selectedVehicleId && (dateFrom || dateTo)
+                            ? 'bg-theme-accent hover:bg-theme-accent/90 text-white'
+                            : 'bg-theme-bg-tertiary text-theme-text-muted border border-theme-border'
+                        }`}
+                        onClick={handleReserveVehicle}
+                        disabled={!selectedVehicleId || !(dateFrom || dateTo) || isVehicleActionLoading}
+                      >
+                        {isVehicleActionLoading ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <span className="ml-2">{t('work.vehicle.reserveLoading', 'Бронирование...')}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Car className="h-4 w-4" />
+                            <span className="ml-2">
+                              {!selectedVehicleId
+                                ? t('work.vehicle.selectVehicleFirst', 'Выберите авто')
+                                : !(dateFrom || dateTo)
+                                ? t('work.vehicle.selectDateFirst', 'Выберите дату')
+                                : t('work.vehicle.createRequest', 'Подать запрос')
+                              }
+                            </span>
+                          </>
+                        )}
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="text-center py-6">
+                      <div className="text-sm text-theme-text-muted">
+                        {t('work.vehicle.noAvailable')}
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -539,113 +844,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </>
         )}
       </div>
-
-      <Dialog
-        open={isVehicleModalOpen}
-        onOpenChange={(open) => {
-          setIsVehicleModalOpen(open);
-          if (!open) {
-            setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
-            setDateFrom('');
-            setDateTo('');
-          }
-        }}
-      >
-        <DialogContent className="max-w-2xl bg-theme-bg-card border border-theme-border text-theme-text-primary max-h-[100vh] overflow-y-auto sm:max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-theme-text-primary">
-              {t('work.vehicle.modalTitle')}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label className="flex flex-col gap-2 text-lg text-theme-text-primary">
-              <span className="font-semibold text-xl">{t('work.vehicle.dateFrom')}</span>
-              <input
-                type="date"
-                value={dateFrom}
-                onChange={(event) => setDateFrom(event.target.value)}
-                className="w-full rounded-xl border-2 border-theme-border bg-theme-bg-tertiary px-4 py-3 text-lg text-theme-text-primary focus:border-theme-accent focus:outline-none"
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-lg text-theme-text-primary">
-              <span className="font-semibold text-xl">{t('work.vehicle.dateTo')}</span>
-              <input
-                type="date"
-                value={dateTo}
-                onChange={(event) => setDateTo(event.target.value)}
-                className="w-full rounded-xl border-2 border-theme-border bg-theme-bg-tertiary px-4 py-3 text-lg text-theme-text-primary focus:border-theme-accent focus:outline-none"
-              />
-            </label>
-          </div>
-          {isVehiclesLoading ? (
-            <div className="flex justify-center items-center py-6 text-lg text-theme-text-secondary">
-              {t('common.loading')}
-            </div>
-          ) : availableVehicles.length === 0 ? (
-            <div className="text-theme-text-secondary text-lg">
-              {t('work.vehicle.noAvailable')}
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar">
-              {availableVehicles.map((vehicle) => (
-                <button
-                  type="button"
-                  key={vehicle.id}
-                  onClick={() => setSelectedVehicleId(vehicle.id)}
-                  className={`w-full text-left p-5 border-2 rounded-xl transition-all ${selectedVehicleId === vehicle.id
-                    ? 'border-theme-accent bg-theme-accent/10 shadow-lg'
-                    : 'border-theme-border hover:border-theme-accent/40'
-                    }`}
-                >
-                  <div className="flex flex-col gap-2">
-                    <span className="text-xl font-semibold text-theme-text-primary">
-                      {vehicle.model || t('work.vehicle.unknownModel')}
-                    </span>
-                    <span className="text-lg text-theme-text-secondary">
-                      {vehicle.license_plate
-                        ? t('work.vehicle.licensePlate', { plate: vehicle.license_plate })
-                        : t('work.vehicle.noLicensePlate')}
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-          <DialogFooter className="gap-3 sm:justify-end">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="text-lg font-semibold px-6 py-4 h-auto border-2 border-theme-border hover:border-theme-accent"
-              onClick={() => {
-                setIsVehicleModalOpen(false);
-                setSelectedVehicleId(reservedVehicle ? reservedVehicle.id : null);
-                setDateFrom('');
-                setDateTo('');
-              }}
-            >
-              {t('work.cancel')}
-            </Button>
-            <Button
-              size="lg"
-              className="text-lg font-semibold px-6 py-4 h-auto"
-              onClick={handleReserveVehicle}
-              disabled={!selectedVehicleId || isVehicleActionLoading}
-            >
-              {isVehicleActionLoading ? (
-                <>
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  {t('work.vehicle.reserveLoading')}
-                </>
-              ) : (
-                <>
-                  <Car className="h-6 w-6" />
-                  {t('work.vehicle.reserveAction')}
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

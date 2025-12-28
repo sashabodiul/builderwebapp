@@ -1,7 +1,7 @@
 import { FC } from 'react';
 // link not used directly, shared card handles it
 import { useTranslation } from 'react-i18next';
-import { Building, Building2, Users, CheckSquare, ArrowRight, Clock } from 'lucide-react';
+import { Building, Building2, Users, CheckSquare, ArrowRight, Clock, Car, Settings } from 'lucide-react';
 import useBackButton from '@/hooks/useBackButton';
 import FeatureLinkCard from '@/components/ui/FeatureLinkCard';
 
@@ -44,6 +44,20 @@ const Admin: FC = () => {
       icon: <Clock className="h-6 w-6" />,
       color: "blue",
       link: "/admin/work-processes"
+    },
+    {
+      title: t('admin.vehicleReservations.title', 'Запросы на бронирование'),
+      description: t('admin.vehicleReservations.subtitle', 'Управление запросами на бронирование авто'),
+      icon: <Car className="h-6 w-6" />,
+      color: "orange",
+      link: "/admin/vehicle-reservations"
+    },
+    {
+      title: t('admin.vehicleManagement.title', 'Управление машинами'),
+      description: t('admin.vehicleManagement.subtitle', 'Прямое бронирование и освобождение машин'),
+      icon: <Settings className="h-6 w-6" />,
+      color: "blue",
+      link: "/admin/vehicle-management"
     }
   ];
 

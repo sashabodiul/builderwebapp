@@ -219,7 +219,10 @@
       "selectDatesFirst": "Bitte Start- und Enddatum wählen",
       "dateFrom": "Startdatum",
       "dateTo": "Enddatum",
-      "dateHint": "Wähle den Zeitraum, in dem du das Fahrzeug brauchst. Beide Daten sind erforderlich."
+      "dateHint": "Wähle den Zeitraum, in dem du das Fahrzeug brauchst. Beide Daten sind erforderlich.",
+      "showAll": "Alle anzeigen",
+      "showLess": "Ausblenden",
+      "available": "Verfügbar"
     },
     "required": "Erforderlich",
     "todoList": "Aufgabenliste",
