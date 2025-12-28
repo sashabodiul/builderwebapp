@@ -17,7 +17,18 @@ export type WorkerOut = {
   updated_at: string; // ISO date string
 };
 
-export type WorkerTypeEnum = "student" | "master" | "sales_head" | "admin";
+export type WorkerTypeEnum = 
+  | "admin" 
+  | "coder" 
+  | "manager" 
+  | "smm" 
+  | "worker" 
+  | "master" 
+  | "head_of_sales" 
+  | "marketolog" 
+  | "foreman" 
+  | "engineer" 
+  | "assistant";
 
 export type WorkerCreate = {
   first_name?: string | null;

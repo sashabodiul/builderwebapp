@@ -26,11 +26,18 @@ const WorkerCard: React.FC<WorkerCardProps> = ({
   const getTypeBadge = (type: string | null) => {
     if (!type) return null;
     
-    const colors = {
-      student: 'bg-blue-500',
-      master: 'bg-green-500',
-      sales_head: 'bg-purple-500',
+    const colors: Record<string, string> = {
       admin: 'bg-red-500',
+      coder: 'bg-orange-500',
+      manager: 'bg-blue-500',
+      smm: 'bg-pink-500',
+      worker: 'bg-gray-500',
+      master: 'bg-green-500',
+      head_of_sales: 'bg-purple-500',
+      marketolog: 'bg-yellow-500',
+      foreman: 'bg-indigo-500',
+      engineer: 'bg-teal-500',
+      assistant: 'bg-cyan-500',
     };
     return (
       <Badge className={`${colors[type as keyof typeof colors]} text-white`}>

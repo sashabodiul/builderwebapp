@@ -1,6 +1,5 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
-import { useTranslation } from 'react-i18next';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -61,7 +60,6 @@ const DraggableMarker: React.FC<{
 const InfoRoad: FC = () => {
   const { tg_id } = useParams<{ tg_id: string }>();
   const [searchParams] = useSearchParams();
-  const { t } = useTranslation();
 
   // Данные из query параметров (от бота)
   const transportFromBot = searchParams.get('transport') || '';

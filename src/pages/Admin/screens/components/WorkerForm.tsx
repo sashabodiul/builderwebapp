@@ -29,7 +29,7 @@ const workerSchema = z.object({
   email: z.string().email('Invalid email').optional().or(z.literal('')),
   username: z.string().optional(),
   telegram_id: z.string().optional(),
-  worker_type: z.enum(['student', 'master', 'sales_head', 'admin']),
+  worker_type: z.enum(['admin', 'coder', 'manager', 'smm', 'worker', 'master', 'head_of_sales', 'marketolog', 'foreman', 'engineer', 'assistant']),
   rate: z.string().min(1, 'Rate is required'),
   birthday: z.string().optional(),
 });
@@ -61,7 +61,7 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
       email: '',
       username: '',
       telegram_id: '',
-      worker_type: 'student',
+      worker_type: 'worker',
       rate: '',
       birthday: '',
       ...defaultValues,
@@ -158,10 +158,17 @@ const WorkerForm: React.FC<WorkerFormProps> = ({
                       <SelectValue placeholder={t('admin.workers.selectType')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="student">{t('admin.workers.types.student')}</SelectItem>
-                      <SelectItem value="master">{t('admin.workers.types.master')}</SelectItem>
-                      <SelectItem value="sales_head">{t('admin.workers.types.sales_head')}</SelectItem>
                       <SelectItem value="admin">{t('admin.workers.types.admin')}</SelectItem>
+                      <SelectItem value="coder">{t('admin.workers.types.coder')}</SelectItem>
+                      <SelectItem value="manager">{t('admin.workers.types.manager')}</SelectItem>
+                      <SelectItem value="smm">{t('admin.workers.types.smm')}</SelectItem>
+                      <SelectItem value="worker">{t('admin.workers.types.worker')}</SelectItem>
+                      <SelectItem value="master">{t('admin.workers.types.master')}</SelectItem>
+                      <SelectItem value="head_of_sales">{t('admin.workers.types.head_of_sales')}</SelectItem>
+                      <SelectItem value="marketolog">{t('admin.workers.types.marketolog')}</SelectItem>
+                      <SelectItem value="foreman">{t('admin.workers.types.foreman')}</SelectItem>
+                      <SelectItem value="engineer">{t('admin.workers.types.engineer')}</SelectItem>
+                      <SelectItem value="assistant">{t('admin.workers.types.assistant')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </FormControl>

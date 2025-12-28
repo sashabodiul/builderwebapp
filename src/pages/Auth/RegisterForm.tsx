@@ -459,7 +459,7 @@ const RegisterForm = () => {
           const workerData: Record<string, any> = {
             first_name: firstName,
             last_name: lastName,
-            worker_type: 'student',
+            worker_type: 'worker',
             rate: 0,
             email: email,
             crm_id: registerResponse.user_id || '',

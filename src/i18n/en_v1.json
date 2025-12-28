@@ -418,10 +418,17 @@
       "ratePlaceholder": "Enter hourly rate",
       "birthday": "Birthday",
       "types": {
-        "student": "Student",
+        "admin": "Admin",
+        "coder": "Coder",
+        "manager": "Manager",
+        "smm": "SMM",
+        "worker": "Worker",
         "master": "Master",
-        "sales_head": "Sales Head",
-        "admin": "Admin"
+        "head_of_sales": "Head of Sales",
+        "marketolog": "Marketer",
+        "foreman": "Foreman",
+        "engineer": "Engineer",
+        "assistant": "Assistant"
       },
       "noWorkers": "No workers found",
       "createSuccess": "Worker created successfully",

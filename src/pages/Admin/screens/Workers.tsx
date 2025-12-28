@@ -265,7 +265,7 @@ const Workers: React.FC = () => {
                 email: editingWorker.email || '',
                 username: editingWorker.username || '',
                 telegram_id: editingWorker.telegram_id?.toString() || '',
-                worker_type: editingWorker.worker_type || 'student',
+                worker_type: editingWorker.worker_type || 'worker',
                 rate: editingWorker.rate?.toString() || '',
                 birthday: editingWorker.birthday ? editingWorker.birthday.split('T')[0] : '',
               } : undefined}

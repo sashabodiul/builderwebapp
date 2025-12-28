@@ -382,10 +382,17 @@
       "ratePlaceholder": "Geben Sie den Stundensatz ein",
       "birthday": "Geburtstag",
       "types": {
-        "student": "Student",
+        "admin": "Administrator",
+        "coder": "Programmierer",
+        "manager": "Manager",
+        "smm": "SMM",
+        "worker": "Arbeiter",
         "master": "Meister",
-        "sales_head": "Verkaufsleiter",
-        "admin": "Administrator"
+        "head_of_sales": "Verkaufsleiter",
+        "marketolog": "Marketer",
+        "foreman": "Polier",
+        "engineer": "Ingenieur",
+        "assistant": "Assistent"
       },
       "noWorkers": "Keine Mitarbeiter gefunden",
       "createSuccess": "Mitarbeiter erfolgreich erstellt",
