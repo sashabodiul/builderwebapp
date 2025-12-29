@@ -193,31 +193,36 @@ const QuestionnairePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Опросник при старте поездки</h1>
+    <div className="min-h-screen bg-background">
+      {/* Safe area для Telegram кнопок сверху */}
+      <div className="pb-4 px-4 md:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+        <div className="max-w-2xl mx-auto">
+          <div className="mb-6">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">Опросник при старте поездки</h1>
+            <p className="text-sm text-muted-foreground">Заполните информацию о поездке</p>
+          </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 md:space-y-6">
             {/* Тип поездки */}
             <FormField
               control={form.control}
               name="reason_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Тип поездки *</FormLabel>
+                  <FormLabel className="text-base font-semibold">Тип поездки *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
                     value={field.value}
                   >
                     <FormControl>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-11 text-base">
                         <SelectValue placeholder="Выберите тип поездки" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="WORK">Рабочая</SelectItem>
-                      <SelectItem value="PERSONAL">Личная</SelectItem>
+                      <SelectItem value="WORK" className="text-base py-3">Рабочая</SelectItem>
+                      <SelectItem value="PERSONAL" className="text-base py-3">Личная</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -231,10 +236,11 @@ const QuestionnairePage: React.FC = () => {
               name="reason"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Причина поездки *</FormLabel>
+                  <FormLabel className="text-base font-semibold">Причина поездки *</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Например: Доставка строительных материалов"
+                      className="min-h-[100px] text-base resize-none"
                       {...field}
                     />
                   </FormControl>
@@ -249,10 +255,11 @@ const QuestionnairePage: React.FC = () => {
               name="destination_description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Описание места назначения *</FormLabel>
+                  <FormLabel className="text-base font-semibold">Описание места назначения *</FormLabel>
                   <FormControl>
                     <Textarea
                       placeholder="Например: Стройплощадка на ул. Главной, д. 10"
+                      className="min-h-[100px] text-base resize-none"
                       {...field}
                     />
                   </FormControl>
@@ -262,15 +269,15 @@ const QuestionnairePage: React.FC = () => {
             />
 
             {/* Координаты места назначения */}
-            <div className="space-y-4">
-              <Label>Координаты места назначения *</Label>
+            <div className="space-y-3 md:space-y-4">
+              <Label className="text-base font-semibold">Координаты места назначения *</Label>
               
-              <div className="flex gap-2 mb-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => setShowMap(!showMap)}
-                  className="flex-1"
+                  className="flex-1 h-11 text-base"
                 >
                   {showMap ? 'Скрыть карту' : 'Показать карту'}
                 </Button>
@@ -278,13 +285,14 @@ const QuestionnairePage: React.FC = () => {
                   type="button"
                   variant="outline"
                   onClick={handleCurrentLocation}
+                  className="h-11 text-base whitespace-nowrap"
                 >
                   📍 Моё местоположение
                 </Button>
               </div>
 
               {showMap && (
-                <div className="mb-4 border rounded-lg overflow-hidden" style={{ height: '300px' }}>
+                <div className="mb-3 border-2 border-border rounded-lg overflow-hidden shadow-sm" style={{ height: '250px' }}>
                   <MapContainer
                     center={position}
                     zoom={destinationLat && destinationLng ? 15 : 13}
@@ -305,18 +313,19 @@ const QuestionnairePage: React.FC = () => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <FormField
                   control={form.control}
                   name="destination_lat"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Широта</FormLabel>
+                      <FormLabel className="text-sm font-medium">Широта</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="any"
                           placeholder="50.4501"
+                          className="h-11 text-base"
                           {...field}
                           onChange={(e) => {
                             const value = parseFloat(e.target.value);
@@ -335,12 +344,13 @@ const QuestionnairePage: React.FC = () => {
                   name="destination_lng"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Долгота</FormLabel>
+                      <FormLabel className="text-sm font-medium">Долгота</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           step="any"
                           placeholder="30.5234"
+                          className="h-11 text-base"
                           {...field}
                           onChange={(e) => {
                             const value = parseFloat(e.target.value);
@@ -354,21 +364,32 @@ const QuestionnairePage: React.FC = () => {
                   )}
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Кликните на карте или перетащите маркер для выбора точки назначения
+              <p className="text-xs md:text-sm text-muted-foreground">
+                💡 Кликните на карте или перетащите маркер для выбора точки назначения
               </p>
             </div>
 
             {/* Кнопка отправки */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting ? 'Отправка...' : 'Отправить'}
-            </Button>
+            <div className="pt-2 pb-safe" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full h-12 text-base font-semibold shadow-lg"
+                size="lg"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    Отправка...
+                  </span>
+                ) : (
+                  '✓ Отправить'
+                )}
+              </Button>
+            </div>
           </form>
         </Form>
+        </div>
       </div>
     </div>
   );

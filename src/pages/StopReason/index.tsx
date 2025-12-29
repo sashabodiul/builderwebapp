@@ -90,10 +90,11 @@ const StopReasonPage: React.FC = () => {
 
   if (!tripId || !stopStateId) {
     return (
-      <div className="min-h-screen bg-background p-4 md:p-6 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Ошибка</h1>
-          <p className="text-muted-foreground">
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
+          <div className="mb-4 text-4xl">⚠️</div>
+          <h1 className="text-xl md:text-2xl font-bold mb-3">Ошибка</h1>
+          <p className="text-sm md:text-base text-muted-foreground">
             Отсутствуют обязательные параметры: trip_id и stop_state_id
           </p>
         </div>
@@ -102,48 +103,80 @@ const StopReasonPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-6">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Причина остановки</h1>
+    <div className="min-h-screen bg-background">
+      {/* Safe area для Telegram кнопок сверху */}
+      <div className="pb-4 px-4 md:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+        <div className="max-w-md mx-auto">
+          <div className="mb-6 text-center md:text-left">
+            <h1 className="text-xl md:text-2xl font-bold mb-2">Причина остановки</h1>
+            <p className="text-sm text-muted-foreground">Выберите причину остановки поездки</p>
+          </div>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            {/* Причина остановки */}
-            <FormField
-              control={form.control}
-              name="reason"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Причина остановки *</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    value={field.value || undefined}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Выберите причину остановки" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="REST">Отдых</SelectItem>
-                      <SelectItem value="PERSONAL">Личные дела</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              {/* Причина остановки */}
+              <FormField
+                control={form.control}
+                name="reason"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-semibold">Причина остановки *</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-14 text-base">
+                          <SelectValue placeholder="Выберите причину остановки" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="REST" className="text-base py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">😴</span>
+                            <div>
+                              <div className="font-semibold">Отдых</div>
+                              <div className="text-xs text-muted-foreground">Перерыв в поездке</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="PERSONAL" className="text-base py-4">
+                          <div className="flex items-center gap-3">
+                            <span className="text-2xl">👤</span>
+                            <div>
+                              <div className="font-semibold">Личные дела</div>
+                              <div className="text-xs text-muted-foreground">Личные вопросы</div>
+                            </div>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-            {/* Кнопка отправки */}
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full"
-            >
-              {isSubmitting ? 'Отправка...' : 'Отправить'}
-            </Button>
-          </form>
-        </Form>
+              {/* Кнопка отправки */}
+              <div className="pt-4 pb-safe" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}>
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full h-12 text-base font-semibold shadow-lg"
+                  size="lg"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <span className="animate-spin">⏳</span>
+                      Отправка...
+                    </span>
+                  ) : (
+                    '✓ Сохранить причину'
+                  )}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
       </div>
     </div>
   );
