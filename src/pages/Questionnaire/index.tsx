@@ -195,7 +195,7 @@ const QuestionnairePage: React.FC = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Safe area для Telegram кнопок сверху */}
-      <div className="pb-4 px-4 md:px-6" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 4.5rem)' }}>
+      <div className="pb-4 px-4 md:px-6" style={{ paddingTop: '16rem', marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-2xl mx-auto">
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold mb-2">Опросник при старте поездки</h1>
