@@ -24,9 +24,10 @@ import { submitStopReason } from '@/requests/stop-reason';
 import { toastSuccess, toastError } from '@/lib/toasts';
 
 const stopReasonSchema = z.object({
-  reason: z.enum(['REST', 'PERSONAL'], {
-    required_error: 'Выберите причину остановки',
-  }),
+  reason: z.string().refine(
+    (val) => val === 'REST' || val === 'PERSONAL',
+    { message: 'Выберите причину остановки' }
+  ),
 });
 
 type StopReasonFormData = z.infer<typeof stopReasonSchema>;
@@ -68,7 +69,7 @@ const StopReasonPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await submitStopReason({
-        reason: data.reason,
+        reason: data.reason as 'REST' | 'PERSONAL',
         trip_id: parseInt(tripId),
         stop_state_id: parseInt(stopStateId),
       });

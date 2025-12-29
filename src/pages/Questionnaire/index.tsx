@@ -37,9 +37,10 @@ L.Icon.Default.mergeOptions({
 });
 
 const questionnaireSchema = z.object({
-  reason_type: z.enum(['WORK', 'PERSONAL'], {
-    required_error: 'Выберите тип поездки',
-  }),
+  reason_type: z.string().refine(
+    (val) => val === 'WORK' || val === 'PERSONAL',
+    { message: 'Выберите тип поездки' }
+  ),
   reason: z.string().min(1, 'Причина поездки обязательна для заполнения'),
   destination_description: z.string().min(1, 'Описание места назначения обязательно'),
   destination_lat: z
@@ -162,7 +163,10 @@ const QuestionnairePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      await submitQuestionnaire(startStateIdNum, data);
+      await submitQuestionnaire(startStateIdNum, {
+        ...data,
+        reason_type: data.reason_type as 'WORK' | 'PERSONAL',
+      });
       toastSuccess('Спасибо! Информация сохранена');
       form.reset();
     } catch (error: any) {
