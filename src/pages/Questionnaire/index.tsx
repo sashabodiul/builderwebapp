@@ -29,6 +29,7 @@ import {
 import { submitQuestionnaire } from '@/requests/questionnaire';
 import { toastSuccess, toastError } from '@/lib/toasts';
 import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 // Фикс для иконок маркеров в Leaflet
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -225,6 +226,9 @@ const QuestionnairePage: React.FC = () => {
       {/* Safe area для Telegram кнопок сверху */}
       <div className="pb-4 px-4 md:px-6" style={{ paddingTop: '16rem', marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-2xl mx-auto">
+          <div className="flex justify-end mb-4">
+            <LanguageSwitcher />
+          </div>
           <div className="mb-6">
             <h1 className="text-xl md:text-2xl font-bold mb-2">{t('questionnaire.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('questionnaire.subtitle')}</p>

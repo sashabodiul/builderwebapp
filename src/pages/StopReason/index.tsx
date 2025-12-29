@@ -23,6 +23,7 @@ import {
 import { submitStopReason } from '@/requests/stop-reason';
 import { toastSuccess, toastError } from '@/lib/toasts';
 import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const stopReasonSchema = z.object({
   reason: z.string().refine(
@@ -109,6 +110,9 @@ const StopReasonPage: React.FC = () => {
       {/* Safe area для Telegram кнопок сверху */}
       <div className="pb-4 px-4 md:px-6" style={{ paddingTop: '16rem', marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-md mx-auto">
+          <div className="flex justify-end mb-4">
+            <LanguageSwitcher />
+          </div>
           <div className="mb-6 text-center md:text-left">
             <h1 className="text-xl md:text-2xl font-bold mb-2">{t('stopReason.title')}</h1>
             <p className="text-sm text-muted-foreground">{t('stopReason.subtitle')}</p>
