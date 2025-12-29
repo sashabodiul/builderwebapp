@@ -422,10 +422,26 @@ const RegisterForm = () => {
 
     // Registration endpoint uses /api/v1 prefix
     const apiUrl = getApiUrl('registration/register', true);
-    const resp = await axios.post(apiUrl, fd, {
-      headers: { Accept: 'application/json' },
-    });
-    return resp.data;
+    try {
+      const resp = await axios.post(apiUrl, fd, {
+        headers: { Accept: 'application/json' },
+      });
+      return resp.data;
+    } catch (error: any) {
+      // Handle CORS error - if status is 201, treat as success
+      // This is a workaround for CORS issue on backend
+      if (error.code === 'ERR_NETWORK' && error.response?.status === 201) {
+        // Request was successful but CORS blocked the response
+        // Try to parse response data if available
+        if (error.response?.data) {
+          return error.response.data;
+        }
+        // If no data, return a success indicator
+        // The actual registration happened on server
+        return { success: true, message: 'Registration successful' };
+      }
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

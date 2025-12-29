@@ -5,7 +5,7 @@
 Откройте консоль браузера (F12) и выполните:
 
 ```javascript
-enableTelegramOverride(6315604689)
+enableTelegramOverride(7013352756)
 ```
 
 Страница перезагрузится автоматически.
