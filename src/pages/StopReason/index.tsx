@@ -42,7 +42,7 @@ const StopReasonPage: React.FC = () => {
   const form = useForm<StopReasonFormData>({
     resolver: zodResolver(stopReasonSchema),
     defaultValues: {
-      reason: undefined,
+      reason: '',
     },
   });
 
@@ -117,7 +117,7 @@ const StopReasonPage: React.FC = () => {
                   <FormLabel>Причина остановки *</FormLabel>
                   <Select
                     onValueChange={field.onChange}
-                    value={field.value}
+                    value={field.value || undefined}
                   >
                     <FormControl>
                       <SelectTrigger>

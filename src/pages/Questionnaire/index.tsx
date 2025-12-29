@@ -10,6 +10,7 @@ import 'leaflet/dist/leaflet.css';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
   Form,
   FormControl,
@@ -262,7 +263,7 @@ const QuestionnairePage: React.FC = () => {
 
             {/* Координаты места назначения */}
             <div className="space-y-4">
-              <FormLabel>Координаты места назначения *</FormLabel>
+              <Label>Координаты места назначения *</Label>
               
               <div className="flex gap-2 mb-2">
                 <Button
