@@ -1165,7 +1165,7 @@ const RegisterForm = () => {
                     ({t('auth.required', 'Required')})
                   </span>
                 </label>
-                <label className="file-label" style={{ 
+                <label className="file-label" data-browse-text={t('auth.browse', 'Browse')} style={{ 
                   display: 'block',
                   padding: '16px',
                   border: '2px dashed rgba(255,255,255,0.3)',
@@ -1278,7 +1278,7 @@ const RegisterForm = () => {
                     ({t('auth.optional', 'Optional')})
                   </span>
                 </label>
-                <label className="file-label" style={{ 
+                <label className="file-label" data-browse-text={t('auth.browse', 'Browse')} style={{ 
                   display: 'block',
                   padding: '16px',
                   border: '2px dashed rgba(255,255,255,0.3)',

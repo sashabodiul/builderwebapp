@@ -1,6 +1,7 @@
 import { FC } from 'react';
 import {Link, useLocation} from "react-router-dom";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import pageRoutes from "../../../consts/pageRoutes.ts";
 import styles from "./Footer.module.scss";
 import classNames from "classnames";
@@ -10,15 +11,16 @@ import LanguageSwitcher from "../LanguageSwitcher";
 const Footer: FC = () => {
   const location = useLocation();
   const user = useSelector((state: any) => state.data.user);
+  const { t } = useTranslation();
 
   const footerLinks = [
     {
-      name: "Work",
+      name: t('footer.work', 'Work'),
       route: pageRoutes.WORK,
       icon: <Hammer />
     },
     {
-      name: "Salary",
+      name: t('footer.salary', 'Salary'),
       route: pageRoutes.SALARY,
       icon: <DollarSign />
     },
@@ -26,7 +28,7 @@ const Footer: FC = () => {
 
   if (user?.worker_type === "admin") {
     footerLinks.push({
-      name: "Admin",
+      name: t('footer.admin', 'Admin'),
       route: pageRoutes.ADMIN,
       icon: <Settings />
     });

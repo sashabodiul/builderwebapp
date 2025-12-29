@@ -72,6 +72,10 @@
     "heightPlaceholder": "Height",
     "chest": "Chest Circumference (cm)",
     "chestPlaceholder": "Chest",
+    "topWaist": "Top Waist (cm)",
+    "topWaistPlaceholder": "Top Waist (cm)",
+    "pantsWaist": "Pants Waist (cm)",
+    "pantsWaistPlaceholder": "Pants Waist (cm)",
     "hips": "Hips Circumference (cm)",
     "hipsPlaceholder": "Hips",
     "inseam": "Inside Leg Length (Step Seam) (cm)",
@@ -80,12 +84,15 @@
     "waistPlaceholder": "Waist",
     "headCircumference": "Head Circumference (cm)",
     "headCircumferencePlaceholder": "Head",
+    "footSize": "Foot size (mm)",
+    "footSizePlaceholder": "Foot size in millimeters, e.g. 270",
     "footSizeMm": "Foot size (insole, mm)",
     "footSizeMmPlaceholder": "e.g. 270",
     "measurementHelper": "Need help with measurements?",
     "openGuide": "Open guide (PDF)",
     "passportPhoto": "Passport Photo (JPEG/PNG)",
     "driverLicensePhoto": "Driver License Photo (JPEG/PNG)",
+    "browse": "Browse",
     "fileSelected": "File: {{filename}}",
     "almostReady": "Almost ready! Click 'Complete Registration' to send the data.",
     "back": "← Back",
@@ -137,7 +144,9 @@
     "registerLinkText": "Register",
     "haveAccountText": "Already have an account?",
     "loginLinkText": "Log in",
-    "forgotPasswordText": "Forgot password?"
+    "forgotPasswordText": "Forgot password?",
+    "optional": "Optional",
+    "required": "Required"
   },
   "salary": {
     "title": "Salary Calculation",
@@ -632,5 +641,10 @@
     "success": "Stop reason saved",
     "error": "Error submitting data",
     "errorMissingParams": "Missing required parameters: trip_id and stop_state_id"
+  },
+  "footer": {
+    "work": "Work",
+    "salary": "Salary",
+    "admin": "Admin"
   }
 }

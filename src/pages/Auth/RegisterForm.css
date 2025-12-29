@@ -285,7 +285,7 @@ form { margin-top: .25rem; }
 .file-label input[type="file"] { display: none; }
 
 .file-label::after {
-  content: "Browse";
+  content: attr(data-browse-text);
   padding: .5rem .8rem;
   background: rgba(255,255,255,.06);
   border-radius: 8px;

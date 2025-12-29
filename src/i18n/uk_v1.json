@@ -47,6 +47,10 @@
     "heightPlaceholder": "170",
     "chest": "Обхват груди (см)",
     "chestPlaceholder": "90",
+    "topWaist": "Обхват талії (см)",
+    "topWaistPlaceholder": "Обхват талії (см)",
+    "pantsWaist": "Обхват брюк (см)",
+    "pantsWaistPlaceholder": "Обхват брюк (см)",
     "hips": "Обхват стегон (см)",
     "hipsPlaceholder": "95",
     "inseam": "Довжина по внутрішньому шву (кроковий шов) (см)",
@@ -55,12 +59,15 @@
     "waistPlaceholder": "80",
     "headCircumference": "Обхват голови (см)",
     "headCircumferencePlaceholder": "58",
+    "footSize": "Розмір стопи (мм)",
+    "footSizePlaceholder": "Розмір стопи в міліметрах, наприклад 270",
     "footSizeMm": "Розмір стопи (устілка, мм)",
     "footSizeMmPlaceholder": "наприклад 270",
     "measurementHelper": "Потрібна допомога з вимірами?",
     "openGuide": "Відкрити інструкцію (PDF)",
     "passportPhoto": "Фото паспорта (JPEG/PNG)",
     "driverLicensePhoto": "Фото водійських прав (JPEG/PNG)",
+    "browse": "Вибрати",
     "fileSelected": "Файл: {{filename}}",
     "almostReady": "Майже готово! Залишилося тільки підтвердити реєстрацію",
     "back": "← Назад",
@@ -112,7 +119,9 @@
     "registerLinkText": "Зареєструватися",
     "haveAccountText": "Вже є акаунт?",
     "loginLinkText": "Увійти",
-    "forgotPasswordText": "Забули пароль?"
+    "forgotPasswordText": "Забули пароль?",
+    "optional": "опціонально",
+    "required": "Обов'язково"
   },
   "salary": {
     "title": "Розрахунок зарплати",
@@ -275,6 +284,7 @@
     "workTime": "Час роботи",
     "lunchTime": "Час обіду",
     "overtimeTime": "Переробка",
+    "waitForAdminApproval": "Очікуйте схвалення адміністратора",
     "summaryRate": "Заробіток",
     "workStatus": "Статус роботи",
     "objectCompleted": "Об'єкт завершено",
@@ -629,5 +639,10 @@
     "success": "Причину зупинки збережено",
     "error": "Помилка відправки даних",
     "errorMissingParams": "Відсутні обов'язкові параметри: trip_id та stop_state_id"
+  },
+  "footer": {
+    "work": "Робота",
+    "salary": "Зарплата",
+    "admin": "Адмін"
   }
 }

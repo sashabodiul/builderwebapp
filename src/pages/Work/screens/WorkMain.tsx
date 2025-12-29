@@ -766,7 +766,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   {t('work.readyToStart')}
                 </h2>
                 {isRestricted ? (
-                  <p className="text-theme-text-secondary text-lg font-medium">Wait for admin approvement</p>
+                  <p className="text-theme-text-secondary text-lg font-medium">{t('work.waitForAdminApproval', 'Wait for admin approval')}</p>
                 ) : (
                   <>
                     <button

@@ -47,6 +47,10 @@
     "heightPlaceholder": "Größe",
     "chest": "Brustumfang (cm)",
     "chestPlaceholder": "Brust",
+    "topWaist": "Taillenumfang (cm)",
+    "topWaistPlaceholder": "Taillenumfang (cm)",
+    "pantsWaist": "Hosenbundumfang (cm)",
+    "pantsWaistPlaceholder": "Hosenbundumfang (cm)",
     "hips": "Hüftumfang (cm)",
     "hipsPlaceholder": "Hüften",
     "inseam": "Innenbeinlänge (Schrittnaht) (cm)",
@@ -55,10 +59,13 @@
     "waistPlaceholder": "Taille",
     "headCircumference": "Kopfumfang (cm)",
     "headCircumferencePlaceholder": "Kopf",
+    "footSize": "Fußgröße (mm)",
+    "footSizePlaceholder": "Fußgröße in Millimetern, z.B. 270",
     "measurementHelper": "Hilfe bei Messungen benötigt?",
     "openGuide": "Anleitung öffnen (PDF)",
     "passportPhoto": "Passfoto (JPEG/PNG)",
     "driverLicensePhoto": "Führerscheinfoto (JPEG/PNG)",
+    "browse": "Durchsuchen",
     "fileSelected": "Datei: {{filename}}",
     "almostReady": "Fast fertig! Klicken Sie auf 'Registrierung abschließen', um die Daten zu senden.",
     "back": "← Zurück",
@@ -110,7 +117,9 @@
     "registerLinkText": "Registrieren",
     "haveAccountText": "Bereits ein Konto?",
     "loginLinkText": "Anmelden",
-    "forgotPasswordText": "Passwort vergessen?"
+    "forgotPasswordText": "Passwort vergessen?",
+    "optional": "Optional",
+    "required": "Erforderlich"
   },
   "salary": {
     "title": "Gehaltsberechnung",
@@ -266,6 +275,7 @@
     "workTime": "Arbeitszeit",
     "lunchTime": "Mittagspause",
     "overtimeTime": "Überstunden",
+    "waitForAdminApproval": "Warten auf Admin-Genehmigung",
     "workStatus": "Arbeitsstatus",
     "objectCompleted": "Objekt abgeschlossen",
     "objectNotCompleted": "Objekt nicht abgeschlossen",
@@ -564,5 +574,10 @@
     "success": "Haltgrund gespeichert",
     "error": "Fehler beim Senden der Daten",
     "errorMissingParams": "Fehlende erforderliche Parameter: trip_id und stop_state_id"
+  },
+  "footer": {
+    "work": "Arbeit",
+    "salary": "Gehalt",
+    "admin": "Admin"
   }
 }
