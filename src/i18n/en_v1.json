@@ -21,7 +21,8 @@
     "back": "Back",
     "close": "Close",
     "next": "Next",
-    "optional": "optional"
+    "optional": "optional",
+    "error": "Error"
   },
   "auth": {
     "loginTitle": "Login",
@@ -582,5 +583,52 @@
     "siteDetailsLabel": "Site Details",
     "skipToResult": "Skip to Result",
     "viewRoute": "View Route"
+  },
+  "questionnaire": {
+    "title": "Trip Start Questionnaire",
+    "subtitle": "Fill in trip information",
+    "tripType": "Trip Type",
+    "tripTypePlaceholder": "Select trip type",
+    "work": "Work",
+    "personal": "Personal",
+    "workType": "Work Trip Type",
+    "workTypePlaceholder": "Select work trip type",
+    "wash": "Wash",
+    "fuel": "Fuel",
+    "service": "Service",
+    "parts": "Parts",
+    "reason": "Trip Reason",
+    "reasonPlaceholder": "e.g., Delivery of construction materials",
+    "destinationDescription": "Destination Description",
+    "destinationDescriptionPlaceholder": "e.g., Construction site on Main St., 10",
+    "coordinates": "Destination Coordinates",
+    "latitude": "Latitude",
+    "longitude": "Longitude",
+    "showMap": "Show Map",
+    "hideMap": "Hide Map",
+    "currentLocation": "My Location",
+    "mapHint": "Click on the map or drag the marker to select destination",
+    "submit": "Submit",
+    "submitting": "Submitting...",
+    "success": "Thank you! Information saved",
+    "error": "Error submitting data",
+    "errorNoStartStateId": "Start state ID not specified",
+    "errorInvalidStartStateId": "Invalid start state ID",
+    "errorNoStartStateIdInUrl": "Start state ID not specified in URL"
+  },
+  "stopReason": {
+    "title": "Stop Reason",
+    "subtitle": "Select the reason for stopping the trip",
+    "reason": "Stop Reason",
+    "reasonPlaceholder": "Select stop reason",
+    "rest": "Rest",
+    "restDescription": "Break during trip",
+    "personal": "Personal",
+    "personalDescription": "Personal matters",
+    "submit": "Save Reason",
+    "submitting": "Submitting...",
+    "success": "Stop reason saved",
+    "error": "Error submitting data",
+    "errorMissingParams": "Missing required parameters: trip_id and stop_state_id"
   }
 }

@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { submitStopReason } from '@/requests/stop-reason';
 import { toastSuccess, toastError } from '@/lib/toasts';
+import { useTranslation } from 'react-i18next';
 
 const stopReasonSchema = z.object({
   reason: z.string().refine(
@@ -35,6 +36,7 @@ type StopReasonFormData = z.infer<typeof stopReasonSchema>;
 const StopReasonPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   const tripId = searchParams.get('trip_id');
   const stopStateId = searchParams.get('stop_state_id');
@@ -56,13 +58,13 @@ const StopReasonPage: React.FC = () => {
 
   useEffect(() => {
     if (!tripId || !stopStateId) {
-      toastError('Отсутствуют обязательные параметры: trip_id и stop_state_id');
+      toastError(t('stopReason.errorMissingParams'));
     }
-  }, [tripId, stopStateId]);
+  }, [tripId, stopStateId, t]);
 
   const onSubmit = async (data: StopReasonFormData) => {
     if (!tripId || !stopStateId) {
-      toastError('Отсутствуют обязательные параметры');
+      toastError(t('stopReason.errorMissingParams'));
       return;
     }
 
@@ -73,7 +75,7 @@ const StopReasonPage: React.FC = () => {
         trip_id: parseInt(tripId),
         stop_state_id: parseInt(stopStateId),
       });
-      toastSuccess('Причина остановки сохранена');
+      toastSuccess(t('stopReason.success'));
       
       // Закрываем WebApp после успешной отправки
       if (window.Telegram && window.Telegram.WebApp) {
@@ -82,7 +84,7 @@ const StopReasonPage: React.FC = () => {
         }, 1500);
       }
     } catch (error: any) {
-      toastError(error.message || 'Ошибка отправки данных');
+      toastError(error.message || t('stopReason.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -93,9 +95,9 @@ const StopReasonPage: React.FC = () => {
       <div className="min-h-screen bg-background flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <div className="mb-4 text-4xl">⚠️</div>
-          <h1 className="text-xl md:text-2xl font-bold mb-3">Ошибка</h1>
+          <h1 className="text-xl md:text-2xl font-bold mb-3">{t('common.error', 'Ошибка')}</h1>
           <p className="text-sm md:text-base text-muted-foreground">
-            Отсутствуют обязательные параметры: trip_id и stop_state_id
+            {t('stopReason.errorMissingParams')}
           </p>
         </div>
       </div>
@@ -108,8 +110,8 @@ const StopReasonPage: React.FC = () => {
       <div className="pb-4 px-4 md:px-6" style={{ paddingTop: '16rem', marginTop: 'env(safe-area-inset-top, 0px)' }}>
         <div className="max-w-md mx-auto">
           <div className="mb-6 text-center md:text-left">
-            <h1 className="text-xl md:text-2xl font-bold mb-2">Причина остановки</h1>
-            <p className="text-sm text-muted-foreground">Выберите причину остановки поездки</p>
+            <h1 className="text-xl md:text-2xl font-bold mb-2">{t('stopReason.title')}</h1>
+            <p className="text-sm text-muted-foreground">{t('stopReason.subtitle')}</p>
           </div>
 
           <Form {...form}>
@@ -119,40 +121,40 @@ const StopReasonPage: React.FC = () => {
                 control={form.control}
                 name="reason"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base font-semibold">Причина остановки *</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      value={field.value || undefined}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-14 text-base">
-                          <SelectValue placeholder="Выберите причину остановки" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="REST" className="text-base py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">😴</span>
-                            <div>
-                              <div className="font-semibold">Отдых</div>
-                              <div className="text-xs text-muted-foreground">Перерыв в поездке</div>
-                            </div>
+                <FormItem>
+                  <FormLabel className="text-base font-semibold">{t('stopReason.reason')} *</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value || undefined}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="h-14 text-base">
+                        <SelectValue placeholder={t('stopReason.reasonPlaceholder')} />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="REST" className="text-base py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">😴</span>
+                          <div>
+                            <div className="font-semibold">{t('stopReason.rest')}</div>
+                            <div className="text-xs text-muted-foreground">{t('stopReason.restDescription')}</div>
                           </div>
-                        </SelectItem>
-                        <SelectItem value="PERSONAL" className="text-base py-4">
-                          <div className="flex items-center gap-3">
-                            <span className="text-2xl">👤</span>
-                            <div>
-                              <div className="font-semibold">Личные дела</div>
-                              <div className="text-xs text-muted-foreground">Личные вопросы</div>
-                            </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="PERSONAL" className="text-base py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">👤</span>
+                          <div>
+                            <div className="font-semibold">{t('stopReason.personal')}</div>
+                            <div className="text-xs text-muted-foreground">{t('stopReason.personalDescription')}</div>
                           </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
                 )}
               />
 
@@ -164,14 +166,14 @@ const StopReasonPage: React.FC = () => {
                   className="w-full h-12 text-base font-semibold shadow-lg"
                   size="lg"
                 >
-                  {isSubmitting ? (
-                    <span className="flex items-center gap-2">
-                      <span className="animate-spin">⏳</span>
-                      Отправка...
-                    </span>
-                  ) : (
-                    '✓ Сохранить причину'
-                  )}
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="animate-spin">⏳</span>
+                    {t('stopReason.submitting')}
+                  </span>
+                ) : (
+                  `✓ ${t('stopReason.submit')}`
+                )}
                 </Button>
               </div>
             </form>
