@@ -27,7 +27,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const stopReasonSchema = z.object({
   reason: z.string().refine(
-    (val) => val === 'REST' || val === 'PERSONAL',
+    (val) => val === 'REST' || val === 'PERSONAL' || val === 'BREAKDOWN',
     { message: 'Выберите причину остановки' }
   ),
 });
@@ -72,7 +72,7 @@ const StopReasonPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       await submitStopReason({
-        reason: data.reason as 'REST' | 'PERSONAL',
+        reason: data.reason as 'REST' | 'PERSONAL' | 'BREAKDOWN',
         trip_id: parseInt(tripId),
         stop_state_id: parseInt(stopStateId),
       });
@@ -152,6 +152,15 @@ const StopReasonPage: React.FC = () => {
                           <div>
                             <div className="font-semibold">{t('stopReason.personal')}</div>
                             <div className="text-xs text-muted-foreground">{t('stopReason.personalDescription')}</div>
+                          </div>
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="BREAKDOWN" className="text-base py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-2xl">🔧</span>
+                          <div>
+                            <div className="font-semibold">{t('stopReason.breakdown')}</div>
+                            <div className="text-xs text-muted-foreground">{t('stopReason.breakdownDescription')}</div>
                           </div>
                         </div>
                       </SelectItem>

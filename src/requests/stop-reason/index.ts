@@ -3,7 +3,7 @@ import axios from 'axios';
 const VEHICLE_TRACKER_API_BASE = 'https://vehicle-tracker.skybud.de/api/v1';
 
 export interface StopReasonRequest {
-  reason: 'REST' | 'PERSONAL';
+  reason: 'REST' | 'PERSONAL' | 'BREAKDOWN';
   stop_state_id: number;
   trip_id: number;
 }
@@ -11,7 +11,7 @@ export interface StopReasonRequest {
 export interface StopReasonResponse {
   id: number;
   trip_id: number;
-  reason: 'REST' | 'PERSONAL';
+  reason: 'REST' | 'PERSONAL' | 'BREAKDOWN';
   ts: string;
   gps_lat: number;
   gps_lng: number;
