@@ -7,7 +7,7 @@ services:
     image: skybud-webapp:latest
     container_name: skybud-webapp
     ports:
-      - '3001:3001'
+      - '3001:3001'  # Пробрасываем порт для системного nginx
     env_file:
       - .env
     restart: unless-stopped
