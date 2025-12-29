@@ -39,6 +39,21 @@ sudo ./setup-nginx.sh
 - **HTTPS**: https://web-app.skybud.de
 - HTTP запросы автоматически перенаправляются на HTTPS
 
+### Диагностика проблем
+
+Если вы видите страницу "Why am I seeing this page?" или сайт не работает, запустите диагностический скрипт:
+
+```bash
+./check-setup.sh
+```
+
+Скрипт проверит:
+- Существует ли конфигурация nginx
+- Запущен ли Docker контейнер
+- Слушается ли порт 3001
+- Существует ли SSL сертификат
+- Корректна ли конфигурация nginx
+
 ## Управление
 
 ### Запуск/остановка приложения
@@ -99,6 +114,7 @@ sudo systemctl status certbot.timer
 
 - `nginx/web-app.skybud.de.conf` - конфигурация nginx для домена
 - `setup-nginx.sh` - скрипт автоматической настройки nginx и certbot
+- `check-setup.sh` - скрипт диагностики проблем
 - `docker-compose.yml` - конфигурация Docker (только приложение, без nginx)
 
 ## Конфигурация на сервере
@@ -107,6 +123,60 @@ sudo systemctl status certbot.timer
 - `/etc/nginx/sites-available/web-app.skybud.de.conf` - конфигурация nginx
 - `/etc/nginx/sites-enabled/web-app.skybud.de.conf` - симлинк на конфигурацию
 - `/etc/letsencrypt/live/web-app.skybud.de/` - SSL сертификаты
+
+## Решение проблем
+
+### Страница "Why am I seeing this page?"
+
+Эта страница появляется, когда nginx не находит конфигурацию для домена. Проверьте:
+
+1. **Запущен ли скрипт настройки?**
+   ```bash
+   sudo ./setup-nginx.sh
+   ```
+
+2. **Существует ли конфигурация?**
+   ```bash
+   ls -la /etc/nginx/sites-enabled/ | grep web-app
+   ```
+
+3. **Запущено ли приложение?**
+   ```bash
+   docker compose ps
+   docker compose up -d  # если не запущено
+   ```
+
+4. **Проверьте логи nginx:**
+   ```bash
+   sudo tail -f /var/log/nginx/error.log
+   ```
+
+### Ручная настройка (если скрипт не работает)
+
+1. Создайте конфигурацию:
+   ```bash
+   sudo cp nginx/web-app.skybud.de.conf /etc/nginx/sites-available/web-app.skybud.de.conf
+   ```
+
+2. Создайте симлинк:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/web-app.skybud.de.conf /etc/nginx/sites-enabled/
+   ```
+
+3. Проверьте конфигурацию:
+   ```bash
+   sudo nginx -t
+   ```
+
+4. Перезагрузите nginx:
+   ```bash
+   sudo systemctl reload nginx
+   ```
+
+5. Получите SSL сертификат:
+   ```bash
+   sudo certbot --nginx -d web-app.skybud.de
+   ```
 
 ## Примечания
 
