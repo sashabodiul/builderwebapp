@@ -12,4 +12,6 @@ export default {
   ADMIN_VEHICLE_MANAGEMENT: "/admin/vehicle-management",
   REGISTER: "/register",
   INFO_ROAD: "/inforoad/:tg_id",
+  QUESTIONNAIRE: "/questionnaire/:start_state_id",
+  STOP_REASON: "/stop-reason",
 }

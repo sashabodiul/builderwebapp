@@ -21,6 +21,8 @@ import VehicleManagement from "./pages/Admin/screens/VehicleManagement";
 import RoutesPage from "./pages/Routes";
 import RouteResultScreen from "@/pages/Routes/components/RouteResultScreen";
 import InfoRoad from "./pages/InfoRoad";
+import QuestionnairePage from "./pages/Questionnaire";
+import StopReasonPage from "./pages/StopReason";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -42,6 +44,8 @@ function App() {
   const isAuthPage = location.pathname === '/register' || location.pathname === '/login';
   const isRoutesPage = location.pathname.startsWith('/routes');
   const isInfoRoadPage = location.pathname.startsWith('/inforoad');
+  const isQuestionnairePage = location.pathname.startsWith('/questionnaire');
+  const isStopReasonPage = location.pathname.startsWith('/stop-reason');
 
   const loadingFallback = (
     <div className="p-6 text-theme-text-muted text-center">loading…</div>
@@ -124,10 +128,18 @@ function App() {
             path={routes.INFO_ROAD} 
             element={<InfoRoad />} 
           />
+          <Route 
+            path={routes.QUESTIONNAIRE} 
+            element={<QuestionnairePage />} 
+          />
+          <Route 
+            path={routes.STOP_REASON} 
+            element={<StopReasonPage />} 
+          />
         </Routes>
       </main>
 
-      {!isAuthPage && !isRoutesPage && !isInfoRoadPage && <Footer />}
+      {!isAuthPage && !isRoutesPage && !isInfoRoadPage && !isQuestionnairePage && !isStopReasonPage && <Footer />}
       <ApiEnvironmentSwitcher />
     </div>
   )
