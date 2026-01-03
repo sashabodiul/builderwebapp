@@ -53,12 +53,15 @@ const Work: FC = () => {
 
   const handleStopWork = () => {
     const workerType: string | undefined = user?.worker_type;
+    const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master'];
+    const canSelectObjectsAndVehicles = workerType && allowedWorkerTypes.includes(workerType);
     const canUploadMedia = workerType === 'master' || workerType === 'admin';
 
-    if (canUploadMedia) {
+    if (canSelectObjectsAndVehicles && canUploadMedia) {
+      // Для admin, coder, worker, master с правами на медиа - показываем экран completion
       setCurrentScreen('completion');
     } else {
-      // skip media steps for other roles
+      // Для остальных - пропускаем экран completion (без фото инструментов)
       setWorkPhotos([]);
       setToolsPhotos([]);
       setVideoFile(null);

@@ -2,8 +2,8 @@ import { FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
-import { endWork } from '../../../requests/work';
-import { EndWorkData, WorkProcessEndOut } from '../../../requests/work/types';
+import { endWork, endWorkOffice } from '../../../requests/work';
+import { EndWorkData, EndWorkOfficeData, WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks, updateWorkTask } from '../../../requests/work-task';
 import { createComment } from '../../../requests/comment';
@@ -179,17 +179,31 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         });
       });
 
-      const endWorkData: EndWorkData = {
-        worker_id: user.id,
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        status_object_finished: isObjectCompleted,
-        done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
-        instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
-        report_video: videoFile || undefined,
-      };
-
-      const response = await endWork(endWorkData);
+      let response;
+      
+      if (canSelectObjectsAndVehicles) {
+        // Для admin, coder, worker, master - обычный эндпоинт с facility_id и instrument_photos
+        const endWorkData: EndWorkData = {
+          worker_id: user.id,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          status_object_finished: isObjectCompleted,
+          done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
+          instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
+          report_video: videoFile || undefined,
+        };
+        response = await endWork(endWorkData);
+      } else {
+        // Для остальных - офисный эндпоинт без facility_id и instrument_photos
+        const endWorkOfficeData: EndWorkOfficeData = {
+          worker_id: user.id,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
+          report_video: videoFile || undefined,
+        };
+        response = await endWorkOffice(endWorkOfficeData);
+      }
       
       if (response.error) {
         console.error('Failed to end work:', response);

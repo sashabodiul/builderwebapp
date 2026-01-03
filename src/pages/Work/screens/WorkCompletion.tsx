@@ -1,5 +1,6 @@
 import { FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 import { Camera, Video, Upload, Check, ArrowRight, ArrowLeft, Hammer, Wrench } from 'lucide-react';
 
 interface WorkCompletionProps {
@@ -10,6 +11,7 @@ interface WorkCompletionProps {
 
 const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectName }) => {
   const { t } = useTranslation();
+  const user = useSelector((state: any) => state.data.user);
   const [currentStep, setCurrentStep] = useState(0);
   const [workPhotos, setWorkPhotos] = useState<File[]>([]);
   const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
@@ -17,7 +19,12 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
   const [videoDuration, setVideoDuration] = useState(0);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
 
-  const steps = [
+  // Разрешенные типы работников для обычной работы (с объектом)
+  const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master'];
+  const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
+
+  // Для офисных работников не показываем шаг с фото инструментов
+  const steps = canSelectObjectsAndVehicles ? [
     {
       id: 'work-photos',
       title: t('work.workPhotosStep'),
@@ -30,6 +37,21 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
       title: t('work.toolsStep'),
       description: t('work.uploadToolsPhotos'),
       icon: <Hammer className="h-6 w-6" />,
+      required: true
+    },
+    {
+      id: 'video',
+      title: t('work.videoStep'),
+      description: t('work.recordVideo'),
+      icon: <Video className="h-6 w-6" />,
+      required: true
+    }
+  ] : [
+    {
+      id: 'work-photos',
+      title: t('work.workPhotosStep'),
+      description: t('work.uploadWorkPhotos'),
+      icon: <Camera className="h-6 w-6" />,
       required: true
     },
     {
@@ -129,9 +151,11 @@ const WorkCompletion: FC<WorkCompletionProps> = ({ onBack, onTodoList, objectNam
           <h1 className="text-3xl font-bold text-theme-text-primary mb-2">
             {t('work.workCompleted')}
           </h1>
-          <p className="text-theme-text-secondary mb-2">
-            {t('work.currentObject')}: {objectName}
-          </p>
+          {objectName && (
+            <p className="text-theme-text-secondary mb-2">
+              {t('work.currentObject')}: {objectName}
+            </p>
+          )}
           <div className="text-theme-accent font-medium">
             {t('work.step')} {currentStep + 1} {t('work.of')} {steps.length}: {currentStepData.title}
           </div>

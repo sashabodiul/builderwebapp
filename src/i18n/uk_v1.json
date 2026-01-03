@@ -163,6 +163,7 @@
   "work": {
     "title": "Робота",
     "today": "Сьогодні",
+    "role": "Роль",
     "selectObject": "Оберіть об'єкт",
     "startWork": "Почати роботу",
     "working": "Працюю...",
@@ -285,6 +286,7 @@
     "lunchTime": "Час обіду",
     "overtimeTime": "Переробка",
     "waitForAdminApproval": "Очікуйте схвалення адміністратора",
+    "noAccessToWork": "У вас немає доступу до цієї функції",
     "summaryRate": "Заробіток",
     "workStatus": "Статус роботи",
     "objectCompleted": "Об'єкт завершено",
@@ -298,6 +300,21 @@
     "edit": "Редагувати",
     "delete": "Видалити",
     "close": "Закрити",
+    "selectWorkType": "Виберіть тип роботи",
+    "workTypeFacility": "На об'єкті",
+    "workTypeOffice": "В офісі",
+    "delegateTask": {
+      "button": "Делегувати задачу",
+      "title": "Делегування задачі",
+      "selectWorker": "Виберіть працівника",
+      "selectWorkerPlaceholder": "Виберіть працівника",
+      "description": "Опис задачі",
+      "descriptionPlaceholder": "Введіть опис задачі",
+      "photo": "Фото",
+      "submit": "Створити задачу",
+      "success": "Задачу успішно делеговано",
+      "error": "Помилка при створенні задачі"
+    },
     "complete": "Виконано",
     "notComplete": "Не виконано",
     "completed": "виконано",
@@ -643,6 +660,26 @@
   "footer": {
     "work": "Робота",
     "salary": "Зарплата",
-    "admin": "Адмін"
+    "admin": "Адмін",
+    "smm": "SMM"
+  },
+  "smm": {
+    "groups": "Групи",
+    "contentByGroup": "Контент за групами",
+    "goToGroup": "Перейти до групи",
+    "objectId": "ID об'єкта",
+    "coordinates": "Координати",
+    "coordinatesNotSet": "Координати не встановлені",
+    "error": "Помилка",
+    "errorLoadingFacilities": "Не вдалося завантажити об'єкти",
+    "errorLoadingMedia": "Помилка завантаження медіа",
+    "noMediaFound": "Медіа не знайдено",
+    "photos": "Фотографії",
+    "videos": "Відео",
+    "download": "Завантажити",
+    "videoNotSupported": "Ваш браузер не підтримує відео.",
+    "downloadFile": "Завантажте файл",
+    "object": "Об'єкт",
+    "hasInviteLink": "Є посилання-запрошення"
   }
 }

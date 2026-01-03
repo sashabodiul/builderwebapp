@@ -61,3 +61,17 @@ export type EndWorkData = {
   done_work_photos?: File[] | null;
   instrument_photos?: File[] | null;
 };
+
+export type StartWorkOfficeData = {
+  worker_id: number;
+  latitude: number;
+  longitude: number;
+};
+
+export type EndWorkOfficeData = {
+  worker_id: number;
+  latitude: number;
+  longitude: number;
+  report_video?: File | null;
+  done_work_photos?: File[] | null;
+};

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import { Edit, Trash2, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -82,7 +83,15 @@ const TaskCard: React.FC<TaskCardProps> = ({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uk-UA', {
+    // Map i18n language codes to locale strings for date formatting
+    const localeMap: Record<string, string> = {
+      'ru': 'ru-RU',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'uk': 'uk-UA'
+    };
+    const locale = localeMap[i18n.language] || 'en-US';
+    return new Date(dateString).toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

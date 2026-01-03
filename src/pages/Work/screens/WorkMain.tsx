@@ -1,14 +1,17 @@
 import { FC, useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
-import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock, Loader2, Clock, X, AlertCircle } from 'lucide-react';
+import i18n from '@/i18n/config';
+import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock, Loader2, Clock, X, AlertCircle, UserPlus, User } from 'lucide-react';
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
-import { startWork, getActiveWorkProcess } from '../../../requests/work';
+import { startWork, startWorkOffice, getActiveWorkProcess } from '../../../requests/work';
+import DelegateTaskDialog from './components/DelegateTaskDialog';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import TodoList from './TodoList';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { getVehicles, unassignVehicle, createVehicleReservationRequest, getWorkerReservedVehicle, getVehicleReservationRequests, cancelVehicleReservationRequest } from '../../../requests/vehicle';
 import { Vehicle, VehicleReservationRequestOut } from '../../../requests/vehicle/types';
 import type { RootState } from '@/store/config';
@@ -37,7 +40,17 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null);
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const [isDelegateTaskDialogOpen, setIsDelegateTaskDialogOpen] = useState(false);
+  const [workType, setWorkType] = useState<'facility' | 'office'>('facility'); // Для foreman, engineer, assistant
   const isRestricted = !user?.rate || user?.worker_type == null;
+  
+  // Разрешенные типы работников для выбора объектов и бронирования авто
+  const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
+  const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
+  
+  // Типы работников, которые могут выбирать между работой на объекте и офисной работой
+  const canChooseWorkType = user?.worker_type && ['foreman', 'engineer', 'assistant'].includes(user.worker_type);
+  
   const availableVehicles = useMemo(
     () => vehicles.filter(vehicle => (vehicle.owner_id == null || vehicle.owner_id === 0) && vehicle.external_id != null),
     [vehicles]
@@ -45,6 +58,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
   useEffect(() => {
     const fetchFacilities = async () => {
+      if (!canSelectObjectsAndVehicles) {
+        setIsLoading(false);
+        return;
+      }
+
       const response = await getFacilities();
 
       if (response.error) {
@@ -61,7 +79,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     };
 
     fetchFacilities();
-  }, [t]);
+  }, [t, canSelectObjectsAndVehicles]);
 
   const fetchVehicles = useCallback(async () => {
     if (!user?.id || isRestricted) {
@@ -166,12 +184,22 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   }, [user?.id, onStartWork]);
 
   useEffect(() => {
-    fetchVehicles();
-  }, [fetchVehicles]);
+    if (canSelectObjectsAndVehicles && !isRestricted && user?.id) {
+      fetchVehicles();
+    }
+  }, [fetchVehicles, canSelectObjectsAndVehicles, isRestricted, user?.id]);
 
   const formatToday = () => {
     const today = new Date();
-    return today.toLocaleDateString('uk-UA', {
+    // Map i18n language codes to locale strings for date formatting
+    const localeMap: Record<string, string> = {
+      'ru': 'ru-RU',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'uk': 'uk-UA'
+    };
+    const locale = localeMap[i18n.language] || 'en-US';
+    return today.toLocaleDateString(locale, {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -180,7 +208,14 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   };
 
   const handleStartWork = async () => {
-    if (!selectedObject) {
+    // Для foreman, engineer, assistant проверяем выбранный тип работы
+    if (canChooseWorkType) {
+      if (workType === 'facility' && !selectedObject) {
+        toastError(t('work.selectObjectFirst'));
+        return;
+      }
+    } else if (canSelectObjectsAndVehicles && !selectedObject) {
+      // Для admin, coder, worker, master требуется выбор объекта
       toastError(t('work.selectObjectFirst'));
       return;
     }
@@ -201,14 +236,35 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
 
-      const startWorkData = {
-        worker_id: user?.id || 0,
-        facility_id: parseInt(selectedObject),
-        latitude,
-        longitude
-      };
-
-      const response = await startWork(startWorkData);
+      let response;
+      
+      // Для foreman, engineer, assistant проверяем выбранный тип работы
+      if (canChooseWorkType && workType === 'office') {
+        // Офисная работа
+        const startWorkOfficeData = {
+          worker_id: user?.id || 0,
+          latitude,
+          longitude
+        };
+        response = await startWorkOffice(startWorkOfficeData);
+      } else if (canSelectObjectsAndVehicles) {
+        // Работа на объекте (admin, coder, worker, master, или foreman/engineer/assistant с workType='facility')
+        const startWorkData = {
+          worker_id: user?.id || 0,
+          facility_id: parseInt(selectedObject),
+          latitude,
+          longitude
+        };
+        response = await startWork(startWorkData);
+      } else {
+        // Для остальных - офисный эндпоинт без facility_id
+        const startWorkOfficeData = {
+          worker_id: user?.id || 0,
+          latitude,
+          longitude
+        };
+        response = await startWorkOffice(startWorkOfficeData);
+      }
 
       if (response.error) {
         console.error('Failed to start work:', response);
@@ -219,7 +275,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       setActiveWorkProcess(response.data);
       setIsWorking(true);
-      onStartWork(selectedObject);
+      // Для офисных работников selectedObject может быть пустым
+      onStartWork(canSelectObjectsAndVehicles ? selectedObject : '');
       toastSuccess(t('work.workStarted'));
     } catch (error) {
       console.error('Error starting work:', error);
@@ -394,23 +451,84 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold text-theme-text-primary">{t('work.title')}</h1>
-            <div className="flex items-center gap-2 text-theme-text-secondary text-lg">
-              <Calendar className="h-5 w-5" />
-              <span>{t('work.today')}: {formatToday()}</span>
+            <div className="flex flex-wrap items-center gap-3 text-theme-text-secondary text-lg">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                <span>{t('work.today')}: {formatToday()}</span>
+              </div>
+              {user?.worker_type && (
+                <div className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  <span>{t('work.role', 'Роль')}:</span>
+                  <Badge className="bg-theme-accent text-white">
+                    {t(`admin.workers.types.${user.worker_type}`, user.worker_type)}
+                  </Badge>
+                </div>
+              )}
             </div>
           </div>
-          <Button
-            variant="default"
-            size="lg"
-            className="w-full md:w-auto text-lg font-semibold gap-3 px-6 py-4"
-            onClick={onShowHistory}
-          >
-            <ListChecks className="h-6 w-6" />
-            {t('work.history.viewButton')}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full md:w-auto text-lg font-semibold gap-3 px-6 py-4"
+              onClick={() => setIsDelegateTaskDialogOpen(true)}
+            >
+              <UserPlus className="h-6 w-6" />
+              {t('work.delegateTask.button', 'Делегировать задачу')}
+            </Button>
+            <Button
+              variant="default"
+              size="lg"
+              className="w-full md:w-auto text-lg font-semibold gap-3 px-6 py-4"
+              onClick={onShowHistory}
+            >
+              <ListChecks className="h-6 w-6" />
+              {t('work.history.viewButton')}
+            </Button>
+          </div>
         </div>
 
-        {!isWorking && (
+        {/* Выбор типа работы для foreman, engineer, assistant */}
+        {!isWorking && canChooseWorkType && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+            <h2 className="text-2xl font-bold text-theme-text-primary mb-4">
+              {t('work.selectWorkType', 'Выберите тип работы')}
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setWorkType('facility')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  workType === 'facility'
+                    ? 'border-theme-accent bg-theme-accent/10'
+                    : 'border-theme-border hover:border-theme-accent/50'
+                }`}
+              >
+                <MapPin className="h-6 w-6 text-theme-accent mb-2 mx-auto" />
+                <div className="font-semibold text-theme-text-primary">
+                  {t('work.workTypeFacility', 'На объекте')}
+                </div>
+              </button>
+              <button
+                type="button"
+                onClick={() => setWorkType('office')}
+                className={`p-4 rounded-lg border-2 transition-all ${
+                  workType === 'office'
+                    ? 'border-theme-accent bg-theme-accent/10'
+                    : 'border-theme-border hover:border-theme-accent/50'
+                }`}
+              >
+                <MessageCircle className="h-6 w-6 text-theme-accent mb-2 mx-auto" />
+                <div className="font-semibold text-theme-text-primary">
+                  {t('work.workTypeOffice', 'В офисе')}
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!isWorking && canSelectObjectsAndVehicles && workType !== 'office' && (
           <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
             <h2 className="text-2xl font-bold text-theme-text-primary mb-4">{t('work.selectObject')}</h2>
             {isLoading ? (
@@ -455,7 +573,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </div>
         )}
 
-        {!isRestricted && (
+        {!isRestricted && canSelectObjectsAndVehicles && (
           <div className="bg-theme-bg-card border border-theme-border rounded-xl p-4 mb-4">
             <div className="flex flex-col gap-3">
               <div>
@@ -571,13 +689,17 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                           {reservationRequest.date_from && (
                             <div>
                               <span className="font-medium text-theme-text-primary">{t('work.vehicle.dateFrom', 'Дата с')}:</span>{' '}
-                              {new Date(reservationRequest.date_from).toLocaleDateString('ru-RU')}
+                              {new Date(reservationRequest.date_from).toLocaleDateString(
+                                { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                              )}
                             </div>
                           )}
                           {reservationRequest.date_to && (
                             <div>
                               <span className="font-medium text-theme-text-primary">{t('work.vehicle.dateTo', 'Дата по')}:</span>{' '}
-                              {new Date(reservationRequest.date_to).toLocaleDateString('ru-RU')}
+                              {new Date(reservationRequest.date_to).toLocaleDateString(
+                                { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                              )}
                             </div>
                           )}
                         </div>
@@ -598,7 +720,9 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                       {/* Date Info */}
                       <div className="text-sm text-theme-text-secondary">
                         <span className="font-medium text-theme-text-primary">{t('work.vehicle.requestCreatedAt', 'Запрос создан')}:</span>{' '}
-                        {new Date(reservationRequest.created_at).toLocaleString('ru-RU')}
+                        {new Date(reservationRequest.created_at).toLocaleString(
+                          { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                        )}
                       </div>
 
                       {/* Cancel Button */}
@@ -771,11 +895,19 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   <>
                     <button
                       onClick={handleStartWork}
-                      disabled={!selectedObject || isStartingWork}
-                      className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${selectedObject && !isStartingWork
-                        ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
-                        : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
-                        }`}
+                      disabled={
+                        (canChooseWorkType && workType === 'facility' && !selectedObject) ||
+                        (!canChooseWorkType && canSelectObjectsAndVehicles && !selectedObject) ||
+                        isStartingWork
+                      }
+                      className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${
+                        ((canChooseWorkType && workType === 'office') ||
+                         (canChooseWorkType && workType === 'facility' && selectedObject) ||
+                         (!canChooseWorkType && canSelectObjectsAndVehicles && selectedObject) ||
+                         (!canSelectObjectsAndVehicles)) && !isStartingWork
+                          ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
+                          : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
+                      }`}
                     >
                       {isStartingWork ? (
                         <>
@@ -789,7 +921,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                         </>
                       )}
                     </button>
-                    {!selectedObject && (
+                    {((canChooseWorkType && workType === 'facility' && !selectedObject) ||
+                      (!canChooseWorkType && canSelectObjectsAndVehicles && !selectedObject)) && (
                       <p className="text-theme-text-muted mt-3">
                         {t('work.selectObjectFirst')}
                       </p>
@@ -844,6 +977,13 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </>
         )}
       </div>
+
+      {/* Диалог делегирования задач */}
+      <DelegateTaskDialog
+        open={isDelegateTaskDialogOpen}
+        onOpenChange={setIsDelegateTaskDialogOpen}
+        currentWorkerId={user?.id}
+      />
     </div>
   );
 };

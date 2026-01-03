@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Euro, Trash2 } from 'lucide-react';
 
@@ -214,7 +215,9 @@ const WorkerAdjustmentDialog: React.FC<Props> = ({ open, onOpenChange, worker })
                 <div className="text-sm">
                   <div className="font-medium text-theme-text-primary">{adj.amount.toFixed(2)} € — {t(`admin.adjustments.types.${adj.adjustment_type}`)}</div>
                   <div className="text-theme-text-secondary">{adj.reason}</div>
-                  <div className="text-xs text-theme-text-muted">{new Date(adj.created_at).toLocaleString()}</div>
+                  <div className="text-xs text-theme-text-muted">{new Date(adj.created_at).toLocaleString(
+                    { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                  )}</div>
                 </div>
                 <div className="flex items-center gap-2">
                   {adj.photo_url && (

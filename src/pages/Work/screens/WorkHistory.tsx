@@ -1,6 +1,7 @@
 import { FC, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
+import i18n from '@/i18n/config';
 import { CalendarClock, MapPin, PlayCircle, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -114,7 +115,16 @@ const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
       return isoString;
     }
 
-    return date.toLocaleString(undefined, {
+    // Map i18n language codes to locale strings for date formatting
+    const localeMap: Record<string, string> = {
+      'ru': 'ru-RU',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'uk': 'uk-UA'
+    };
+    const locale = localeMap[i18n.language] || 'en-US';
+
+    return date.toLocaleString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       day: '2-digit',

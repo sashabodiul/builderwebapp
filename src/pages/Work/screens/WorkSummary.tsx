@@ -1,5 +1,6 @@
 import { FC } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import { CheckCircle, Clock, DollarSign, Coffee, Zap, Calendar } from 'lucide-react';
 import { WorkProcessEndOut } from '../../../requests/work/types';
 
@@ -25,7 +26,15 @@ const WorkSummary: FC<WorkSummaryProps> = ({ workData, onComplete }) => {
 
   const formatDateTime = (dateString: string): string => {
     const date = new Date(dateString);
-    return date.toLocaleString('uk-UA', {
+    // Map i18n language codes to locale strings for date formatting
+    const localeMap: Record<string, string> = {
+      'ru': 'ru-RU',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'uk': 'uk-UA'
+    };
+    const locale = localeMap[i18n.language] || 'en-US';
+    return date.toLocaleString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',

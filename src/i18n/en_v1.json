@@ -188,6 +188,7 @@
   "work": {
     "title": "Work",
     "today": "Today",
+    "role": "Role",
     "selectObject": "Select object",
     "startWork": "Start work",
     "working": "Working...",
@@ -300,6 +301,7 @@
     "endingWork": "Finishing work...",
     "completingWork": "Completing work...",
     "waitForAdminApproval": "Wait for admin approval",
+    "noAccessToWork": "You don't have access to this feature",
     "completeWork": "Finish work",
     "goToTasks": "Go to tasks",
     "workDayCompleted": "Work day completed!",
@@ -323,6 +325,21 @@
     "edit": "Edit",
     "delete": "Delete",
     "close": "Close",
+    "selectWorkType": "Select work type",
+    "workTypeFacility": "At facility",
+    "workTypeOffice": "In office",
+    "delegateTask": {
+      "button": "Delegate task",
+      "title": "Delegate task",
+      "selectWorker": "Select worker",
+      "selectWorkerPlaceholder": "Select worker",
+      "description": "Task description",
+      "descriptionPlaceholder": "Enter task description",
+      "photo": "Photo",
+      "submit": "Create task",
+      "success": "Task successfully delegated",
+      "error": "Error creating task"
+    },
     "complete": "Complete",
     "notComplete": "Not complete",
     "completed": "completed",
@@ -645,6 +662,26 @@
   "footer": {
     "work": "Work",
     "salary": "Salary",
-    "admin": "Admin"
+    "admin": "Admin",
+    "smm": "SMM"
+  },
+  "smm": {
+    "groups": "Groups",
+    "contentByGroup": "Content by group",
+    "goToGroup": "Go to group",
+    "objectId": "Object ID",
+    "coordinates": "Coordinates",
+    "coordinatesNotSet": "Coordinates not set",
+    "error": "Error",
+    "errorLoadingFacilities": "Failed to load facilities",
+    "errorLoadingMedia": "Error loading media",
+    "noMediaFound": "No media found",
+    "photos": "Photos",
+    "videos": "Videos",
+    "download": "Download",
+    "videoNotSupported": "Your browser does not support video.",
+    "downloadFile": "Download file",
+    "object": "Object",
+    "hasInviteLink": "Has invite link"
   }
 }

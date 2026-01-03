@@ -23,6 +23,7 @@ import RouteResultScreen from "@/pages/Routes/components/RouteResultScreen";
 import InfoRoad from "./pages/InfoRoad";
 import QuestionnairePage from "./pages/Questionnaire";
 import StopReasonPage from "./pages/StopReason";
+import SmmContent from "./pages/SmmContent";
 
 function App() {
   const [, setIsLoading] = useState(true);
@@ -46,6 +47,7 @@ function App() {
   const isInfoRoadPage = location.pathname.startsWith('/inforoad');
   const isQuestionnairePage = location.pathname.startsWith('/questionnaire');
   const isStopReasonPage = location.pathname.startsWith('/stop-reason');
+  const isSmmContentPage = location.pathname.startsWith('/smm-content');
 
   const loadingFallback = (
     <div className="p-6 text-theme-text-muted text-center">loading…</div>
@@ -135,6 +137,10 @@ function App() {
           <Route 
             path={routes.STOP_REASON} 
             element={<StopReasonPage />} 
+          />
+          <Route 
+            path={routes.SMM_CONTENT} 
+            element={renderProtected(<SmmContent />)} 
           />
         </Routes>
       </main>

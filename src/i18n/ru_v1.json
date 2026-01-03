@@ -158,6 +158,7 @@
   "work": {
     "title": "Работа",
     "today": "Сегодня",
+    "role": "Роль",
     "selectObject": "Выберите объект",
     "startWork": "Начать работу",
     "working": "Работаем...",
@@ -280,6 +281,7 @@
     "lunchTime": "Время обеда",
     "overtimeTime": "Переработка",
     "waitForAdminApproval": "Ожидайте одобрения администратора",
+    "noAccessToWork": "У вас нет доступа к этой функции",
     "summaryRate": "Заработок",
     "workStatus": "Статус работы",
     "objectCompleted": "Объект завершен",
@@ -292,7 +294,22 @@
     "save": "Сохранить",
     "edit": "Редактировать",
     "delete": "Удалить",
-    "close": "Закрыть"
+    "close": "Закрыть",
+    "selectWorkType": "Выберите тип работы",
+    "workTypeFacility": "На объекте",
+    "workTypeOffice": "В офисе",
+    "delegateTask": {
+      "button": "Делегировать задачу",
+      "title": "Делегирование задачи",
+      "selectWorker": "Выберите работника",
+      "selectWorkerPlaceholder": "Выберите работника",
+      "description": "Описание задачи",
+      "descriptionPlaceholder": "Введите описание задачи",
+      "photo": "Фото",
+      "submit": "Создать задачу",
+      "success": "Задача успешно делегирована",
+      "error": "Ошибка при создании задачи"
+    }
   },
   "admin": {
     "title": "Админ панель",
@@ -595,6 +612,26 @@
   "footer": {
     "work": "Работа",
     "salary": "Зарплата",
-    "admin": "Админ"
+    "admin": "Админ",
+    "smm": "SMM"
+  },
+  "smm": {
+    "groups": "Группы",
+    "contentByGroup": "Контент по группам",
+    "goToGroup": "Перейти в группу",
+    "objectId": "ID объекта",
+    "coordinates": "Координаты",
+    "coordinatesNotSet": "Координаты не установлены",
+    "error": "Ошибка",
+    "errorLoadingFacilities": "Не удалось загрузить объекты",
+    "errorLoadingMedia": "Ошибка загрузки медиа",
+    "noMediaFound": "Медиа не найдено",
+    "photos": "Фотографии",
+    "videos": "Видео",
+    "download": "Скачать",
+    "videoNotSupported": "Ваш браузер не поддерживает видео.",
+    "downloadFile": "Скачайте файл",
+    "object": "Объект",
+    "hasInviteLink": "Есть ссылка"
   }
 }

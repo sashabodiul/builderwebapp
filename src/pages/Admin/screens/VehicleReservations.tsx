@@ -1,5 +1,6 @@
 import { FC, useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n/config';
 import { Car, Check, X, Clock, AlertCircle, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -260,21 +261,27 @@ const VehicleReservations: FC = () => {
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-theme-text-muted" />
                               <span className="font-medium text-theme-text-primary">С:</span>{' '}
-                              <span className="text-theme-text-secondary">{new Date(request.date_from).toLocaleDateString('ru-RU')}</span>
+                              <span className="text-theme-text-secondary">{new Date(request.date_from).toLocaleDateString(
+                                { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                              )}</span>
                             </div>
                           )}
                           {request.date_to && (
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-theme-text-muted" />
                               <span className="font-medium text-theme-text-primary">По:</span>{' '}
-                              <span className="text-theme-text-secondary">{new Date(request.date_to).toLocaleDateString('ru-RU')}</span>
+                              <span className="text-theme-text-secondary">{new Date(request.date_to).toLocaleDateString(
+                                { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                              )}</span>
                             </div>
                           )}
                         </div>
                       )}
                       <div>
                         <span className="font-medium text-theme-text-primary">Создан:</span>{' '}
-                        <span className="text-theme-text-secondary">{new Date(request.created_at).toLocaleString('ru-RU')}</span>
+                        <span className="text-theme-text-secondary">{new Date(request.created_at).toLocaleString(
+                          { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                        )}</span>
                       </div>
                       {request.status === 'rejected' && request.rejection_reason && (
                         <div className="bg-rose-50 border border-rose-200 rounded-lg p-2 mt-2">

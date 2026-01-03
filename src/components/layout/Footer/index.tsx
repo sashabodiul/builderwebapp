@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import pageRoutes from "../../../consts/pageRoutes.ts";
 import styles from "./Footer.module.scss";
 import classNames from "classnames";
-import {Hammer, DollarSign, Settings } from "lucide-react";
+import {Hammer, DollarSign, Settings, Image } from "lucide-react";
 import LanguageSwitcher from "../LanguageSwitcher";
 
 const Footer: FC = () => {
@@ -31,6 +31,14 @@ const Footer: FC = () => {
       name: t('footer.admin', 'Admin'),
       route: pageRoutes.ADMIN,
       icon: <Settings />
+    });
+  }
+
+  if (user?.worker_type === "smm") {
+    footerLinks.push({
+      name: t('footer.smm', 'SMM'),
+      route: pageRoutes.SMM_CONTENT,
+      icon: <Image />
     });
   }
 

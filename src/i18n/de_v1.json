@@ -156,6 +156,7 @@
   "work": {
     "title": "Arbeit",
     "today": "Heute",
+    "role": "Rolle",
     "selectObject": "Objekt auswählen",
     "startWork": "Arbeit beginnen",
     "working": "Arbeite...",
@@ -276,6 +277,7 @@
     "lunchTime": "Mittagspause",
     "overtimeTime": "Überstunden",
     "waitForAdminApproval": "Warten auf Admin-Genehmigung",
+    "noAccessToWork": "Sie haben keinen Zugriff auf diese Funktion",
     "workStatus": "Arbeitsstatus",
     "objectCompleted": "Objekt abgeschlossen",
     "objectNotCompleted": "Objekt nicht abgeschlossen",
@@ -289,6 +291,21 @@
     "edit": "Bearbeiten",
     "delete": "Löschen",
     "close": "Schließen",
+    "selectWorkType": "Arbeitstyp auswählen",
+    "workTypeFacility": "Auf der Baustelle",
+    "workTypeOffice": "Im Büro",
+    "delegateTask": {
+      "button": "Aufgabe delegieren",
+      "title": "Aufgabe delegieren",
+      "selectWorker": "Mitarbeiter auswählen",
+      "selectWorkerPlaceholder": "Mitarbeiter auswählen",
+      "description": "Aufgabenbeschreibung",
+      "descriptionPlaceholder": "Aufgabenbeschreibung eingeben",
+      "photo": "Foto",
+      "submit": "Aufgabe erstellen",
+      "success": "Aufgabe erfolgreich delegiert",
+      "error": "Fehler beim Erstellen der Aufgabe"
+    },
     "complete": "Abgeschlossen",
     "notComplete": "Nicht abgeschlossen",
     "completed": "abgeschlossen",
@@ -578,6 +595,26 @@
   "footer": {
     "work": "Arbeit",
     "salary": "Gehalt",
-    "admin": "Admin"
+    "admin": "Admin",
+    "smm": "SMM"
+  },
+  "smm": {
+    "groups": "Gruppen",
+    "contentByGroup": "Inhalt nach Gruppe",
+    "goToGroup": "Zur Gruppe gehen",
+    "objectId": "Objekt-ID",
+    "coordinates": "Koordinaten",
+    "coordinatesNotSet": "Koordinaten nicht gesetzt",
+    "error": "Fehler",
+    "errorLoadingFacilities": "Fehler beim Laden der Objekte",
+    "errorLoadingMedia": "Fehler beim Laden der Medien",
+    "noMediaFound": "Keine Medien gefunden",
+    "photos": "Fotos",
+    "videos": "Videos",
+    "download": "Herunterladen",
+    "videoNotSupported": "Ihr Browser unterstützt kein Video.",
+    "downloadFile": "Datei herunterladen",
+    "object": "Objekt",
+    "hasInviteLink": "Hat Einladungslink"
   }
 }

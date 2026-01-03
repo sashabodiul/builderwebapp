@@ -1,6 +1,6 @@
 import { apiRequest } from '../index';
 import { ApiResponse } from '../shared/types';
-import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData } from './types';
+import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData, StartWorkOfficeData, EndWorkOfficeData } from './types';
 import axios from 'axios';
 
 export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkProcessStartOut>> => {
@@ -97,6 +97,42 @@ export const getWorkProcesses = async (params?: {
       status: error?.response?.status,
     };
   }
+};
+
+export const startWorkOffice = async (data: StartWorkOfficeData): Promise<ApiResponse<WorkProcessStartOut>> => {
+  const formData = new URLSearchParams();
+  formData.append('worker_id', data.worker_id.toString());
+  formData.append('latitude', data.latitude.toString());
+  formData.append('longitude', data.longitude.toString());
+
+  return await apiRequest<WorkProcessStartOut>("POST", "/work/start-office", {
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded'
+    }
+  }, formData);
+};
+
+export const endWorkOffice = async (data: EndWorkOfficeData): Promise<ApiResponse<WorkProcessEndOut>> => {
+  const formData = new FormData();
+  formData.append('worker_id', data.worker_id.toString());
+  formData.append('latitude', data.latitude.toString());
+  formData.append('longitude', data.longitude.toString());
+  
+  if (data.report_video) {
+    formData.append('report_video', data.report_video);
+  }
+  
+  if (data.done_work_photos && data.done_work_photos.length > 0) {
+    data.done_work_photos.forEach((photo) => {
+      formData.append('done_work_photos', photo);
+    });
+  }
+
+  return await apiRequest<WorkProcessEndOut>("POST", "/work/end-office", {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  }, formData);
 };
 
 export const getActiveWorkProcess = async (worker_id: number): Promise<ApiResponse<WorkProcessStartOut | null>> => {

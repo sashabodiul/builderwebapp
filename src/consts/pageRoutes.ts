@@ -14,4 +14,5 @@ export default {
   INFO_ROAD: "/inforoad/:tg_id",
   QUESTIONNAIRE: "/questionnaire/:start_state_id",
   STOP_REASON: "/stop-reason",
+  SMM_CONTENT: "/smm-content",
 }

@@ -1,6 +1,7 @@
 import { FC, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
+import i18n from '@/i18n/config';
 import { Plus, Minus } from 'lucide-react';
 import { getWorkerPayroll } from '../../requests/worker';
 import { WorkerPayrollOut } from '../../requests/worker/types';
@@ -105,7 +106,14 @@ const Salary: FC = () => {
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('uk-UA', {
+    const localeMap: Record<string, string> = {
+      'ru': 'ru-RU',
+      'en': 'en-US',
+      'de': 'de-DE',
+      'uk': 'uk-UA'
+    };
+    const locale = localeMap[i18n.language] || 'en-US';
+    return new Date(dateString).toLocaleDateString(locale, {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
