@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Download, Image as ImageIcon, Video, ExternalLink } from 'lucide-react';
 import { getFacilities, FacilityOut } from '@/requests/facility';
@@ -10,14 +9,10 @@ import useBackButton from '@/hooks/useBackButton';
 import ImageViewer from '@/components/ui/ImageViewer';
 import i18n from '@/i18n/config';
 
-const PAGE_LIMIT = 20;
-
 const SmmContent: React.FC = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const user = useSelector((state: any) => state.data.user);
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
-  const [page, setPage] = useState(1);
   const [loadingFacilities, setLoadingFacilities] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -51,7 +46,7 @@ const SmmContent: React.FC = () => {
       }
     };
     loadFacilities();
-  }, [page, t]);
+  }, [t, selectedId]);
 
   useEffect(() => {
     const loadMedia = async () => {
@@ -323,8 +318,7 @@ const SmmContent: React.FC = () => {
       {/* Image Viewer */}
       {selectedImage && (
         <ImageViewer
-          imageUrl={selectedImage}
-          onClose={() => setSelectedImage(null)}
+          images={[selectedImage]}
         />
       )}
     </div>

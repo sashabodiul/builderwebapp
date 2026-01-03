@@ -39,6 +39,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const [isObjectCompleted, setIsObjectCompleted] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
 
+  const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
+  const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
+
   const queryParams = useMemo(() => ({
     facility_id: facilityId,
     facility_type_id: facilityTypeId,

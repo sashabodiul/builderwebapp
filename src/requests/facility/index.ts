@@ -2,6 +2,8 @@ import apiRequest from "../config.ts";
 import { ApiResponse } from "../shared/types.ts";
 import { FacilityOut, FacilityCreate, FacilityUpdate, FacilityQueryParams } from "./types.ts";
 
+export type { FacilityOut, FacilityCreate, FacilityUpdate, FacilityQueryParams };
+
 export const getFacilities = async (params?: FacilityQueryParams): Promise<ApiResponse<FacilityOut[]>> => {
   const queryParams = new URLSearchParams();
   if (params?.limit) queryParams.append('limit', params.limit.toString());

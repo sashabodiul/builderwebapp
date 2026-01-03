@@ -47,7 +47,6 @@ function App() {
   const isInfoRoadPage = location.pathname.startsWith('/inforoad');
   const isQuestionnairePage = location.pathname.startsWith('/questionnaire');
   const isStopReasonPage = location.pathname.startsWith('/stop-reason');
-  const isSmmContentPage = location.pathname.startsWith('/smm-content');
 
   const loadingFallback = (
     <div className="p-6 text-theme-text-muted text-center">loading…</div>
