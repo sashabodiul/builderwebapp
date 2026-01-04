@@ -643,6 +643,16 @@
     "download": "Скачать",
     "videoNotSupported": "Ваш браузер не поддерживает видео.",
     "downloadFile": "Скачайте файл",
+    "like": "Лайк",
+    "likes": "лайков",
+    "liked": "лайкнуто",
+    "viewMedia": "Просмотр медиа",
+    "today": "Сегодня",
+    "yesterday": "Вчера",
+    "showLiked": "Показать лайкнутые",
+    "showAll": "Показать все",
+    "likedOnly": "Только лайкнутые",
+    "noLikedMedia": "Нет лайкнутых медиа",
     "object": "Объект",
     "hasInviteLink": "Есть ссылка"
   }

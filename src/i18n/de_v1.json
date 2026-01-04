@@ -628,6 +628,16 @@
     "download": "Herunterladen",
     "videoNotSupported": "Ihr Browser unterstützt kein Video.",
     "downloadFile": "Datei herunterladen",
+    "like": "Gefällt mir",
+    "likes": "Gefällt mir",
+    "liked": "Gefällt mir",
+    "viewMedia": "Medien anzeigen",
+    "today": "Heute",
+    "yesterday": "Gestern",
+    "showLiked": "Gefällt mir anzeigen",
+    "showAll": "Alle anzeigen",
+    "likedOnly": "Nur Gefällt mir",
+    "noLikedMedia": "Keine gefällt mir-Medien",
     "object": "Objekt",
     "hasInviteLink": "Hat Einladungslink"
   }

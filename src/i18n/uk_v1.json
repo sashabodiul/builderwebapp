@@ -690,6 +690,16 @@
     "download": "Завантажити",
     "videoNotSupported": "Ваш браузер не підтримує відео.",
     "downloadFile": "Завантажте файл",
+    "like": "Лайк",
+    "likes": "лайків",
+    "liked": "лайкнуто",
+    "viewMedia": "Перегляд медіа",
+    "today": "Сьогодні",
+    "yesterday": "Вчора",
+    "showLiked": "Показати лайкнуті",
+    "showAll": "Показати все",
+    "likedOnly": "Тільки лайкнуті",
+    "noLikedMedia": "Немає лайкнутих медіа",
     "object": "Об'єкт",
     "hasInviteLink": "Є посилання-запрошення"
   }

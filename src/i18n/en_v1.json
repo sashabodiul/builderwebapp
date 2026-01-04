@@ -692,6 +692,16 @@
     "download": "Download",
     "videoNotSupported": "Your browser does not support video.",
     "downloadFile": "Download file",
+    "like": "Like",
+    "likes": "likes",
+    "liked": "liked",
+    "viewMedia": "View media",
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "showLiked": "Show liked",
+    "showAll": "Show all",
+    "likedOnly": "Liked only",
+    "noLikedMedia": "No liked media",
     "object": "Object",
     "hasInviteLink": "Has invite link"
   }

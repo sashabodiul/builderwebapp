@@ -10,6 +10,8 @@ export type MediaItem = {
   created_at: string;
   object_id: number;
   uploaded_by?: number;
+  is_liked?: boolean;
+  total_likes?: number;
 };
 
 export type MediaResponse = {
@@ -54,6 +56,75 @@ export const fetchMediaByObjectId = async (
   } catch (error: any) {
     console.error('Failed to fetch media:', error);
     throw new Error(error?.response?.data?.detail || 'Failed to fetch media');
+  }
+};
+
+export type LikeResponse = {
+  media_id: number;
+  worker_id: number;
+  is_liked: boolean;
+  action: 'liked' | 'unliked';
+  total_likes: number;
+};
+
+export type LikedMediaResponse = {
+  items: MediaItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  worker_id: number;
+};
+
+// Поставить/убрать лайк
+export const toggleMediaLike = async (
+  mediaId: number,
+  workerId: number
+): Promise<LikeResponse> => {
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/v1/media/${mediaId}/like?worker_id=${workerId}`;
+  
+  try {
+    const apiToken = import.meta.env.VITE_API_TOKEN;
+    const response = await axios.post<LikeResponse>(url, {}, {
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        ...(apiToken && { 'Authorization': apiToken }),
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    console.error('Failed to toggle like:', error);
+    throw new Error(error?.response?.data?.detail || 'Failed to toggle like');
+  }
+};
+
+// Получить все лайкнутые медиа работника
+export const getLikedMedia = async (
+  workerId: number,
+  limit: number = 50,
+  offset: number = 0
+): Promise<LikedMediaResponse> => {
+  const queryParams = new URLSearchParams();
+  queryParams.append('worker_id', workerId.toString());
+  if (limit) queryParams.append('limit', limit.toString());
+  if (offset) queryParams.append('offset', offset.toString());
+  
+  const baseUrl = getApiBaseUrl();
+  const url = `${baseUrl}/api/v1/media/liked?${queryParams.toString()}`;
+  
+  try {
+    const apiToken = import.meta.env.VITE_API_TOKEN;
+    const response = await axios.get<LikedMediaResponse>(url, {
+      headers: {
+        'Accept': 'application/json',
+        ...(apiToken && { 'Authorization': apiToken }),
+      },
+    });
+    return response.data || { items: [], total: 0, limit, offset, worker_id: workerId };
+  } catch (error: any) {
+    console.error('Failed to fetch liked media:', error);
+    throw new Error(error?.response?.data?.detail || 'Failed to fetch liked media');
   }
 };
 
