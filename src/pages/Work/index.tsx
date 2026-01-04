@@ -23,11 +23,26 @@ const Work: FC = () => {
 
   // Приховуємо кнопку назад для головного екрану Work
   useEffect(() => {
-    window.Telegram.WebApp.BackButton.hide();
+    if (window.Telegram?.WebApp?.BackButton) {
+      try {
+        window.Telegram.WebApp.BackButton.hide();
+      } catch (error) {
+        // BackButton не поддерживается в версии 6.0
+        console.warn('BackButton not supported in this Telegram WebApp version');
+      }
+    }
   }, []);
 
-  // Завантаження об'єктів з API
+  // Определяем, может ли работник выбирать объекты
+  const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
+  const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
+
+  // Завантаження об'єктів з API (только для работников, которые могут выбирать объекты)
   useEffect(() => {
+    if (!canSelectObjectsAndVehicles) {
+      return;
+    }
+
     const fetchFacilities = async () => {
       const response = await getFacilities();
 
@@ -40,7 +55,7 @@ const Work: FC = () => {
     };
 
     fetchFacilities();
-  }, []);
+  }, [canSelectObjectsAndVehicles]);
 
   const handleStartWork = (objectId: string) => {
     setSelectedObject(objectId);
@@ -115,6 +130,10 @@ const Work: FC = () => {
   };
 
   const getSelectedObjectName = () => {
+    if (!canSelectObjectsAndVehicles) {
+      // Для офисных работников
+      return `${t('work.workPlace')}: ${t('work.office')}`;
+    }
     const facility = facilities.find(facility => facility.id.toString() === selectedObject);
     return facility?.name || t('work.unnamedObject');
   };

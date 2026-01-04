@@ -141,10 +141,23 @@ const WorkSummary: FC<WorkSummaryProps> = ({ workData, onComplete }) => {
             {t('work.workStatus')}
           </h3>
           <div className="flex items-center gap-3">
-            <div className={`w-3 h-3 rounded-full ${workData.status_object_finished ? 'bg-green-500' : 'bg-red-500'}`}></div>
-            <span className="text-theme-text-primary">
-              {workData.status_object_finished ? t('work.objectCompleted') : t('work.objectNotCompleted')}
-            </span>
+            {workData.facility_id === null ? (
+              // Для офисных работников - всегда зеленый статус "Рабочий день окончен"
+              <>
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-theme-text-primary">
+                  {t('work.workDayEnded')}
+                </span>
+              </>
+            ) : (
+              // Для работников с объектами - статус зависит от status_object_finished
+              <>
+                <div className={`w-3 h-3 rounded-full ${workData.status_object_finished ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                <span className="text-theme-text-primary">
+                  {workData.status_object_finished ? t('work.objectCompleted') : t('work.objectNotCompleted')}
+                </span>
+              </>
+            )}
           </div>
         </div>
 

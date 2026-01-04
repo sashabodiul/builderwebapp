@@ -117,6 +117,8 @@ const QuestionnairePage: React.FC = () => {
   const { start_state_id } = useParams<{ start_state_id: string }>();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [address, setAddress] = useState<string>('');
+  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
   const { t } = useTranslation();
 
   const form = useForm<QuestionnaireFormData>({
@@ -147,6 +149,44 @@ const QuestionnairePage: React.FC = () => {
   const handleLocationChange = (lat: number, lng: number) => {
     form.setValue('destination_lat', lat, { shouldValidate: true });
     form.setValue('destination_lng', lng, { shouldValidate: true });
+  };
+
+  // Поиск координат по адресу через Nominatim API
+  const handleSearchAddress = async () => {
+    if (!address.trim()) {
+      toastError(t('questionnaire.enterAddress') || 'Введите адрес');
+      return;
+    }
+
+    setIsSearchingAddress(true);
+    try {
+      // Используем Nominatim API от OpenStreetMap (бесплатный, не требует API ключа)
+      const encodedAddress = encodeURIComponent(address.trim());
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodedAddress}&limit=1&accept-language=${navigator.language || 'ru'}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Ошибка при поиске адреса');
+      }
+
+      const data = await response.json();
+
+      if (data && data.length > 0) {
+        const lat = parseFloat(data[0].lat);
+        const lng = parseFloat(data[0].lon);
+        
+        handleLocationChange(lat, lng);
+        toastSuccess(t('questionnaire.addressFound') || 'Координаты найдены');
+      } else {
+        toastError(t('questionnaire.addressNotFound') || 'Адрес не найден');
+      }
+    } catch (error) {
+      console.error('Ошибка поиска адреса:', error);
+      toastError(t('questionnaire.addressNotFound') || 'Ошибка при поиске адреса');
+    } finally {
+      setIsSearchingAddress(false);
+    }
   };
 
   const handleCurrentLocation = () => {
@@ -339,6 +379,37 @@ const QuestionnairePage: React.FC = () => {
             {/* Координаты места назначения */}
             <div className="space-y-3 md:space-y-4">
               <Label className="text-base font-semibold">{t('questionnaire.coordinates')} *</Label>
+              
+              {/* Поле для ввода адреса */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-muted-foreground">
+                  {t('questionnaire.enterAddress')}
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearchAddress();
+                      }
+                    }}
+                    placeholder={t('questionnaire.addressPlaceholder')}
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleSearchAddress}
+                    disabled={isSearchingAddress || !address.trim()}
+                    className="whitespace-nowrap"
+                  >
+                    {isSearchingAddress ? t('questionnaire.searching') : t('questionnaire.searchAddress')}
+                  </Button>
+                </div>
+              </div>
               
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button

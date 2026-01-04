@@ -117,16 +117,6 @@ export const endWorkOffice = async (data: EndWorkOfficeData): Promise<ApiRespons
   formData.append('worker_id', data.worker_id.toString());
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
-  
-  if (data.report_video) {
-    formData.append('report_video', data.report_video);
-  }
-  
-  if (data.done_work_photos && data.done_work_photos.length > 0) {
-    data.done_work_photos.forEach((photo) => {
-      formData.append('done_work_photos', photo);
-    });
-  }
 
   return await apiRequest<WorkProcessEndOut>("POST", "/work/end-office", {
     headers: {

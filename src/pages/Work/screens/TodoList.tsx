@@ -42,11 +42,22 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
   const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
 
-  const queryParams = useMemo(() => ({
-    facility_id: facilityId,
-    facility_type_id: facilityTypeId,
-    finished: null as boolean | null,
-  }), [facilityId, facilityTypeId]);
+  const queryParams = useMemo(() => {
+    if (canSelectObjectsAndVehicles) {
+      // Для работников с объектами - фильтрация по facility_id и facility_type_id
+      return {
+        facility_id: facilityId,
+        facility_type_id: facilityTypeId,
+        finished: null as boolean | null,
+      };
+    } else {
+      // Для офисных работников - фильтрация по worker_id
+      return {
+        worker_id: user?.id || null,
+        finished: null as boolean | null,
+      };
+    }
+  }, [canSelectObjectsAndVehicles, facilityId, facilityTypeId, user?.id]);
 
   useEffect(() => {
     const loadTasks = async () => {
@@ -100,8 +111,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         try {
           const res = await createWorkTask({
             text,
-            facility_id: facilityId ?? undefined,
-            facility_type_id: facilityTypeId ?? undefined,
+            facility_id: canSelectObjectsAndVehicles ? (facilityId ?? undefined) : undefined,
+            facility_type_id: canSelectObjectsAndVehicles ? (facilityTypeId ?? undefined) : undefined,
             worker_id: user?.id,
           });
           if (!res.error && res.data) {
@@ -167,20 +178,58 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         if (ct.text.trim().length === 0) continue;
         await createWorkTask({
           text: ct.text.trim(),
-          facility_id: facilityId ?? undefined,
-          facility_type_id: facilityTypeId ?? undefined,
+          facility_id: canSelectObjectsAndVehicles ? (facilityId ?? undefined) : undefined,
+          facility_type_id: canSelectObjectsAndVehicles ? (facilityTypeId ?? undefined) : undefined,
           worker_id: user.id,
           finished: ct.status === 'completed',
         });
       }
 
+      // Получаем геолокацию
+      console.log('[DEBUG] Requesting geolocation...', {
+        enableHighAccuracy: canSelectObjectsAndVehicles,
+        timeout: 15000,
+        maximumAge: 60000,
+        canSelectObjectsAndVehicles
+      });
+      
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 30000,
+        const startTime = Date.now();
+        
+        const successCallback = (pos: GeolocationPosition) => {
+          const elapsed = Date.now() - startTime;
+          console.log('[DEBUG] Geolocation success:', {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            elapsedMs: elapsed
+          });
+          resolve(pos);
+        };
+        
+        const errorCallback = (error: GeolocationPositionError) => {
+          const elapsed = Date.now() - startTime;
+          console.error('[DEBUG] Geolocation error:', {
+            code: error.code,
+            message: error.message,
+            elapsedMs: elapsed,
+            errorDetails: {
+              code1: 'PERMISSION_DENIED',
+              code2: 'POSITION_UNAVAILABLE',
+              code3: 'TIMEOUT'
+            }
+          });
+          reject(error);
+        };
+        
+        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+          enableHighAccuracy: canSelectObjectsAndVehicles, // Для офисных работников используем менее точную геолокацию
+          timeout: 15000,
           maximumAge: 60000
         });
       });
+      
+      console.log('[DEBUG] Geolocation obtained, continuing with work completion...');
 
       let response;
       
@@ -197,13 +246,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         };
         response = await endWork(endWorkData);
       } else {
-        // Для остальных - офисный эндпоинт без facility_id и instrument_photos
+        // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
         const endWorkOfficeData: EndWorkOfficeData = {
           worker_id: user.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
-          done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
-          report_video: videoFile || undefined,
         };
         response = await endWorkOffice(endWorkOfficeData);
       }
@@ -428,8 +475,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         </div>
         )}
 
-        {/* Object Completion Checkbox */}
-        {!embedded && (
+        {/* Object Completion Checkbox - только для работников с объектами */}
+        {!embedded && canSelectObjectsAndVehicles && (
         <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
           <div className="flex items-center gap-3">
             <input

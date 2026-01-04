@@ -941,7 +941,10 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 </h2>
                 <div className="bg-theme-accent/20 border border-theme-accent rounded-xl p-4 mb-6">
                   <p className="text-theme-text-primary font-medium">
-                    {t('work.currentObject')}: {facilities.find(facility => facility.id.toString() === selectedObject)?.name || t('work.unnamedObject')}
+                    {canSelectObjectsAndVehicles 
+                      ? `${t('work.currentObject')}: ${facilities.find(facility => facility.id.toString() === selectedObject)?.name || t('work.unnamedObject')}`
+                      : `${t('work.workPlace')}: ${t('work.office')}`
+                    }
                   </p>
                 </div>
                 <button
@@ -952,15 +955,17 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   {t('work.stopWork')}
                 </button>
 
-                <div className="mt-6 text-center">
-                  <button
-                    onClick={handleTelegramGroup}
-                    className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
-                  >
-                    <MessageCircle className="h-5 w-5" />
-                    {t('work.joinTelegramGroup')}
-                  </button>
-                </div>
+                {canSelectObjectsAndVehicles && (
+                  <div className="mt-6 text-center">
+                    <button
+                      onClick={handleTelegramGroup}
+                      className="inline-flex items-center gap-3 px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
+                    >
+                      <MessageCircle className="h-5 w-5" />
+                      {t('work.joinTelegramGroup')}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             <div className="bg-theme-bg-card mt-6 border border-theme-border text-center rounded-xl p-6">

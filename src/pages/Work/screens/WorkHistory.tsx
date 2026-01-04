@@ -189,7 +189,10 @@ const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
   };
 
   const renderEndedProcess = (process: WorkProcessEndOut) => {
-    const facilityName = process.facility?.name || t('work.unnamedObject');
+    const isOfficeWorker = process.facility_id === null;
+    const facilityName = isOfficeWorker 
+      ? `${t('work.workPlace')}: ${t('work.office')}`
+      : (process.facility?.name || t('work.unnamedObject'));
     const duration = getDuration(process);
 
     return (
@@ -198,14 +201,19 @@ const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
           <span className="text-base text-theme-text-muted font-medium">#{process.id}</span>
           <span className="text-2xl font-semibold text-theme-text-primary">{facilityName}</span>
           <span
-            className={`text-sm font-semibold px-3 py-1.5 rounded ${process.status_object_finished
-              ? 'bg-green-500/10 text-green-400'
-              : 'bg-yellow-500/10 text-yellow-400'
-              }`}
+            className={`text-sm font-semibold px-3 py-1.5 rounded ${
+              isOfficeWorker
+                ? 'bg-green-500/10 text-green-400'
+                : (process.status_object_finished
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-yellow-500/10 text-yellow-400')
+            }`}
           >
-            {process.status_object_finished
-              ? t('admin.workProcesses.badges.finished')
-              : t('admin.workProcesses.badges.notFinished')}
+            {isOfficeWorker
+              ? t('work.workDayEnded')
+              : (process.status_object_finished
+                  ? t('admin.workProcesses.badges.finished')
+                  : t('admin.workProcesses.badges.notFinished'))}
           </span>
           {process.summary_rate !== null && (
             <span className="ml-auto text-base font-semibold px-3 py-1.5 rounded bg-theme-bg-tertiary text-theme-text-secondary border border-theme-border">
@@ -241,18 +249,22 @@ const WorkHistory: FC<WorkHistoryProps> = ({ onBack }) => {
         </div>
 
         <div className="space-y-3">
-          <div>
-            <div className="text-lg font-semibold text-theme-text-primary mb-3">{t('work.history.photos')}</div>
-            {process.done_work_photos_url?.length || process.instrument_photos_url?.length ? (
-              <ImageViewer
-                images={[...(process.done_work_photos_url || []), ...(process.instrument_photos_url || [])]}
-              />
-            ) : (
-              <div className="text-base text-theme-text-muted">{t('work.history.noPhotos')}</div>
-            )}
-          </div>
+          {/* Фото - только для работников с объектами */}
+          {!isOfficeWorker && (
+            <div>
+              <div className="text-lg font-semibold text-theme-text-primary mb-3">{t('work.history.photos')}</div>
+              {process.done_work_photos_url?.length || process.instrument_photos_url?.length ? (
+                <ImageViewer
+                  images={[...(process.done_work_photos_url || []), ...(process.instrument_photos_url || [])]}
+                />
+              ) : (
+                <div className="text-base text-theme-text-muted">{t('work.history.noPhotos')}</div>
+              )}
+            </div>
+          )}
 
-          {process.report_video_url && (
+          {/* Видео - только для работников с объектами */}
+          {!isOfficeWorker && process.report_video_url && (
             <Button
               asChild
               variant="default"

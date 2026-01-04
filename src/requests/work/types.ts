@@ -72,6 +72,4 @@ export type EndWorkOfficeData = {
   worker_id: number;
   latitude: number;
   longitude: number;
-  report_video?: File | null;
-  done_work_photos?: File[] | null;
 };
