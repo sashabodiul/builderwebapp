@@ -100,16 +100,42 @@ export const endWork = async (
     
     onLog?.(`Отправка FormData...`);
     
-    // Используем axios для всех случаев - он более надежен
-    const response = await axios.post(requestUrl, formData, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': botApiToken,
-        // Не устанавливаем Content-Type - браузер сам установит для FormData
-      },
+    // Создаем отдельный экземпляр axios для этого запроса
+    // чтобы гарантировать правильную обработку FormData
+    const axiosInstance = axios.create({
       timeout: finalTimeout,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
+    });
+    
+    // Перехватываем запрос, чтобы гарантировать правильные заголовки
+    axiosInstance.interceptors.request.use((config) => {
+      // Для FormData НЕ устанавливаем Content-Type - браузер сам установит с boundary
+      if (config.data instanceof FormData) {
+        delete config.headers['Content-Type'];
+        delete config.headers['content-type'];
+        // Логируем финальные заголовки для диагностики
+        onLog?.(`Финальные заголовки запроса: ${JSON.stringify(Object.keys(config.headers || {}))}`);
+        if (config.headers && 'Content-Type' in config.headers) {
+          onLog?.(`⚠️ ВНИМАНИЕ: Content-Type все еще установлен: ${config.headers['Content-Type']}`);
+        } else {
+          onLog?.(`✓ Content-Type не установлен - браузер установит автоматически`);
+        }
+      }
+      return config;
+    });
+    
+    // Создаем заголовки без Content-Type для FormData
+    const headers: Record<string, string> = {
+      'Accept': 'application/json',
+      'Authorization': botApiToken,
+    };
+    
+    onLog?.(`Заголовки запроса: Accept=${headers.Accept}, Authorization=***, Content-Type=автоматически (multipart/form-data с boundary)`);
+    
+    // Используем созданный экземпляр axios
+    const response = await axiosInstance.post(requestUrl, formData, {
+      headers,
       // Добавляем обработчик прогресса для всех случаев
       onUploadProgress: (progressEvent) => {
         if (progressEvent.total && onProgress) {
