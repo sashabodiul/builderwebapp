@@ -10,6 +10,7 @@ import DelegateTaskDialog from './components/DelegateTaskDialog';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import { logger } from '../../../lib/logger';
+import { ErrorDetails } from '@/components/ui/ErrorDetails';
 import TodoList from './TodoList';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +44,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [dateTo, setDateTo] = useState<string>('');
   const [isDelegateTaskDialogOpen, setIsDelegateTaskDialogOpen] = useState(false);
   const [workType, setWorkType] = useState<'facility' | 'office'>('facility'); // Для foreman, engineer, assistant
+  const [errorDetails, setErrorDetails] = useState<{
+    title: string;
+    message: string;
+    details?: any;
+  } | null>(null);
   const isRestricted = !user?.rate || user?.worker_type == null;
   
   // Разрешенные типы работников для выбора объектов и бронирования авто
@@ -320,6 +326,39 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       if (response.error) {
         const errorData = response.error as any;
+        const isAndroid = /android/i.test(navigator.userAgent);
+        
+        let errorMessage = t('work.startWorkError');
+        if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
+          errorMessage = 'Превышено время ожидания. Проверьте интернет-соединение и попробуйте снова.';
+        } else if (errorData?.response?.status >= 500) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже.';
+        } else if (errorData?.response?.status === 400) {
+          errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
+        }
+        
+        setErrorDetails({
+          title: 'Ошибка начала работы',
+          message: errorMessage,
+          details: {
+            status: errorData?.response?.status || response.status,
+            statusText: errorData?.response?.statusText,
+            code: errorData?.code,
+            responseData: errorData?.response?.data,
+            requestData: {
+              worker_id: requestData.worker_id,
+              facility_id: requestData.facility_id,
+              latitude: requestData.latitude,
+              longitude: requestData.longitude,
+            },
+            environment: {
+              isAndroid,
+              userAgent: navigator.userAgent,
+              connectionType: (navigator as any).connection?.effectiveType,
+            },
+          },
+        });
+        
         logger.error('Failed to start work', {
           requestData,
           response: {
@@ -330,7 +369,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           },
         });
         console.error('Failed to start work:', response);
-        toastError(t('work.startWorkError'));
+        toastError(errorMessage);
         setIsStartingWork(false);
         return;
       }
@@ -354,16 +393,53 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         } : error,
       });
       console.error('Error starting work:', error);
+      
+      let errorMessage = t('work.startWorkError');
+      let errorTitle = 'Ошибка начала работы';
+      
       if (error instanceof GeolocationPositionError) {
-        const errorMessage = error.code === 1
-          ? t('work.geolocationDenied')
+        errorTitle = 'Ошибка геолокации';
+        errorMessage = error.code === 1
+          ? 'Доступ к геолокации запрещен. Разрешите доступ в настройках устройства.'
           : error.code === 2
-            ? t('work.geolocationUnavailable')
-            : t('work.geolocationTimeout');
-        toastError(errorMessage);
+            ? 'Геолокация недоступна. Проверьте настройки GPS.'
+            : 'Превышено время ожидания геолокации. Попробуйте снова.';
+        
+        setErrorDetails({
+          title: errorTitle,
+          message: errorMessage,
+          details: {
+            code: error.code,
+            message: error.message,
+            errorCode1: 'PERMISSION_DENIED',
+            errorCode2: 'POSITION_UNAVAILABLE',
+            errorCode3: 'TIMEOUT',
+            environment: {
+              isAndroid: /android/i.test(navigator.userAgent),
+              userAgent: navigator.userAgent,
+            },
+          },
+        });
       } else {
-        toastError(t('work.startWorkError'));
+        const errorData = error as any;
+        setErrorDetails({
+          title: errorTitle,
+          message: errorMessage,
+          details: {
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+            } : String(error),
+            code: errorData?.code,
+            environment: {
+              isAndroid: /android/i.test(navigator.userAgent),
+              userAgent: navigator.userAgent,
+            },
+          },
+        });
       }
+      
+      toastError(errorMessage);
     } finally {
       setIsStartingWork(false);
     }
@@ -522,6 +598,16 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   return (
     <div className="min-h-screen page bg-theme-bg-primary p-6">
       <div className="max-w-4xl mx-auto w-full">
+        {/* Error Details */}
+        {errorDetails && (
+          <ErrorDetails
+            title={errorDetails.title}
+            message={errorDetails.message}
+            details={errorDetails.details}
+            onClose={() => setErrorDetails(null)}
+          />
+        )}
+        
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <h1 className="text-4xl font-bold text-theme-text-primary">{t('work.title')}</h1>

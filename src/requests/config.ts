@@ -13,6 +13,7 @@ const getBaseUrl = (): string => {
 
 const api = axios.create({
   baseURL: getBaseUrl(),
+  timeout: 60000, // Увеличенный timeout по умолчанию для больших запросов (60 секунд)
 });
 
 // Update baseURL when environment changes
@@ -25,6 +26,14 @@ api.interceptors.request.use((config) => {
   if (apiToken) {
     config.headers["Authorization"] = apiToken;
   }
+  
+  // Для FormData не устанавливаем Content-Type - браузер сам установит правильный заголовок с boundary
+  // Это особенно важно для Android и больших файлов
+  if (config.data instanceof FormData) {
+    // Удаляем явно установленный Content-Type, если он есть
+    delete config.headers['Content-Type'];
+  }
+  
   return config;
 });
 

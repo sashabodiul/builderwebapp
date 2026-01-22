@@ -42,10 +42,10 @@ export const endWork = async (data: EndWorkData): Promise<ApiResponse<WorkProces
     });
   }
 
+  // Не устанавливаем Content-Type явно для FormData - браузер сам установит правильный заголовок с boundary
+  // Это особенно важно для Android, где могут быть проблемы с multipart/form-data
   return await apiRequest<WorkProcessEndOut>("POST", "/work/end", {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    timeout: 60000, // Увеличенный timeout для больших файлов (60 секунд)
   }, formData);
 };
 
@@ -118,10 +118,9 @@ export const endWorkOffice = async (data: EndWorkOfficeData): Promise<ApiRespons
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
 
+  // Не устанавливаем Content-Type явно для FormData
   return await apiRequest<WorkProcessEndOut>("POST", "/work/end-office", {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
+    timeout: 30000, // Timeout для офисных работников
   }, formData);
 };
 

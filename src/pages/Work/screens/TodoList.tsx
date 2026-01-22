@@ -6,6 +6,7 @@ import { endWork, endWorkOffice } from '../../../requests/work';
 import { logger } from '../../../lib/logger';
 import { WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
+import { ErrorDetails } from '@/components/ui/ErrorDetails';
 import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks, updateWorkTask } from '../../../requests/work-task';
 import { createComment } from '../../../requests/comment';
 import ImageViewer from '@/components/ui/ImageViewer';
@@ -39,6 +40,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const [workComment, setWorkComment] = useState('');
   const [isObjectCompleted, setIsObjectCompleted] = useState(false);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [errorDetails, setErrorDetails] = useState<{
+    title: string;
+    message: string;
+    details?: any;
+  } | null>(null);
 
   const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
   const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
@@ -324,17 +330,81 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
       if (response.error) {
         const errorData = response.error as any;
-        logger.error('Failed to end work', {
-          requestData,
+        const isAndroid = /android/i.test(navigator.userAgent);
+        
+        // Детальное логирование ошибки для диагностики
+        const errorDetails = {
+          requestData: {
+            ...requestData,
+            // Не логируем сами файлы, только их размеры
+            workPhotosCount: workPhotos.length,
+            toolsPhotosCount: toolsPhotos.length,
+            hasVideo: !!videoFile,
+            videoSize: videoFile ? videoFile.size : 0,
+            totalPhotosSize: [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0),
+          },
           response: {
             error: response.error,
             status: response.status,
             message: errorData?.message,
+            code: errorData?.code,
             responseData: errorData?.response?.data,
+            responseStatus: errorData?.response?.status,
+            responseStatusText: errorData?.response?.statusText,
+          },
+          environment: {
+            isAndroid,
+            userAgent: navigator.userAgent,
+            connectionType: (navigator as any).connection?.effectiveType,
+          },
+        };
+        
+        logger.error('Failed to end work', errorDetails);
+        console.error('Failed to end work:', errorDetails);
+        
+        // Более информативное сообщение об ошибке
+        let errorMessage = t('work.endWorkError');
+        if (errorData?.response?.status === 413) {
+          errorMessage = 'Файлы слишком большие. Попробуйте уменьшить размер фотографий или видео.';
+        } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
+          errorMessage = 'Превышено время ожидания. Проверьте интернет-соединение и попробуйте снова.';
+        } else if (errorData?.response?.status >= 500) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже.';
+        } else if (errorData?.response?.status === 400) {
+          errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
+        } else if (errorData?.response?.status === 401 || errorData?.response?.status === 403) {
+          errorMessage = 'Ошибка авторизации. Перезайдите в приложение.';
+        }
+        
+        // Сохраняем детали ошибки для отображения в UI
+        setErrorDetails({
+          title: 'Ошибка завершения работы',
+          message: errorMessage,
+          details: {
+            status: errorData?.response?.status || response.status,
+            statusText: errorData?.response?.statusText,
+            code: errorData?.code,
+            responseData: errorData?.response?.data,
+            requestData: {
+              worker_id: requestData.worker_id,
+              latitude: requestData.latitude,
+              longitude: requestData.longitude,
+              status_object_finished: requestData.status_object_finished,
+              workPhotosCount: workPhotos.length,
+              toolsPhotosCount: toolsPhotos.length,
+              hasVideo: !!videoFile,
+              videoSize: videoFile ? videoFile.size : 0,
+              totalPhotosSize: [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0),
+            },
+            environment: {
+              isAndroid: /android/i.test(navigator.userAgent),
+              userAgent: navigator.userAgent,
+              connectionType: (navigator as any).connection?.effectiveType,
+            },
           },
         });
-        console.error('Failed to end work:', response);
-        toastError(t('work.endWorkError'));
+        
+        toastError(errorMessage);
         setIsCompleting(false);
         return;
       }
@@ -365,16 +435,53 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         } : error,
       });
       console.error('Error ending work:', error);
+      
+      let errorMessage = t('work.endWorkError');
+      let errorTitle = 'Ошибка завершения работы';
+      
       if (error instanceof GeolocationPositionError) {
-        const errorMessage = error.code === 1 
-          ? t('work.geolocationDenied')
+        errorTitle = 'Ошибка геолокации';
+        errorMessage = error.code === 1 
+          ? 'Доступ к геолокации запрещен. Разрешите доступ в настройках устройства.'
           : error.code === 2 
-          ? t('work.geolocationUnavailable')
-          : t('work.geolocationTimeout');
-        toastError(errorMessage);
+          ? 'Геолокация недоступна. Проверьте настройки GPS.'
+          : 'Превышено время ожидания геолокации. Попробуйте снова.';
+        
+        setErrorDetails({
+          title: errorTitle,
+          message: errorMessage,
+          details: {
+            code: error.code,
+            message: error.message,
+            errorCode1: 'PERMISSION_DENIED',
+            errorCode2: 'POSITION_UNAVAILABLE',
+            errorCode3: 'TIMEOUT',
+            environment: {
+              isAndroid: /android/i.test(navigator.userAgent),
+              userAgent: navigator.userAgent,
+            },
+          },
+        });
       } else {
-        toastError(t('work.endWorkError'));
+        const errorData = error as any;
+        setErrorDetails({
+          title: errorTitle,
+          message: errorMessage,
+          details: {
+            error: error instanceof Error ? {
+              name: error.name,
+              message: error.message,
+            } : String(error),
+            code: errorData?.code,
+            environment: {
+              isAndroid: /android/i.test(navigator.userAgent),
+              userAgent: navigator.userAgent,
+            },
+          },
+        });
       }
+      
+      toastError(errorMessage);
       setIsCompleting(false);
     }
   };
@@ -382,6 +489,16 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   return (
     <div className={`bg-theme-bg-primary p-6 overflow-x-hidden ${embedded ? '' : 'min-h-screen page'}`}>
       <div className="max-w-2xl mx-auto">
+        {/* Error Details */}
+        {errorDetails && (
+          <ErrorDetails
+            title={errorDetails.title}
+            message={errorDetails.message}
+            details={errorDetails.details}
+            onClose={() => setErrorDetails(null)}
+          />
+        )}
+        
         {/* Header */}
         {!embedded && (
         <div className="text-center mb-8">
