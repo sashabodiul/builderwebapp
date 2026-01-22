@@ -16,11 +16,46 @@ export const useTelegramWebApp = () => {
       html!.classList.add("desktop");
     }
 
-    if (window.Telegram && !isDesktop() && !import.meta.env.VITE_DEBUG) {
-      window.Telegram.WebApp.requestFullscreen();
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.disableVerticalSwipes();
-      window.Telegram.WebApp.lockOrientation();
+    if (window.Telegram?.WebApp && !isDesktop() && !import.meta.env.VITE_DEBUG) {
+      const webApp = window.Telegram.WebApp;
+      const version = webApp.version || '6.0';
+      const isVersion6 = version.startsWith('6.');
+      
+      // expand() поддерживается во всех версиях
+      if (typeof webApp.expand === 'function') {
+        try {
+          webApp.expand();
+        } catch (error) {
+          // Игнорируем ошибки для expand
+        }
+      }
+
+      // Методы, которые не поддерживаются в версии 6.0
+      if (!isVersion6) {
+        if (typeof webApp.requestFullscreen === 'function') {
+          try {
+            webApp.requestFullscreen();
+          } catch (error) {
+            // Игнорируем ошибки
+          }
+        }
+
+        if (typeof webApp.disableVerticalSwipes === 'function') {
+          try {
+            webApp.disableVerticalSwipes();
+          } catch (error) {
+            // Игнорируем ошибки
+          }
+        }
+
+        if (typeof webApp.lockOrientation === 'function') {
+          try {
+            webApp.lockOrientation();
+          } catch (error) {
+            // Игнорируем ошибки
+          }
+        }
+      }
     }
   }, []);
 

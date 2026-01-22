@@ -23,13 +23,23 @@ const Work: FC = () => {
 
   // Приховуємо кнопку назад для головного екрану Work
   useEffect(() => {
-    if (window.Telegram?.WebApp?.BackButton) {
-      try {
-        window.Telegram.WebApp.BackButton.hide();
-      } catch (error) {
-        // BackButton не поддерживается в версии 6.0
-        console.warn('BackButton not supported in this Telegram WebApp version');
-      }
+    if (!window.Telegram?.WebApp?.BackButton) {
+      return;
+    }
+
+    const webApp = window.Telegram.WebApp;
+    const version = webApp.version || '6.0';
+    const isVersion6 = version.startsWith('6.');
+
+    // BackButton не поддерживается в версии 6.0
+    if (isVersion6) {
+      return;
+    }
+
+    try {
+      webApp.BackButton.hide();
+    } catch (error) {
+      // Игнорируем ошибки
     }
   }, []);
 

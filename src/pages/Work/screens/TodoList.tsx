@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { endWork, endWorkOffice } from '../../../requests/work';
+import { logger } from '../../../lib/logger';
 import { EndWorkData, EndWorkOfficeData, WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks, updateWorkTask } from '../../../requests/work-task';
@@ -160,6 +161,18 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
 
+    logger.info('handleCompleteWork called', {
+      user: { id: user.id, worker_type: user.worker_type },
+      canSelectObjectsAndVehicles,
+      facilityId,
+      facilityTypeId,
+      tasksCount: tasks.length,
+      workPhotosCount: workPhotos.length,
+      toolsPhotosCount: toolsPhotos.length,
+      hasVideo: !!videoFile,
+      isObjectCompleted,
+    });
+
     setIsCompleting(true);
 
     try {
@@ -167,15 +180,22 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       const existingTasks = tasks.filter(t => !t.isCustom);
       const customTasks = tasks.filter(t => t.isCustom);
 
+      logger.debug('Updating tasks', {
+        existingTasksCount: existingTasks.length,
+        customTasksCount: customTasks.length,
+      });
+
       if (existingTasks.length > 0) {
         const bulkPayload = {
           tasks: existingTasks.map(t => ({ id: Number(t.id), finished: t.status === 'completed' }))
         };
+        logger.debug('Bulk updating tasks', bulkPayload);
         await bulkUpdateWorkTasks(bulkPayload);
       }
 
       for (const ct of customTasks) {
         if (ct.text.trim().length === 0) continue;
+        logger.debug('Creating custom task', { text: ct.text.trim(), status: ct.status });
         await createWorkTask({
           text: ct.text.trim(),
           facility_id: canSelectObjectsAndVehicles ? (facilityId ?? undefined) : undefined,
@@ -186,7 +206,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       }
 
       // Получаем геолокацию
-      console.log('[DEBUG] Requesting geolocation...', {
+      logger.debug('Requesting geolocation for work completion', {
         enableHighAccuracy: canSelectObjectsAndVehicles,
         timeout: 15000,
         maximumAge: 60000,
@@ -198,7 +218,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         const successCallback = (pos: GeolocationPosition) => {
           const elapsed = Date.now() - startTime;
-          console.log('[DEBUG] Geolocation success:', {
+          logger.info('Geolocation obtained for work completion', {
             latitude: pos.coords.latitude,
             longitude: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
@@ -209,15 +229,13 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         const errorCallback = (error: GeolocationPositionError) => {
           const elapsed = Date.now() - startTime;
-          console.error('[DEBUG] Geolocation error:', {
+          logger.error('Geolocation error when completing work', {
             code: error.code,
             message: error.message,
             elapsedMs: elapsed,
-            errorDetails: {
-              code1: 'PERMISSION_DENIED',
-              code2: 'POSITION_UNAVAILABLE',
-              code3: 'TIMEOUT'
-            }
+            errorCode1: 'PERMISSION_DENIED',
+            errorCode2: 'POSITION_UNAVAILABLE',
+            errorCode3: 'TIMEOUT'
           });
           reject(error);
         };
@@ -229,13 +247,14 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         });
       });
       
-      console.log('[DEBUG] Geolocation obtained, continuing with work completion...');
+      logger.debug('Geolocation obtained, continuing with work completion');
 
       let response;
+      let requestData;
       
       if (canSelectObjectsAndVehicles) {
         // Для admin, coder, worker, master - обычный эндпоинт с facility_id и instrument_photos
-        const endWorkData: EndWorkData = {
+        requestData = {
           worker_id: user.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
@@ -244,35 +263,72 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
           report_video: videoFile || undefined,
         };
-        response = await endWork(endWorkData);
+        logger.info('Ending facility work', {
+          ...requestData,
+          workPhotosCount: workPhotos.length,
+          toolsPhotosCount: toolsPhotos.length,
+          hasVideo: !!videoFile,
+        });
+        response = await endWork(requestData);
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
-        const endWorkOfficeData: EndWorkOfficeData = {
+        requestData = {
           worker_id: user.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         };
-        response = await endWorkOffice(endWorkOfficeData);
+        logger.info('Ending office work', requestData);
+        response = await endWorkOffice(requestData);
       }
       
+      logger.debug('Work end API response received', {
+        hasError: !!response.error,
+        hasData: !!response.data,
+        status: response.status,
+        error: response.error,
+      });
+
       if (response.error) {
+        logger.error('Failed to end work', {
+          requestData,
+          response: {
+            error: response.error,
+            status: response.status,
+            message: response.error?.message,
+            responseData: response.error?.response?.data,
+          },
+        });
         console.error('Failed to end work:', response);
         toastError(t('work.endWorkError'));
         setIsCompleting(false);
         return;
       }
 
+      logger.info('Work completed successfully', {
+        workProcessId: response.data?.id,
+      });
+
       // optional comment after getting process id
       try {
         const text = workComment.trim();
         if (text.length > 0) {
+          logger.debug('Adding work comment', { workProcessId: response.data.id, commentLength: text.length });
           await createComment({ worker_process_id: response.data.id, text });
         }
-      } catch {}
+      } catch (error) {
+        logger.warn('Failed to add work comment', { error });
+      }
 
       toastSuccess(t('work.workEnded'));
       onComplete && onComplete(response.data);
     } catch (error) {
+      logger.error('Exception when completing work', {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       console.error('Error ending work:', error);
       if (error instanceof GeolocationPositionError) {
         const errorMessage = error.code === 1 

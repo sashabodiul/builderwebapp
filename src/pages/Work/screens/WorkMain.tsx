@@ -9,6 +9,7 @@ import { startWork, startWorkOffice, getActiveWorkProcess } from '../../../reque
 import DelegateTaskDialog from './components/DelegateTaskDialog';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
+import { logger } from '../../../lib/logger';
 import TodoList from './TodoList';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -208,14 +209,27 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   };
 
   const handleStartWork = async () => {
+    logger.info('handleStartWork called', {
+      user: { id: user?.id, worker_type: user?.worker_type },
+      canChooseWorkType,
+      canSelectObjectsAndVehicles,
+      workType,
+      selectedObject,
+    });
+
     // Для foreman, engineer, assistant проверяем выбранный тип работы
     if (canChooseWorkType) {
       if (workType === 'facility' && !selectedObject) {
+        logger.warn('Cannot start work: object not selected (foreman/engineer/assistant)');
         toastError(t('work.selectObjectFirst'));
         return;
       }
     } else if (canSelectObjectsAndVehicles && !selectedObject) {
       // Для admin, coder, worker, master требуется выбор объекта
+      logger.warn('Cannot start work: object not selected', {
+        worker_type: user?.worker_type,
+        canSelectObjectsAndVehicles,
+      });
       toastError(t('work.selectObjectFirst'));
       return;
     }
@@ -223,10 +237,37 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     setIsStartingWork(true);
 
     try {
+      logger.debug('Requesting geolocation for work start');
       toastSuccess(t('work.requestingGeolocation'));
 
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
+        const startTime = Date.now();
+        
+        const successCallback = (pos: GeolocationPosition) => {
+          const elapsed = Date.now() - startTime;
+          logger.info('Geolocation obtained for work start', {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            elapsedMs: elapsed,
+          });
+          resolve(pos);
+        };
+        
+        const errorCallback = (error: GeolocationPositionError) => {
+          const elapsed = Date.now() - startTime;
+          logger.error('Geolocation error when starting work', {
+            code: error.code,
+            message: error.message,
+            elapsedMs: elapsed,
+            errorCode1: 'PERMISSION_DENIED',
+            errorCode2: 'POSITION_UNAVAILABLE',
+            errorCode3: 'TIMEOUT',
+          });
+          reject(error);
+        };
+
+        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
           enableHighAccuracy: true,
           timeout: 30000,
           maximumAge: 60000
@@ -237,41 +278,66 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       const longitude = position.coords.longitude;
 
       let response;
+      let requestData;
       
       // Для foreman, engineer, assistant проверяем выбранный тип работы
       if (canChooseWorkType && workType === 'office') {
         // Офисная работа
-        const startWorkOfficeData = {
+        requestData = {
           worker_id: user?.id || 0,
           latitude,
           longitude
         };
-        response = await startWorkOffice(startWorkOfficeData);
+        logger.info('Starting office work', requestData);
+        response = await startWorkOffice(requestData);
       } else if (canSelectObjectsAndVehicles) {
         // Работа на объекте (admin, coder, worker, master, или foreman/engineer/assistant с workType='facility')
-        const startWorkData = {
+        requestData = {
           worker_id: user?.id || 0,
           facility_id: parseInt(selectedObject),
           latitude,
           longitude
         };
-        response = await startWork(startWorkData);
+        logger.info('Starting facility work', requestData);
+        response = await startWork(requestData);
       } else {
         // Для остальных - офисный эндпоинт без facility_id
-        const startWorkOfficeData = {
+        requestData = {
           worker_id: user?.id || 0,
           latitude,
           longitude
         };
-        response = await startWorkOffice(startWorkOfficeData);
+        logger.info('Starting office work (default)', requestData);
+        response = await startWorkOffice(requestData);
       }
 
+      logger.debug('Work start API response received', {
+        hasError: !!response.error,
+        hasData: !!response.data,
+        status: response.status,
+        error: response.error,
+      });
+
       if (response.error) {
+        logger.error('Failed to start work', {
+          requestData,
+          response: {
+            error: response.error,
+            status: response.status,
+            message: response.error?.message,
+            responseData: response.error?.response?.data,
+          },
+        });
         console.error('Failed to start work:', response);
         toastError(t('work.startWorkError'));
         setIsStartingWork(false);
         return;
       }
+
+      logger.info('Work started successfully', {
+        workProcessId: response.data?.id,
+        facilityId: response.data?.facility_id,
+      });
 
       setActiveWorkProcess(response.data);
       setIsWorking(true);
@@ -279,6 +345,13 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       onStartWork(canSelectObjectsAndVehicles ? selectedObject : '');
       toastSuccess(t('work.workStarted'));
     } catch (error) {
+      logger.error('Exception when starting work', {
+        error: error instanceof Error ? {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        } : error,
+      });
       console.error('Error starting work:', error);
       if (error instanceof GeolocationPositionError) {
         const errorMessage = error.code === 1
