@@ -133,28 +133,83 @@ export const endWork = async (
     
     onLog?.(`Заголовки запроса: Accept=${headers.Accept}, Authorization=***, Content-Type=автоматически (multipart/form-data с boundary)`);
     
-    // Используем созданный экземпляр axios
-    const response = await axiosInstance.post(requestUrl, formData, {
-      headers,
-      // Добавляем обработчик прогресса для всех случаев
-      onUploadProgress: (progressEvent) => {
-        if (progressEvent.total && onProgress) {
-          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-          onProgress({
-            loaded: progressEvent.loaded,
-            total: progressEvent.total,
-            percent: percentCompleted,
-          });
-          console.log(`[endWork] Upload progress: ${percentCompleted}% (${(progressEvent.loaded / 1024 / 1024).toFixed(2)}MB / ${(progressEvent.total / 1024 / 1024).toFixed(2)}MB)`);
+    // Для Android с большими файлами используем fetch API
+    // axios устанавливает неправильный Content-Type даже после удаления в interceptor
+    if (isAndroid && totalSize > 30 * 1024 * 1024) {
+      onLog?.(`Использование fetch API для больших файлов на Android (axios устанавливает неправильный Content-Type)`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
+      
+      try {
+        // fetch правильно обрабатывает FormData - автоматически устанавливает multipart/form-data
+        const response = await fetch(requestUrl, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': botApiToken,
+            // НЕ устанавливаем Content-Type - браузер сам установит multipart/form-data с boundary
+          },
+          body: formData,
+          signal: controller.signal,
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+          throw {
+            response: {
+              status: response.status,
+              statusText: response.statusText,
+              data: errorData,
+            },
+            message: `HTTP ${response.status}: ${response.statusText}`,
+            code: 'ERR_BAD_RESPONSE',
+          };
         }
-      },
-    });
-    
-    onLog?.(`✓ Запрос выполнен успешно`);
-    onLog?.(`HTTP статус: ${response.status} ${response.statusText || ''}`);
-    onLog?.(`Размер ответа: ${JSON.stringify(response.data).length} байт`);
-    console.log('[endWork] Request successful', { status: response.status });
-    return { data: response.data };
+        
+        const data = await response.json();
+        onLog?.(`✓ Запрос выполнен успешно`);
+        onLog?.(`HTTP статус: ${response.status} ${response.statusText}`);
+        onLog?.(`Размер ответа: ${JSON.stringify(data).length} байт`);
+        return { data };
+      } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw {
+            code: 'ECONNABORTED',
+            message: 'Request timeout',
+            response: { status: 408 },
+          };
+        }
+        throw error;
+      }
+    } else {
+      // Для остальных случаев используем axios
+      onLog?.(`Использование axios для запроса`);
+      const response = await axiosInstance.post(requestUrl, formData, {
+        headers,
+        // Добавляем обработчик прогресса
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total && onProgress) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            onProgress({
+              loaded: progressEvent.loaded,
+              total: progressEvent.total,
+              percent: percentCompleted,
+            });
+            console.log(`[endWork] Upload progress: ${percentCompleted}% (${(progressEvent.loaded / 1024 / 1024).toFixed(2)}MB / ${(progressEvent.total / 1024 / 1024).toFixed(2)}MB)`);
+          }
+        },
+      });
+      
+      onLog?.(`✓ Запрос выполнен успешно`);
+      onLog?.(`HTTP статус: ${response.status} ${response.statusText || ''}`);
+      onLog?.(`Размер ответа: ${JSON.stringify(response.data).length} байт`);
+      console.log('[endWork] Request successful', { status: response.status });
+      return { data: response.data };
+    }
   } catch (error: any) {
     onLog?.(`✗ Ошибка запроса`);
     onLog?.(`Код ошибки: ${error?.code || 'неизвестно'}`);
