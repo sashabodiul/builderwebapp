@@ -26,10 +26,9 @@ import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 const stopReasonSchema = z.object({
-  reason: z.string().refine(
-    (val) => val === 'REST' || val === 'PERSONAL' || val === 'BREAKDOWN',
-    { message: 'Выберите причину остановки' }
-  ),
+  reason: z.enum(['REST', 'PERSONAL', 'BREAKDOWN'], {
+    message: 'Выберите причину остановки',
+  }),
 });
 
 type StopReasonFormData = z.infer<typeof stopReasonSchema>;
@@ -43,9 +42,9 @@ const StopReasonPage: React.FC = () => {
   const stopStateId = searchParams.get('stop_state_id');
 
   const form = useForm<StopReasonFormData>({
-    resolver: zodResolver(stopReasonSchema),
+    resolver: zodResolver(stopReasonSchema) as any,
     defaultValues: {
-      reason: '',
+      reason: 'REST' as 'REST' | 'PERSONAL' | 'BREAKDOWN',
     },
   });
 

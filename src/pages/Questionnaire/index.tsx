@@ -40,10 +40,9 @@ L.Icon.Default.mergeOptions({
 });
 
 const questionnaireSchema = z.object({
-  reason_type: z.string().refine(
-    (val) => val === 'WORK' || val === 'PERSONAL',
-    { message: 'Выберите тип поездки' }
-  ),
+  reason_type: z.enum(['WORK', 'PERSONAL'], {
+    message: 'Выберите тип поездки',
+  }),
   work_type: z.string().optional(),
   reason: z.string().min(1, 'Причина поездки обязательна для заполнения'),
   destination_description: z.string().min(1, 'Описание места назначения обязательно'),
@@ -122,9 +121,9 @@ const QuestionnairePage: React.FC = () => {
   const { t } = useTranslation();
 
   const form = useForm<QuestionnaireFormData>({
-    resolver: zodResolver(questionnaireSchema),
+    resolver: zodResolver(questionnaireSchema) as any,
     defaultValues: {
-      reason_type: undefined,
+      reason_type: 'WORK' as 'WORK' | 'PERSONAL',
       work_type: undefined,
       reason: '',
       destination_description: '',

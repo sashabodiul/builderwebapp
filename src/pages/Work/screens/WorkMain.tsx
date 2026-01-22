@@ -319,13 +319,14 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       });
 
       if (response.error) {
+        const errorData = response.error as any;
         logger.error('Failed to start work', {
           requestData,
           response: {
             error: response.error,
             status: response.status,
-            message: response.error?.message,
-            responseData: response.error?.response?.data,
+            message: errorData?.message,
+            responseData: errorData?.response?.data,
           },
         });
         console.error('Failed to start work:', response);

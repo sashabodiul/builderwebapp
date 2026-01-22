@@ -4,7 +4,7 @@ import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
 import { endWork, endWorkOffice } from '../../../requests/work';
 import { logger } from '../../../lib/logger';
-import { EndWorkData, EndWorkOfficeData, WorkProcessEndOut } from '../../../requests/work/types';
+import { WorkProcessEndOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
 import { createWorkTask, getWorkTasks, bulkUpdateWorkTasks, updateWorkTask } from '../../../requests/work-task';
 import { createComment } from '../../../requests/comment';
@@ -289,13 +289,14 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       });
 
       if (response.error) {
+        const errorData = response.error as any;
         logger.error('Failed to end work', {
           requestData,
           response: {
             error: response.error,
             status: response.status,
-            message: response.error?.message,
-            responseData: response.error?.response?.data,
+            message: errorData?.message,
+            responseData: errorData?.response?.data,
           },
         });
         console.error('Failed to end work:', response);
