@@ -33,7 +33,11 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
   }
 };
 
-export const endWork = async (data: EndWorkData): Promise<ApiResponse<WorkProcessEndOut>> => {
+export const endWork = async (
+  data: EndWorkData,
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void,
+  onLog?: (message: string) => void
+): Promise<ApiResponse<WorkProcessEndOut>> => {
   // This endpoint should use bot-api, not api-crm
   const botApiUrl = 'https://bot-api.skybud.de';
   const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
@@ -81,65 +85,72 @@ export const endWork = async (data: EndWorkData): Promise<ApiResponse<WorkProces
     const isAndroid = /android/i.test(navigator.userAgent);
     const finalTimeout = isAndroid && totalSize > 30 * 1024 * 1024 ? 600000 : timeoutMs; // 10 минут для Android с файлами > 30MB
     
-    // Для Android с большими файлами используем fetch вместо axios
-    // fetch может лучше работать с большими файлами в Telegram WebView
-    if (isAndroid && totalSize > 30 * 1024 * 1024) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
-      
-      try {
-        const response = await fetch(`${botApiUrl}/api/v1/work/end`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': botApiToken,
-            // Не устанавливаем Content-Type - браузер сам установит для FormData
-          },
-          body: formData,
-          signal: controller.signal,
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-          throw {
-            response: {
-              status: response.status,
-              statusText: response.statusText,
-              data: errorData,
-            },
-            message: `HTTP ${response.status}: ${response.statusText}`,
-          };
+    const requestUrl = `${botApiUrl}/api/v1/work/end`;
+    onLog?.(`Начало запроса к ${requestUrl}`);
+    onLog?.(`Timeout: ${finalTimeout}ms (${(finalTimeout / 1000).toFixed(0)} сек)`);
+    onLog?.(`Размер данных: ${(totalSize / (1024 * 1024)).toFixed(2)} MB`);
+    onLog?.(`Android: ${isAndroid ? 'Да' : 'Нет'}`);
+    
+    console.log('[endWork] Starting request', {
+      isAndroid,
+      totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+      timeout: finalTimeout,
+      url: requestUrl,
+    });
+    
+    onLog?.(`Отправка FormData...`);
+    
+    // Используем axios для всех случаев - он более надежен
+    const response = await axios.post(requestUrl, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // Не устанавливаем Content-Type - браузер сам установит для FormData
+      },
+      timeout: finalTimeout,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+      // Добавляем обработчик прогресса для всех случаев
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress({
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+            percent: percentCompleted,
+          });
+          console.log(`[endWork] Upload progress: ${percentCompleted}% (${(progressEvent.loaded / 1024 / 1024).toFixed(2)}MB / ${(progressEvent.total / 1024 / 1024).toFixed(2)}MB)`);
         }
-        
-        const data = await response.json();
-        return { data };
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-          throw {
-            code: 'ECONNABORTED',
-            message: 'Request timeout',
-            response: { status: 408 },
-          };
-        }
-        throw error;
-      }
-    } else {
-      // Для остальных случаев используем axios
-      const response = await axios.post(`${botApiUrl}/api/v1/work/end`, formData, {
-        headers: {
-          'Accept': 'application/json',
-          'Authorization': botApiToken,
-        },
-        timeout: finalTimeout,
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-      });
-      return { data: response.data };
-    }
+      },
+    });
+    
+    onLog?.(`✓ Запрос выполнен успешно`);
+    onLog?.(`HTTP статус: ${response.status} ${response.statusText || ''}`);
+    onLog?.(`Размер ответа: ${JSON.stringify(response.data).length} байт`);
+    console.log('[endWork] Request successful', { status: response.status });
+    return { data: response.data };
   } catch (error: any) {
+    onLog?.(`✗ Ошибка запроса`);
+    onLog?.(`Код ошибки: ${error?.code || 'неизвестно'}`);
+    onLog?.(`Сообщение: ${error?.message || String(error)}`);
+    if (error?.response) {
+      onLog?.(`HTTP статус: ${error.response.status} ${error.response.statusText || ''}`);
+      if (error.response.data) {
+        onLog?.(`Данные ответа: ${JSON.stringify(error.response.data)}`);
+      }
+    }
+    if (error?.request) {
+      onLog?.(`Запрос был отправлен, но ответ не получен`);
+    }
+    
+    console.error('[endWork] Request failed', {
+      error: error?.message || error,
+      code: error?.code,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      responseData: error?.response?.data,
+    });
+    
     return {
       data: {} as WorkProcessEndOut,
       error: error,

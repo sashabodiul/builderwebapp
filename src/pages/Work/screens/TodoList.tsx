@@ -45,6 +45,73 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     message: string;
     details?: any;
   } | null>(null);
+  const [uploadLogs, setUploadLogs] = useState<string[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percent: number } | null>(null);
+  
+  const addLog = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setUploadLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
+  
+  // Перехватываем console.log, console.error, console.warn для вывода в UI
+  useEffect(() => {
+    if (!isCompleting) return;
+    
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
+    
+    console.log = (...args: any[]) => {
+      originalLog.apply(console, args);
+      const message = args.map(arg => {
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      addLog(`[LOG] ${message}`);
+    };
+    
+    console.error = (...args: any[]) => {
+      originalError.apply(console, args);
+      const message = args.map(arg => {
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      addLog(`[ERROR] ${message}`);
+    };
+    
+    console.warn = (...args: any[]) => {
+      originalWarn.apply(console, args);
+      const message = args.map(arg => {
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg, null, 2);
+          } catch {
+            return String(arg);
+          }
+        }
+        return String(arg);
+      }).join(' ');
+      addLog(`[WARN] ${message}`);
+    };
+    
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+      console.warn = originalWarn;
+    };
+  }, [isCompleting]);
 
   const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
   const canSelectObjectsAndVehicles = user?.worker_type && allowedWorkerTypes.includes(user.worker_type);
@@ -167,6 +234,16 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
 
+    // Очищаем предыдущие логи
+    setUploadLogs([]);
+    setUploadProgress(null);
+    setErrorDetails(null);
+
+    addLog('Начало завершения работы...');
+    addLog(`Пользователь: ID ${user.id}, тип: ${user.worker_type}`);
+    addLog(`Фотографий работы: ${workPhotos.length}, инструментов: ${toolsPhotos.length}`);
+    addLog(`Видео: ${videoFile ? 'Да' : 'Нет'}`);
+
     logger.info('handleCompleteWork called', {
       user: { id: user.id, worker_type: user.worker_type },
       canSelectObjectsAndVehicles,
@@ -186,21 +263,21 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       const existingTasks = tasks.filter(t => !t.isCustom);
       const customTasks = tasks.filter(t => t.isCustom);
 
-      logger.debug('Updating tasks', {
-        existingTasksCount: existingTasks.length,
-        customTasksCount: customTasks.length,
-      });
+      addLog(`Обновление задач: существующих ${existingTasks.length}, новых ${customTasks.length}`);
 
       if (existingTasks.length > 0) {
+        addLog('Отправка обновлений существующих задач...');
         const bulkPayload = {
           tasks: existingTasks.map(t => ({ id: Number(t.id), finished: t.status === 'completed' }))
         };
         logger.debug('Bulk updating tasks', bulkPayload);
         await bulkUpdateWorkTasks(bulkPayload);
+        addLog('✓ Задачи обновлены успешно');
       }
 
       for (const ct of customTasks) {
         if (ct.text.trim().length === 0) continue;
+        addLog(`Создание новой задачи: "${ct.text.trim().substring(0, 30)}..."`);
         logger.debug('Creating custom task', { text: ct.text.trim(), status: ct.status });
         await createWorkTask({
           text: ct.text.trim(),
@@ -209,9 +286,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           worker_id: user.id,
           finished: ct.status === 'completed',
         });
+        addLog('✓ Задача создана');
       }
 
       // Получаем геолокацию
+      addLog('Запрос геолокации...');
       // На Android может быть проблема с повторным запросом геолокации с высоким приоритетом
       // Используем те же параметры, что и при начале работы, для консистентности
       const isAndroid = /android/i.test(navigator.userAgent);
@@ -254,6 +333,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           
           const errorCallback = (error: GeolocationPositionError) => {
             const elapsed = Date.now() - startTime;
+            const errorMsg = error.code === 1 ? 'Доступ запрещен' : error.code === 2 ? 'Недоступна' : 'Таймаут';
+            addLog(`✗ Ошибка геолокации: ${errorMsg} (${elapsed}мс)`);
             logger.error('Geolocation error when completing work', {
               code: error.code,
               message: error.message,
@@ -269,6 +350,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             // На Android, если первая попытка с высоким приоритетом не удалась, пробуем с низким
             if (isAndroid && retryAttempt === 0 && useHighAccuracy && error.code !== 1) {
               retryAttempt++;
+              addLog(`Повторная попытка геолокации с низкой точностью...`);
               logger.debug('Retrying geolocation with lower accuracy on Android', {
                 attempt: retryAttempt + 1,
               });
@@ -289,6 +371,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       
       logger.debug('Geolocation obtained, continuing with work completion');
 
+      const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
+      const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      addLog(`Подготовка данных для отправки...`);
+      addLog(`Общий размер файлов: ${totalSizeMB} MB`);
+
       let response;
       let requestData;
       
@@ -303,13 +390,33 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
           report_video: videoFile || undefined,
         };
+        addLog(`Отправка запроса на завершение работы...`);
+        addLog(`URL: https://bot-api.skybud.de/api/v1/work/end`);
+        addLog(`Метод: POST`);
+        addLog(`Данные запроса:`);
+        addLog(`  - worker_id: ${requestData.worker_id}`);
+        addLog(`  - latitude: ${requestData.latitude}`);
+        addLog(`  - longitude: ${requestData.longitude}`);
+        addLog(`  - status_object_finished: ${requestData.status_object_finished}`);
+        addLog(`  - done_work_photos: ${workPhotos.length} файлов`);
+        addLog(`  - instrument_photos: ${toolsPhotos.length} файлов`);
+        addLog(`  - report_video: ${videoFile ? 'Да' : 'Нет'}`);
         logger.info('Ending facility work', {
           ...requestData,
           workPhotosCount: workPhotos.length,
           toolsPhotosCount: toolsPhotos.length,
           hasVideo: !!videoFile,
         });
-        response = await endWork(requestData);
+        
+        // Передаем callback для обновления прогресса и логирования
+        response = await endWork(requestData, (progress) => {
+          setUploadProgress(progress);
+          if (progress.total > 0) {
+            addLog(`Загрузка: ${progress.percent}% (${(progress.loaded / 1024 / 1024).toFixed(2)} MB / ${(progress.total / 1024 / 1024).toFixed(2)} MB)`);
+          }
+        }, (log) => {
+          addLog(log);
+        });
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
         requestData = {
@@ -317,6 +424,13 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         };
+        addLog(`Отправка запроса на завершение офисной работы...`);
+        addLog(`URL: https://bot-api.skybud.de/api/v1/work/end-office`);
+        addLog(`Метод: POST`);
+        addLog(`Данные запроса:`);
+        addLog(`  - worker_id: ${requestData.worker_id}`);
+        addLog(`  - latitude: ${requestData.latitude}`);
+        addLog(`  - longitude: ${requestData.longitude}`);
         logger.info('Ending office work', requestData);
         response = await endWorkOffice(requestData);
       }
@@ -329,7 +443,17 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       });
 
       if (response.error) {
+        addLog(`✗ Ошибка при отправке запроса`);
         const errorData = response.error as any;
+        addLog(`Код ошибки: ${errorData?.code || 'неизвестно'}`);
+        addLog(`HTTP статус: ${errorData?.response?.status || response.status || 'неизвестно'}`);
+        addLog(`Статус текст: ${errorData?.response?.statusText || 'неизвестно'}`);
+        if (errorData?.message) {
+          addLog(`Сообщение: ${errorData.message}`);
+        }
+        if (errorData?.response?.data) {
+          addLog(`Ответ сервера: ${JSON.stringify(errorData.response.data)}`);
+        }
         const isAndroid = /android/i.test(navigator.userAgent);
         
         // Детальное логирование ошибки для диагностики
@@ -367,8 +491,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
         const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
         
-        if (errorData?.code === 'ERR_NETWORK' || errorData?.message?.includes('Network Error')) {
-          errorMessage = `Ошибка сети при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение. Если файлы слишком большие, попробуйте уменьшить размер видео или количество фотографий.`;
+        if (errorData?.code === 'ERR_NETWORK' || errorData?.message?.includes('Network Error') || errorData?.message?.includes('Failed to fetch')) {
+          // Если OPTIONS прошел, но POST не отправился, это может быть ограничение Telegram WebView
+          errorMessage = `Не удалось отправить файлы (${totalSizeMB} MB). Это может быть ограничение Telegram WebView на Android. Попробуйте: 1) Использовать Wi-Fi вместо мобильного интернета, 2) Уменьшить размер видео, 3) Отправить меньше фотографий.`;
         } else if (errorData?.response?.status === 413) {
           errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
         } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
@@ -414,6 +539,23 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         return;
       }
 
+      addLog(`✓ Запрос успешно отправлен!`);
+      addLog(`HTTP статус ответа: ${response.status || 200}`);
+      addLog(`Ответ сервера:`);
+      addLog(`  - ID процесса: ${response.data?.id || 'неизвестно'}`);
+      addLog(`  - worker_id: ${response.data?.worker_id || 'неизвестно'}`);
+      addLog(`  - facility_id: ${response.data?.facility_id || 'null'}`);
+      addLog(`  - end_time: ${response.data?.end_time || 'неизвестно'}`);
+      if (response.data?.report_video_url) {
+        addLog(`  - report_video_url: ${response.data.report_video_url}`);
+      }
+      if (response.data?.done_work_photos_url) {
+        addLog(`  - done_work_photos_url: ${response.data.done_work_photos_url.length} файлов`);
+      }
+      if (response.data?.instrument_photos_url) {
+        addLog(`  - instrument_photos_url: ${response.data.instrument_photos_url.length} файлов`);
+      }
+      
       logger.info('Work completed successfully', {
         workProcessId: response.data?.id,
       });
@@ -422,16 +564,29 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       try {
         const text = workComment.trim();
         if (text.length > 0) {
+          addLog(`Добавление комментария...`);
           logger.debug('Adding work comment', { workProcessId: response.data.id, commentLength: text.length });
           await createComment({ worker_process_id: response.data.id, text });
+          addLog(`✓ Комментарий добавлен`);
         }
       } catch (error) {
+        addLog(`✗ Ошибка при добавлении комментария`);
         logger.warn('Failed to add work comment', { error });
       }
 
+      addLog(`✓ Работа успешно завершена!`);
+      setUploadProgress(null);
       toastSuccess(t('work.workEnded'));
       onComplete && onComplete(response.data);
     } catch (error) {
+      addLog(`✗ Исключение при завершении работы`);
+      if (error instanceof Error) {
+        addLog(`Тип: ${error.name}`);
+        addLog(`Сообщение: ${error.message}`);
+      } else {
+        addLog(`Ошибка: ${String(error)}`);
+      }
+      
       logger.error('Exception when completing work', {
         error: error instanceof Error ? {
           name: error.name,
@@ -502,6 +657,47 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             details={errorDetails.details}
             onClose={() => setErrorDetails(null)}
           />
+        )}
+        
+        {/* Upload Progress and Logs */}
+        {(isCompleting || uploadLogs.length > 0 || uploadProgress) && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-semibold text-theme-text-primary mb-3">
+              {isCompleting ? 'Завершение работы...' : 'Логи операции'}
+            </h3>
+            
+            {/* Progress Bar */}
+            {uploadProgress && uploadProgress.total > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-theme-text-secondary mb-1">
+                  <span>Загрузка файлов</span>
+                  <span>{uploadProgress.percent}%</span>
+                </div>
+                <div className="w-full bg-theme-bg-tertiary rounded-full h-2">
+                  <div
+                    className="bg-theme-accent h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${uploadProgress.percent}%` }}
+                  />
+                </div>
+                <div className="text-xs text-theme-text-muted mt-1">
+                  {((uploadProgress.loaded / 1024 / 1024).toFixed(2))} MB / {((uploadProgress.total / 1024 / 1024).toFixed(2))} MB
+                </div>
+              </div>
+            )}
+            
+            {/* Logs */}
+            {uploadLogs.length > 0 && (
+              <div className="bg-theme-bg-tertiary rounded p-3 max-h-60 overflow-y-auto">
+                <div className="space-y-1">
+                  {uploadLogs.map((log, index) => (
+                    <div key={index} className="text-xs font-mono text-theme-text-secondary">
+                      {log}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
         
         {/* Header */}
