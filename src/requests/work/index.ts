@@ -78,16 +78,29 @@ export const endWork = async (data: EndWorkData): Promise<ApiResponse<WorkProces
     : Math.max(120000, Math.ceil(totalSize / (10 * 1024 * 1024)) * 60000); // 2 минуты минимум или 60 сек на каждые 10MB
 
   try {
+    // Для больших файлов на Android увеличиваем timeout до 10 минут
+    const isAndroid = /android/i.test(navigator.userAgent);
+    const finalTimeout = isAndroid && totalSize > 30 * 1024 * 1024 ? 600000 : timeoutMs; // 10 минут для Android с файлами > 30MB
+    
     const response = await axios.post(`${botApiUrl}/api/v1/work/end`, formData, {
       headers: {
         'Accept': 'application/json',
         'Authorization': botApiToken,
         // Не устанавливаем Content-Type явно для FormData - браузер сам установит правильный заголовок с boundary
-        // Это особенно важно для Android, где могут быть проблемы с multipart/form-data
       },
-      timeout: timeoutMs,
+      timeout: finalTimeout,
       maxContentLength: Infinity,
       maxBodyLength: Infinity,
+      // Для Android добавляем дополнительные настройки
+      ...(isAndroid && {
+        onUploadProgress: (progressEvent) => {
+          // Логируем прогресс для диагностики
+          if (progressEvent.total) {
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            console.log(`Upload progress: ${percentCompleted}%`);
+          }
+        },
+      }),
     });
     return { data: response.data };
   } catch (error: any) {

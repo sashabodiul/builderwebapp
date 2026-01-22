@@ -167,19 +167,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
 
-    // Проверяем размер файлов перед отправкой
-    const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
-    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
-    const isAndroid = /android/i.test(navigator.userAgent);
-    
-    // Предупреждение для больших файлов на Android
-    if (isAndroid && totalSize > 50 * 1024 * 1024) { // Более 50MB
-      const confirmMessage = `Внимание! Общий размер файлов составляет ${totalSizeMB} MB. На Android это может занять много времени и потребовать стабильного интернет-соединения. Рекомендуется использовать Wi-Fi. Продолжить?`;
-      if (!window.confirm(confirmMessage)) {
-        return;
-      }
-    }
-
     logger.info('handleCompleteWork called', {
       user: { id: user.id, worker_type: user.worker_type },
       canSelectObjectsAndVehicles,
@@ -190,7 +177,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       toolsPhotosCount: toolsPhotos.length,
       hasVideo: !!videoFile,
       isObjectCompleted,
-      totalSizeMB: parseFloat(totalSizeMB),
     });
 
     setIsCompleting(true);
