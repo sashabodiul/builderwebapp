@@ -206,45 +206,79 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       }
 
       // Получаем геолокацию
-      logger.debug('Requesting geolocation for work completion', {
+      // На Android может быть проблема с повторным запросом геолокации с высоким приоритетом
+      // Используем те же параметры, что и при начале работы, для консистентности
+      const isAndroid = /android/i.test(navigator.userAgent);
+      const geolocationOptions = {
         enableHighAccuracy: canSelectObjectsAndVehicles,
-        timeout: 15000,
-        maximumAge: 60000,
-        canSelectObjectsAndVehicles
+        timeout: 30000, // Увеличено с 15000 до 30000 для Android совместимости
+        maximumAge: 60000
+      };
+
+      logger.debug('Requesting geolocation for work completion', {
+        ...geolocationOptions,
+        canSelectObjectsAndVehicles,
+        isAndroid,
+        userAgent: navigator.userAgent,
       });
       
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         const startTime = Date.now();
+        let retryAttempt = 0;
         
-        const successCallback = (pos: GeolocationPosition) => {
-          const elapsed = Date.now() - startTime;
-          logger.info('Geolocation obtained for work completion', {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            elapsedMs: elapsed
-          });
-          resolve(pos);
+        const tryGetPosition = (useHighAccuracy: boolean) => {
+          const currentOptions = {
+            ...geolocationOptions,
+            enableHighAccuracy: useHighAccuracy,
+          };
+          
+          const successCallback = (pos: GeolocationPosition) => {
+            const elapsed = Date.now() - startTime;
+            logger.info('Geolocation obtained for work completion', {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              elapsedMs: elapsed,
+              attempt: retryAttempt + 1,
+              usedHighAccuracy: useHighAccuracy,
+              isAndroid,
+            });
+            resolve(pos);
+          };
+          
+          const errorCallback = (error: GeolocationPositionError) => {
+            const elapsed = Date.now() - startTime;
+            logger.error('Geolocation error when completing work', {
+              code: error.code,
+              message: error.message,
+              elapsedMs: elapsed,
+              attempt: retryAttempt + 1,
+              usedHighAccuracy: useHighAccuracy,
+              isAndroid,
+              errorCode1: 'PERMISSION_DENIED',
+              errorCode2: 'POSITION_UNAVAILABLE',
+              errorCode3: 'TIMEOUT'
+            });
+            
+            // На Android, если первая попытка с высоким приоритетом не удалась, пробуем с низким
+            if (isAndroid && retryAttempt === 0 && useHighAccuracy && error.code !== 1) {
+              retryAttempt++;
+              logger.debug('Retrying geolocation with lower accuracy on Android', {
+                attempt: retryAttempt + 1,
+              });
+              setTimeout(() => {
+                tryGetPosition(false);
+              }, 500); // Небольшая задержка перед повторной попыткой
+            } else {
+              reject(error);
+            }
+          };
+          
+          navigator.geolocation.getCurrentPosition(successCallback, errorCallback, currentOptions);
         };
         
-        const errorCallback = (error: GeolocationPositionError) => {
-          const elapsed = Date.now() - startTime;
-          logger.error('Geolocation error when completing work', {
-            code: error.code,
-            message: error.message,
-            elapsedMs: elapsed,
-            errorCode1: 'PERMISSION_DENIED',
-            errorCode2: 'POSITION_UNAVAILABLE',
-            errorCode3: 'TIMEOUT'
-          });
-          reject(error);
-        };
-        
-        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
-          enableHighAccuracy: canSelectObjectsAndVehicles, // Для офисных работников используем менее точную геолокацию
-          timeout: 15000,
-          maximumAge: 60000
-        });
+        // Начинаем с запрошенной точности
+        tryGetPosition(canSelectObjectsAndVehicles);
       });
       
       logger.debug('Geolocation obtained, continuing with work completion');
