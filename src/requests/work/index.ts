@@ -1,9 +1,12 @@
-import { apiRequest } from '../index';
 import { ApiResponse } from '../shared/types';
 import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData, StartWorkOfficeData, EndWorkOfficeData } from './types';
 import axios from 'axios';
 
 export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkProcessStartOut>> => {
+  // This endpoint should use bot-api, not api-crm
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  
   const formData = new URLSearchParams();
   formData.append('worker_id', data.worker_id.toString());
   if (data.facility_id !== undefined && data.facility_id !== null) {
@@ -12,41 +15,88 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
 
-  return await apiRequest<WorkProcessStartOut>("POST", "/work/start", {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  }, formData);
+  try {
+    const response = await axios.post(`${botApiUrl}/api/v1/work/start`, formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkProcessStartOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const endWork = async (data: EndWorkData): Promise<ApiResponse<WorkProcessEndOut>> => {
+  // This endpoint should use bot-api, not api-crm
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  
   const formData = new FormData();
   formData.append('worker_id', data.worker_id.toString());
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
   formData.append('status_object_finished', data.status_object_finished.toString());
   
+  // Вычисляем общий размер файлов для определения timeout
+  let totalSize = 0;
+  
   if (data.report_video) {
     formData.append('report_video', data.report_video);
+    totalSize += data.report_video.size;
   }
   
   if (data.done_work_photos && data.done_work_photos.length > 0) {
     data.done_work_photos.forEach((photo) => {
       formData.append('done_work_photos', photo);
+      totalSize += photo.size;
     });
   }
   
   if (data.instrument_photos && data.instrument_photos.length > 0) {
     data.instrument_photos.forEach((photo) => {
       formData.append('instrument_photos', photo);
+      totalSize += photo.size;
     });
   }
 
-  // Не устанавливаем Content-Type явно для FormData - браузер сам установит правильный заголовок с boundary
-  // Это особенно важно для Android, где могут быть проблемы с multipart/form-data
-  return await apiRequest<WorkProcessEndOut>("POST", "/work/end", {
-    timeout: 60000, // Увеличенный timeout для больших файлов (60 секунд)
-  }, formData);
+  // Вычисляем timeout на основе размера файлов
+  // Для больших файлов (более 20MB) используем 5 минут
+  // Для средних (10-20MB) - 3 минуты
+  // Для маленьких - 2 минуты
+  // Минимум 60 секунд на каждые 10MB
+  const timeoutMs = totalSize > 20 * 1024 * 1024 
+    ? 300000 // 5 минут для файлов > 20MB
+    : totalSize > 10 * 1024 * 1024
+    ? 180000 // 3 минуты для файлов 10-20MB
+    : Math.max(120000, Math.ceil(totalSize / (10 * 1024 * 1024)) * 60000); // 2 минуты минимум или 60 сек на каждые 10MB
+
+  try {
+    const response = await axios.post(`${botApiUrl}/api/v1/work/end`, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // Не устанавливаем Content-Type явно для FormData - браузер сам установит правильный заголовок с boundary
+        // Это особенно важно для Android, где могут быть проблемы с multipart/form-data
+      },
+      timeout: timeoutMs,
+      maxContentLength: Infinity,
+      maxBodyLength: Infinity,
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkProcessEndOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const getWorkProcesses = async (params?: {
@@ -100,28 +150,60 @@ export const getWorkProcesses = async (params?: {
 };
 
 export const startWorkOffice = async (data: StartWorkOfficeData): Promise<ApiResponse<WorkProcessStartOut>> => {
+  // This endpoint should use bot-api, not api-crm
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  
   const formData = new URLSearchParams();
   formData.append('worker_id', data.worker_id.toString());
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
 
-  return await apiRequest<WorkProcessStartOut>("POST", "/work/start-office", {
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    }
-  }, formData);
+  try {
+    const response = await axios.post(`${botApiUrl}/api/v1/work/start-office`, formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkProcessStartOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const endWorkOffice = async (data: EndWorkOfficeData): Promise<ApiResponse<WorkProcessEndOut>> => {
+  // This endpoint should use bot-api, not api-crm
+  const botApiUrl = 'https://bot-api.skybud.de';
+  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  
   const formData = new FormData();
   formData.append('worker_id', data.worker_id.toString());
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
 
-  // Не устанавливаем Content-Type явно для FormData
-  return await apiRequest<WorkProcessEndOut>("POST", "/work/end-office", {
-    timeout: 30000, // Timeout для офисных работников
-  }, formData);
+  try {
+    const response = await axios.post(`${botApiUrl}/api/v1/work/end-office`, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // Не устанавливаем Content-Type явно для FormData - браузер сам установит правильный заголовок с boundary
+      },
+      timeout: 30000, // Timeout для офисных работников
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkProcessEndOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const getActiveWorkProcess = async (worker_id: number): Promise<ApiResponse<WorkProcessStartOut | null>> => {

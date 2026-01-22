@@ -13,7 +13,9 @@ const getBaseUrl = (): string => {
 
 const api = axios.create({
   baseURL: getBaseUrl(),
-  timeout: 60000, // Увеличенный timeout по умолчанию для больших запросов (60 секунд)
+  timeout: 300000, // Увеличенный timeout по умолчанию для больших запросов (5 минут)
+  maxContentLength: Infinity, // Разрешаем неограниченный размер ответа
+  maxBodyLength: Infinity, // Разрешаем неограниченный размер тела запроса
 });
 
 // Update baseURL when environment changes

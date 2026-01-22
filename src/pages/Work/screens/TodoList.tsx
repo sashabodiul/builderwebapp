@@ -167,6 +167,19 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
 
+    // Проверяем размер файлов перед отправкой
+    const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
+    const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+    const isAndroid = /android/i.test(navigator.userAgent);
+    
+    // Предупреждение для больших файлов на Android
+    if (isAndroid && totalSize > 50 * 1024 * 1024) { // Более 50MB
+      const confirmMessage = `Внимание! Общий размер файлов составляет ${totalSizeMB} MB. На Android это может занять много времени и потребовать стабильного интернет-соединения. Рекомендуется использовать Wi-Fi. Продолжить?`;
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+
     logger.info('handleCompleteWork called', {
       user: { id: user.id, worker_type: user.worker_type },
       canSelectObjectsAndVehicles,
@@ -177,6 +190,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       toolsPhotosCount: toolsPhotos.length,
       hasVideo: !!videoFile,
       isObjectCompleted,
+      totalSizeMB: parseFloat(totalSizeMB),
     });
 
     setIsCompleting(true);
@@ -364,10 +378,15 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         // Более информативное сообщение об ошибке
         let errorMessage = t('work.endWorkError');
-        if (errorData?.response?.status === 413) {
-          errorMessage = 'Файлы слишком большие. Попробуйте уменьшить размер фотографий или видео.';
+        const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+        
+        if (errorData?.code === 'ERR_NETWORK' || errorData?.message?.includes('Network Error')) {
+          errorMessage = `Ошибка сети при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение. Если файлы слишком большие, попробуйте уменьшить размер видео или количество фотографий.`;
+        } else if (errorData?.response?.status === 413) {
+          errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
         } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
-          errorMessage = 'Превышено время ожидания. Проверьте интернет-соединение и попробуйте снова.';
+          errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
         } else if (errorData?.response?.status >= 500) {
           errorMessage = 'Ошибка сервера. Попробуйте позже.';
         } else if (errorData?.response?.status === 400) {
