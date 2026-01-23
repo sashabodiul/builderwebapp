@@ -133,58 +133,126 @@ export const endWork = async (
     
     onLog?.(`Заголовки запроса: Accept=${headers.Accept}, Authorization=***, Content-Type=автоматически (multipart/form-data с boundary)`);
     
-    // Для Android с большими файлами используем fetch API
-    // axios устанавливает неправильный Content-Type даже после удаления в interceptor
+    // Для Android с большими файлами используем XMLHttpRequest
+    // axios и fetch могут не работать для больших файлов в Telegram WebView
     if (isAndroid && totalSize > 30 * 1024 * 1024) {
-      onLog?.(`Использование fetch API для больших файлов на Android (axios устанавливает неправильный Content-Type)`);
+      onLog?.(`Использование XMLHttpRequest для больших файлов на Android`);
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), finalTimeout);
-      
-      try {
-        // fetch правильно обрабатывает FormData - автоматически устанавливает multipart/form-data
-        const response = await fetch(requestUrl, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': botApiToken,
-            // НЕ устанавливаем Content-Type - браузер сам установит multipart/form-data с boundary
-          },
-          body: formData,
-          signal: controller.signal,
-        });
+      return new Promise<ApiResponse<WorkProcessEndOut>>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        let timeoutId: NodeJS.Timeout | null = null;
         
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({ detail: response.statusText }));
-          throw {
-            response: {
-              status: response.status,
-              statusText: response.statusText,
-              data: errorData,
-            },
-            message: `HTTP ${response.status}: ${response.statusText}`,
-            code: 'ERR_BAD_RESPONSE',
-          };
-        }
-        
-        const data = await response.json();
-        onLog?.(`✓ Запрос выполнен успешно`);
-        onLog?.(`HTTP статус: ${response.status} ${response.statusText}`);
-        onLog?.(`Размер ответа: ${JSON.stringify(data).length} байт`);
-        return { data };
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        if (error.name === 'AbortError') {
-          throw {
+        // Устанавливаем timeout
+        timeoutId = setTimeout(() => {
+          xhr.abort();
+          onLog?.(`✗ Превышено время ожидания (${(finalTimeout / 1000).toFixed(0)} сек)`);
+          reject({
             code: 'ECONNABORTED',
             message: 'Request timeout',
             response: { status: 408 },
-          };
+          });
+        }, finalTimeout);
+        
+        // Обработчик прогресса загрузки
+        xhr.upload.addEventListener('progress', (event) => {
+          if (event.lengthComputable && onProgress) {
+            const percentCompleted = Math.round((event.loaded * 100) / event.total);
+            onProgress({
+              loaded: event.loaded,
+              total: event.total,
+              percent: percentCompleted,
+            });
+            onLog?.(`Прогресс загрузки: ${percentCompleted}% (${(event.loaded / 1024 / 1024).toFixed(2)} MB / ${(event.total / 1024 / 1024).toFixed(2)} MB)`);
+          }
+        });
+        
+        // Обработчик успешного завершения
+        xhr.addEventListener('load', () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const data = JSON.parse(xhr.responseText);
+              onLog?.(`✓ Запрос выполнен успешно`);
+              onLog?.(`HTTP статус: ${xhr.status} ${xhr.statusText}`);
+              onLog?.(`Размер ответа: ${xhr.responseText.length} байт`);
+              resolve({ data });
+            } catch (parseError) {
+              onLog?.(`✗ Ошибка парсинга ответа: ${parseError}`);
+              reject({
+                code: 'ERR_BAD_RESPONSE',
+                message: 'Failed to parse response',
+                response: { status: xhr.status, data: xhr.responseText },
+              });
+            }
+          } else {
+            onLog?.(`✗ HTTP ошибка: ${xhr.status} ${xhr.statusText}`);
+            let errorData;
+            try {
+              errorData = JSON.parse(xhr.responseText);
+            } catch {
+              errorData = { detail: xhr.statusText };
+            }
+            reject({
+              code: 'ERR_BAD_RESPONSE',
+              message: `HTTP ${xhr.status}: ${xhr.statusText}`,
+              response: {
+                status: xhr.status,
+                statusText: xhr.statusText,
+                data: errorData,
+              },
+            });
+          }
+        });
+        
+        // Обработчик ошибок
+        xhr.addEventListener('error', () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          onLog?.(`✗ Ошибка сети при отправке запроса`);
+          onLog?.(`Статус: ${xhr.status}, ReadyState: ${xhr.readyState}`);
+          reject({
+            code: 'ERR_NETWORK',
+            message: 'Network Error',
+            response: { status: xhr.status },
+          });
+        });
+        
+        // Обработчик отмены
+        xhr.addEventListener('abort', () => {
+          if (timeoutId) clearTimeout(timeoutId);
+          onLog?.(`✗ Запрос был отменен`);
+          reject({
+            code: 'ECONNABORTED',
+            message: 'Request aborted',
+            response: { status: 0 },
+          });
+        });
+        
+        // Настраиваем запрос
+        xhr.open('POST', requestUrl, true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.setRequestHeader('Authorization', botApiToken);
+        // НЕ устанавливаем Content-Type - браузер сам установит multipart/form-data с boundary
+        
+        onLog?.(`Отправка запроса через XMLHttpRequest...`);
+        onLog?.(`URL: ${requestUrl}`);
+        onLog?.(`Метод: POST`);
+        onLog?.(`Заголовки: Accept=application/json, Authorization=***`);
+        
+        // Отправляем FormData
+        try {
+          xhr.send(formData);
+          onLog?.(`✓ FormData отправлен, ожидание ответа...`);
+        } catch (sendError: any) {
+          if (timeoutId) clearTimeout(timeoutId);
+          onLog?.(`✗ Ошибка при отправке FormData: ${sendError?.message || sendError}`);
+          reject({
+            code: 'ERR_SEND',
+            message: sendError?.message || 'Failed to send request',
+            response: { status: 0 },
+          });
         }
-        throw error;
-      }
+      });
     } else {
       // Для остальных случаев используем axios
       onLog?.(`Использование axios для запроса`);
