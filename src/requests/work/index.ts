@@ -63,47 +63,59 @@ export const endWork = async (
 
   const requestUrl = `${botApiUrl}/api/v1/work/end`;
 
-  try {
-    const response = await fetch(requestUrl, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': botApiToken,
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      let errorData;
-      try {
-        errorData = await response.json();
-      } catch {
-        errorData = { detail: response.statusText };
-      }
-      return {
-        data: {} as WorkProcessEndOut,
-        error: {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    
+    xhr.open('POST', requestUrl, true);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('Authorization', botApiToken);
+    
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          resolve({ data: JSON.parse(xhr.responseText) });
+        } catch {
+          reject({
+            code: 'ERR_BAD_RESPONSE',
+            message: 'Failed to parse response',
+            response: { status: xhr.status },
+          });
+        }
+      } else {
+        let errorData;
+        try {
+          errorData = JSON.parse(xhr.responseText);
+        } catch {
+          errorData = { detail: xhr.statusText };
+        }
+        reject({
           code: 'ERR_BAD_RESPONSE',
-          message: `HTTP ${response.status}: ${response.statusText}`,
-          response: {
-            status: response.status,
-            statusText: response.statusText,
-            data: errorData,
-          },
-        },
-        status: response.status,
-      };
-    }
-
-    const responseData = await response.json();
-    return { data: responseData };
-  } catch (error: any) {
-    return {
-      data: {} as WorkProcessEndOut,
-      error: error,
-      status: error?.response?.status,
+          message: `HTTP ${xhr.status}`,
+          response: { status: xhr.status, data: errorData },
+        });
+      }
     };
-  }
+    
+    xhr.onerror = () => {
+      reject({
+        code: 'ERR_NETWORK',
+        message: 'Network Error',
+        response: { status: xhr.status || 0 },
+      });
+    };
+    
+    xhr.ontimeout = () => {
+      reject({
+        code: 'ECONNABORTED',
+        message: 'Request timeout',
+        response: { status: 408 },
+      });
+    };
+    
+    xhr.timeout = 600000; // 10 минут
+    
+    xhr.send(formData);
+  });
 };
 
 export const getWorkProcesses = async (params?: {
