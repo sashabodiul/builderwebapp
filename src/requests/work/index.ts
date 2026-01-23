@@ -2,6 +2,154 @@ import { ApiResponse } from '../shared/types';
 import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData, StartWorkOfficeData, EndWorkOfficeData } from './types';
 import axios from 'axios';
 
+// Константы для chunked upload
+const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
+const botApiUrl = 'https://bot-api.skybud.de';
+const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+
+// Типы для chunked upload
+type ChunkUploadResponse = {
+  file_id: string;
+  chunk_index: number;
+  total_chunks: number;
+  uploaded: boolean;
+};
+
+type FileUploadResponse = {
+  file_id: string;
+  file_type: 'video' | 'photo';
+  original_filename: string;
+};
+
+// Разбить файл на чанки
+function splitFileIntoChunks(file: File): Blob[] {
+  const chunks: Blob[] = [];
+  let start = 0;
+  
+  while (start < file.size) {
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    chunks.push(file.slice(start, end));
+    start = end;
+  }
+  
+  return chunks;
+}
+
+// Загрузить один чанк
+async function uploadChunk(
+  chunk: Blob,
+  chunkIndex: number,
+  totalChunks: number,
+  fileId: string,
+  fileName: string,
+  fileType: 'video' | 'photo',
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void
+): Promise<ChunkUploadResponse> {
+  const formData = new FormData();
+  formData.append('file_id', fileId);
+  formData.append('chunk_index', chunkIndex.toString());
+  formData.append('total_chunks', totalChunks.toString());
+  formData.append('file_name', fileName);
+  formData.append('file_type', fileType);
+  formData.append('chunk', chunk, `chunk_${chunkIndex}`);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${botApiUrl}/api/v1/upload/chunk`, true);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.setRequestHeader('Authorization', botApiToken);
+    
+    xhr.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable && onProgress) {
+        onProgress({
+          loaded: event.loaded,
+          total: event.total,
+          percent: Math.round((event.loaded * 100) / event.total),
+        });
+      }
+    });
+    
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            resolve(JSON.parse(xhr.responseText));
+          } catch {
+            reject({
+              code: 'ERR_BAD_RESPONSE',
+              message: 'Failed to parse chunk upload response',
+              response: { status: xhr.status },
+            });
+          }
+        } else {
+          reject({
+            code: 'ERR_BAD_RESPONSE',
+            message: `HTTP ${xhr.status}`,
+            response: { status: xhr.status },
+          });
+        }
+      }
+    };
+    
+    xhr.onerror = () => {
+      reject({
+        code: 'ERR_NETWORK',
+        message: 'Network Error',
+        response: { status: xhr.status || 0 },
+      });
+    };
+    
+    xhr.timeout = 300000; // 5 минут на чанк
+    xhr.ontimeout = () => {
+      reject({
+        code: 'ECONNABORTED',
+        message: 'Chunk upload timeout',
+        response: { status: 408 },
+      });
+    };
+    
+    xhr.send(formData);
+  });
+}
+
+// Загрузить весь файл через chunked upload
+async function uploadFileInChunks(
+  file: File,
+  fileType: 'video' | 'photo',
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void
+): Promise<FileUploadResponse> {
+  // Генерируем уникальный file_id
+  const fileId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
+  
+  // Разбиваем файл на чанки
+  const chunks = splitFileIntoChunks(file);
+  const totalChunks = chunks.length;
+  
+  // Загружаем чанки последовательно
+  for (let i = 0; i < chunks.length; i++) {
+    const chunkProgress = (progressEvent: { loaded: number; total: number; percent: number }) => {
+      if (onProgress) {
+        // Общий прогресс = (загруженные чанки + прогресс текущего чанка) / общее количество чанков
+        const totalLoaded = (i * CHUNK_SIZE) + progressEvent.loaded;
+        const totalSize = file.size;
+        onProgress({
+          loaded: totalLoaded,
+          total: totalSize,
+          percent: Math.round((totalLoaded * 100) / totalSize),
+        });
+      }
+    };
+    
+    await uploadChunk(chunks[i], i, totalChunks, fileId, file.name, fileType, chunkProgress);
+  }
+  
+  return {
+    file_id: fileId,
+    file_type: fileType,
+    original_filename: file.name,
+  };
+}
+
 export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkProcessStartOut>> => {
   // This endpoint should use bot-api, not api-crm
   const botApiUrl = 'https://bot-api.skybud.de';
@@ -34,31 +182,130 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
 };
 
 export const endWork = async (
-  data: EndWorkData
+  data: EndWorkData,
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void
 ): Promise<ApiResponse<WorkProcessEndOut>> => {
-  const botApiUrl = 'https://bot-api.skybud.de';
-  const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
+  // Определяем общий размер файлов для решения: использовать chunked upload или обычную загрузку
+  const totalSize = 
+    (data.report_video?.size || 0) +
+    (data.done_work_photos?.reduce((sum, f) => sum + f.size, 0) || 0) +
+    (data.instrument_photos?.reduce((sum, f) => sum + f.size, 0) || 0);
   
+  const USE_CHUNKED_UPLOAD = totalSize > 10 * 1024 * 1024; // Используем chunked upload для файлов > 10MB
+  
+  let uploadedFileIds: {
+    report_video_id?: string;
+    done_work_photos_ids?: string[];
+    instrument_photos_ids?: string[];
+  } = {};
+  
+  // Если файлы большие, используем chunked upload
+  if (USE_CHUNKED_UPLOAD) {
+    // Загружаем видео
+    if (data.report_video) {
+      const videoProgress = (progress: { loaded: number; total: number; percent: number }) => {
+        if (onProgress) {
+          // Прогресс видео = 30% от общего прогресса
+          const videoPercent = (progress.percent * 0.3);
+          onProgress({
+            loaded: progress.loaded,
+            total: totalSize,
+            percent: Math.round(videoPercent),
+          });
+        }
+      };
+      const result = await uploadFileInChunks(data.report_video, 'video', videoProgress);
+      uploadedFileIds.report_video_id = result.file_id;
+    }
+    
+    // Загружаем фото работ
+    if (data.done_work_photos && data.done_work_photos.length > 0) {
+      uploadedFileIds.done_work_photos_ids = [];
+      const photoCount = data.done_work_photos.length;
+      const photoProgressWeight = 0.35; // 35% от общего прогресса
+      
+      for (let i = 0; i < data.done_work_photos.length; i++) {
+        const photo = data.done_work_photos[i];
+        const photoProgress = (progress: { loaded: number; total: number; percent: number }) => {
+          if (onProgress) {
+            // Прогресс текущего фото + уже загруженные фото
+            const currentPhotoPercent = (progress.percent / photoCount) * photoProgressWeight;
+            const alreadyUploadedPercent = (i / photoCount) * photoProgressWeight * 100;
+            onProgress({
+              loaded: progress.loaded + (i * photo.size),
+              total: totalSize,
+              percent: Math.round(30 + alreadyUploadedPercent + currentPhotoPercent),
+            });
+          }
+        };
+        const result = await uploadFileInChunks(photo, 'photo', photoProgress);
+        uploadedFileIds.done_work_photos_ids.push(result.file_id);
+      }
+    }
+    
+    // Загружаем фото инструментов
+    if (data.instrument_photos && data.instrument_photos.length > 0) {
+      uploadedFileIds.instrument_photos_ids = [];
+      const photoCount = data.instrument_photos.length;
+      const photoProgressWeight = 0.35; // 35% от общего прогресса
+      const startPercent = 65; // Начинаем с 65% (30% видео + 35% фото работ)
+      
+      for (let i = 0; i < data.instrument_photos.length; i++) {
+        const photo = data.instrument_photos[i];
+        const photoProgress = (progress: { loaded: number; total: number; percent: number }) => {
+          if (onProgress) {
+            const currentPhotoPercent = (progress.percent / photoCount) * photoProgressWeight;
+            const alreadyUploadedPercent = (i / photoCount) * photoProgressWeight * 100;
+            onProgress({
+              loaded: progress.loaded + (i * photo.size),
+              total: totalSize,
+              percent: Math.round(startPercent + alreadyUploadedPercent + currentPhotoPercent),
+            });
+          }
+        };
+        const result = await uploadFileInChunks(photo, 'photo', photoProgress);
+        uploadedFileIds.instrument_photos_ids.push(result.file_id);
+      }
+    }
+  }
+  
+  // Отправляем финальный запрос на завершение работы
   const formData = new FormData();
   formData.append('worker_id', data.worker_id.toString());
   formData.append('latitude', data.latitude.toString());
   formData.append('longitude', data.longitude.toString());
   formData.append('status_object_finished', data.status_object_finished.toString());
   
-  if (data.report_video) {
-    formData.append('report_video', data.report_video);
-  }
-  
-  if (data.done_work_photos && data.done_work_photos.length > 0) {
-    data.done_work_photos.forEach((photo) => {
-      formData.append('done_work_photos', photo);
-    });
-  }
-  
-  if (data.instrument_photos && data.instrument_photos.length > 0) {
-    data.instrument_photos.forEach((photo) => {
-      formData.append('instrument_photos', photo);
-    });
+  if (USE_CHUNKED_UPLOAD) {
+    // Используем file_id вместо файлов
+    if (uploadedFileIds.report_video_id) {
+      formData.append('report_video_id', uploadedFileIds.report_video_id);
+    }
+    if (uploadedFileIds.done_work_photos_ids && uploadedFileIds.done_work_photos_ids.length > 0) {
+      uploadedFileIds.done_work_photos_ids.forEach((fileId) => {
+        formData.append('done_work_photos_ids', fileId);
+      });
+    }
+    if (uploadedFileIds.instrument_photos_ids && uploadedFileIds.instrument_photos_ids.length > 0) {
+      uploadedFileIds.instrument_photos_ids.forEach((fileId) => {
+        formData.append('instrument_photos_ids', fileId);
+      });
+    }
+  } else {
+    // Обычная загрузка для маленьких файлов
+    if (data.report_video) {
+      formData.append('report_video', data.report_video, data.report_video.name);
+    }
+    if (data.done_work_photos && data.done_work_photos.length > 0) {
+      data.done_work_photos.forEach((photo) => {
+        formData.append('done_work_photos', photo, photo.name);
+      });
+    }
+    if (data.instrument_photos && data.instrument_photos.length > 0) {
+      data.instrument_photos.forEach((photo) => {
+        formData.append('instrument_photos', photo, photo.name);
+      });
+    }
   }
 
   const requestUrl = `${botApiUrl}/api/v1/work/end`;
@@ -70,29 +317,57 @@ export const endWork = async (
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('Authorization', botApiToken);
     
-    xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          resolve({ data: JSON.parse(xhr.responseText) });
-        } catch {
-          reject({
-            code: 'ERR_BAD_RESPONSE',
-            message: 'Failed to parse response',
-            response: { status: xhr.status },
+    if (onProgress && USE_CHUNKED_UPLOAD) {
+      // Для финального запроса показываем 95-100%
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && onProgress) {
+          const finalPercent = 95 + Math.round((event.loaded * 5) / event.total);
+          onProgress({
+            loaded: totalSize + event.loaded,
+            total: totalSize + event.total,
+            percent: finalPercent,
           });
         }
-      } else {
-        let errorData;
-        try {
-          errorData = JSON.parse(xhr.responseText);
-        } catch {
-          errorData = { detail: xhr.statusText };
+      });
+    }
+    
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState === XMLHttpRequest.DONE) {
+        if (xhr.status === 0) {
+          reject({
+            code: 'ERR_NETWORK',
+            message: 'Request blocked or network error (status 0)',
+            response: { status: 0 },
+          });
+          return;
         }
-        reject({
-          code: 'ERR_BAD_RESPONSE',
-          message: `HTTP ${xhr.status}`,
-          response: { status: xhr.status, data: errorData },
-        });
+        
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            if (onProgress) {
+              onProgress({ loaded: totalSize, total: totalSize, percent: 100 });
+            }
+            resolve({ data: JSON.parse(xhr.responseText) });
+          } catch {
+            reject({
+              code: 'ERR_BAD_RESPONSE',
+              message: 'Failed to parse response',
+              response: { status: xhr.status, data: xhr.responseText },
+            });
+          }
+        } else {
+          let errorData;
+          try {
+            errorData = JSON.parse(xhr.responseText);
+          } catch {
+            errorData = { detail: xhr.statusText };
+          }
+          reject({
+            code: 'ERR_BAD_RESPONSE',
+            message: `HTTP ${xhr.status}`,
+            response: { status: xhr.status, data: errorData },
+          });
+        }
       }
     };
     
@@ -112,9 +387,17 @@ export const endWork = async (
       });
     };
     
-    xhr.timeout = 600000; // 10 минут
+    xhr.timeout = 600000;
     
-    xhr.send(formData);
+    try {
+      xhr.send(formData);
+    } catch (error: any) {
+      reject({
+        code: 'ERR_SEND',
+        message: error?.message || 'Failed to send request',
+        response: { status: 0 },
+      });
+    }
   });
 };
 
