@@ -133,9 +133,9 @@ export const endWork = async (
     
     onLog?.(`Заголовки запроса: Accept=${headers.Accept}, Authorization=***, Content-Type=автоматически (multipart/form-data с boundary)`);
     
-    // Для Android с большими файлами используем XMLHttpRequest
-    // axios и fetch могут не работать для больших файлов в Telegram WebView
-    if (isAndroid && totalSize > 30 * 1024 * 1024) {
+    // Для Android используем XMLHttpRequest для всех случаев
+    // axios и fetch могут не работать корректно в Telegram WebView на Android
+    if (isAndroid) {
       onLog?.(`Использование XMLHttpRequest для больших файлов на Android`);
       
       return new Promise<ApiResponse<WorkProcessEndOut>>((resolve, reject) => {
