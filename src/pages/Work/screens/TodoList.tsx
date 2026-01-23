@@ -408,15 +408,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           hasVideo: !!videoFile,
         });
         
-        // Передаем callback для обновления прогресса и логирования
-        response = await endWork(requestData, (progress) => {
-          setUploadProgress(progress);
-          if (progress.total > 0) {
-            addLog(`Загрузка: ${progress.percent}% (${(progress.loaded / 1024 / 1024).toFixed(2)} MB / ${(progress.total / 1024 / 1024).toFixed(2)} MB)`);
-          }
-        }, (log) => {
-          addLog(log);
-        });
+        response = await endWork(requestData);
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
         requestData = {

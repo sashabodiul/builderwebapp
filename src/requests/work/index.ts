@@ -34,11 +34,8 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
 };
 
 export const endWork = async (
-  data: EndWorkData,
-  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void,
-  onLog?: (message: string) => void
+  data: EndWorkData
 ): Promise<ApiResponse<WorkProcessEndOut>> => {
-  // This endpoint should use bot-api, not api-crm
   const botApiUrl = 'https://bot-api.skybud.de';
   const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
   
@@ -48,258 +45,59 @@ export const endWork = async (
   formData.append('longitude', data.longitude.toString());
   formData.append('status_object_finished', data.status_object_finished.toString());
   
-  // Вычисляем общий размер файлов для определения timeout
-  let totalSize = 0;
-  
   if (data.report_video) {
     formData.append('report_video', data.report_video);
-    totalSize += data.report_video.size;
   }
   
   if (data.done_work_photos && data.done_work_photos.length > 0) {
     data.done_work_photos.forEach((photo) => {
       formData.append('done_work_photos', photo);
-      totalSize += photo.size;
     });
   }
   
   if (data.instrument_photos && data.instrument_photos.length > 0) {
     data.instrument_photos.forEach((photo) => {
       formData.append('instrument_photos', photo);
-      totalSize += photo.size;
     });
   }
 
-  // Вычисляем timeout на основе размера файлов
-  // Для больших файлов (более 20MB) используем 5 минут
-  // Для средних (10-20MB) - 3 минуты
-  // Для маленьких - 2 минуты
-  // Минимум 60 секунд на каждые 10MB
-  const timeoutMs = totalSize > 20 * 1024 * 1024 
-    ? 300000 // 5 минут для файлов > 20MB
-    : totalSize > 10 * 1024 * 1024
-    ? 180000 // 3 минуты для файлов 10-20MB
-    : Math.max(120000, Math.ceil(totalSize / (10 * 1024 * 1024)) * 60000); // 2 минуты минимум или 60 сек на каждые 10MB
+  const requestUrl = `${botApiUrl}/api/v1/work/end`;
 
   try {
-    const isAndroid = /android/i.test(navigator.userAgent);
-    const finalTimeout = isAndroid && totalSize > 30 * 1024 * 1024 ? 600000 : timeoutMs; // 10 минут для Android с файлами > 30MB
-    
-    const requestUrl = `${botApiUrl}/api/v1/work/end`;
-    onLog?.(`Начало запроса к ${requestUrl}`);
-    onLog?.(`Timeout: ${finalTimeout}ms (${(finalTimeout / 1000).toFixed(0)} сек)`);
-    onLog?.(`Размер данных: ${(totalSize / (1024 * 1024)).toFixed(2)} MB`);
-    onLog?.(`Android: ${isAndroid ? 'Да' : 'Нет'}`);
-    
-    console.log('[endWork] Starting request', {
-      isAndroid,
-      totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
-      timeout: finalTimeout,
-      url: requestUrl,
+    const response = await fetch(requestUrl, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+      body: formData,
     });
-    
-    onLog?.(`Отправка FormData...`);
-    
-    // Создаем отдельный экземпляр axios для этого запроса
-    // чтобы гарантировать правильную обработку FormData
-    const axiosInstance = axios.create({
-      timeout: finalTimeout,
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity,
-    });
-    
-    // Перехватываем запрос, чтобы гарантировать правильные заголовки
-    axiosInstance.interceptors.request.use((config) => {
-      // Для FormData НЕ устанавливаем Content-Type - браузер сам установит с boundary
-      if (config.data instanceof FormData) {
-        delete config.headers['Content-Type'];
-        delete config.headers['content-type'];
-        // Логируем финальные заголовки для диагностики
-        onLog?.(`Финальные заголовки запроса: ${JSON.stringify(Object.keys(config.headers || {}))}`);
-        if (config.headers && 'Content-Type' in config.headers) {
-          onLog?.(`⚠️ ВНИМАНИЕ: Content-Type все еще установлен: ${config.headers['Content-Type']}`);
-        } else {
-          onLog?.(`✓ Content-Type не установлен - браузер установит автоматически`);
-        }
+
+    if (!response.ok) {
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch {
+        errorData = { detail: response.statusText };
       }
-      return config;
-    });
-    
-    // Создаем заголовки без Content-Type для FormData
-    const headers: Record<string, string> = {
-      'Accept': 'application/json',
-      'Authorization': botApiToken,
-    };
-    
-    onLog?.(`Заголовки запроса: Accept=${headers.Accept}, Authorization=***, Content-Type=автоматически (multipart/form-data с boundary)`);
-    
-    // Для Android используем XMLHttpRequest для всех случаев
-    // axios и fetch могут не работать корректно в Telegram WebView на Android
-    if (isAndroid) {
-      onLog?.(`Использование XMLHttpRequest для больших файлов на Android`);
-      
-      return new Promise<ApiResponse<WorkProcessEndOut>>((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        let timeoutId: NodeJS.Timeout | null = null;
-        
-        // Устанавливаем timeout
-        timeoutId = setTimeout(() => {
-          xhr.abort();
-          onLog?.(`✗ Превышено время ожидания (${(finalTimeout / 1000).toFixed(0)} сек)`);
-          reject({
-            code: 'ECONNABORTED',
-            message: 'Request timeout',
-            response: { status: 408 },
-          });
-        }, finalTimeout);
-        
-        // Обработчик прогресса загрузки
-        xhr.upload.addEventListener('progress', (event) => {
-          if (event.lengthComputable && onProgress) {
-            const percentCompleted = Math.round((event.loaded * 100) / event.total);
-            onProgress({
-              loaded: event.loaded,
-              total: event.total,
-              percent: percentCompleted,
-            });
-            onLog?.(`Прогресс загрузки: ${percentCompleted}% (${(event.loaded / 1024 / 1024).toFixed(2)} MB / ${(event.total / 1024 / 1024).toFixed(2)} MB)`);
-          }
-        });
-        
-        // Обработчик успешного завершения
-        xhr.addEventListener('load', () => {
-          if (timeoutId) clearTimeout(timeoutId);
-          
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              onLog?.(`✓ Запрос выполнен успешно`);
-              onLog?.(`HTTP статус: ${xhr.status} ${xhr.statusText}`);
-              onLog?.(`Размер ответа: ${xhr.responseText.length} байт`);
-              resolve({ data });
-            } catch (parseError) {
-              onLog?.(`✗ Ошибка парсинга ответа: ${parseError}`);
-              reject({
-                code: 'ERR_BAD_RESPONSE',
-                message: 'Failed to parse response',
-                response: { status: xhr.status, data: xhr.responseText },
-              });
-            }
-          } else {
-            onLog?.(`✗ HTTP ошибка: ${xhr.status} ${xhr.statusText}`);
-            let errorData;
-            try {
-              errorData = JSON.parse(xhr.responseText);
-            } catch {
-              errorData = { detail: xhr.statusText };
-            }
-            reject({
-              code: 'ERR_BAD_RESPONSE',
-              message: `HTTP ${xhr.status}: ${xhr.statusText}`,
-              response: {
-                status: xhr.status,
-                statusText: xhr.statusText,
-                data: errorData,
-              },
-            });
-          }
-        });
-        
-        // Обработчик ошибок
-        xhr.addEventListener('error', () => {
-          if (timeoutId) clearTimeout(timeoutId);
-          onLog?.(`✗ Ошибка сети при отправке запроса`);
-          onLog?.(`Статус: ${xhr.status}, ReadyState: ${xhr.readyState}`);
-          reject({
-            code: 'ERR_NETWORK',
-            message: 'Network Error',
-            response: { status: xhr.status },
-          });
-        });
-        
-        // Обработчик отмены
-        xhr.addEventListener('abort', () => {
-          if (timeoutId) clearTimeout(timeoutId);
-          onLog?.(`✗ Запрос был отменен`);
-          reject({
-            code: 'ECONNABORTED',
-            message: 'Request aborted',
-            response: { status: 0 },
-          });
-        });
-        
-        // Настраиваем запрос
-        xhr.open('POST', requestUrl, true);
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.setRequestHeader('Authorization', botApiToken);
-        // НЕ устанавливаем Content-Type - браузер сам установит multipart/form-data с boundary
-        
-        onLog?.(`Отправка запроса через XMLHttpRequest...`);
-        onLog?.(`URL: ${requestUrl}`);
-        onLog?.(`Метод: POST`);
-        onLog?.(`Заголовки: Accept=application/json, Authorization=***`);
-        
-        // Отправляем FormData
-        try {
-          xhr.send(formData);
-          onLog?.(`✓ FormData отправлен, ожидание ответа...`);
-        } catch (sendError: any) {
-          if (timeoutId) clearTimeout(timeoutId);
-          onLog?.(`✗ Ошибка при отправке FormData: ${sendError?.message || sendError}`);
-          reject({
-            code: 'ERR_SEND',
-            message: sendError?.message || 'Failed to send request',
-            response: { status: 0 },
-          });
-        }
-      });
-    } else {
-      // Для остальных случаев используем axios
-      onLog?.(`Использование axios для запроса`);
-      const response = await axiosInstance.post(requestUrl, formData, {
-        headers,
-        // Добавляем обработчик прогресса
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total && onProgress) {
-            const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            onProgress({
-              loaded: progressEvent.loaded,
-              total: progressEvent.total,
-              percent: percentCompleted,
-            });
-            console.log(`[endWork] Upload progress: ${percentCompleted}% (${(progressEvent.loaded / 1024 / 1024).toFixed(2)}MB / ${(progressEvent.total / 1024 / 1024).toFixed(2)}MB)`);
-          }
+      return {
+        data: {} as WorkProcessEndOut,
+        error: {
+          code: 'ERR_BAD_RESPONSE',
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          response: {
+            status: response.status,
+            statusText: response.statusText,
+            data: errorData,
+          },
         },
-      });
-      
-      onLog?.(`✓ Запрос выполнен успешно`);
-      onLog?.(`HTTP статус: ${response.status} ${response.statusText || ''}`);
-      onLog?.(`Размер ответа: ${JSON.stringify(response.data).length} байт`);
-      console.log('[endWork] Request successful', { status: response.status });
-      return { data: response.data };
+        status: response.status,
+      };
     }
+
+    const responseData = await response.json();
+    return { data: responseData };
   } catch (error: any) {
-    onLog?.(`✗ Ошибка запроса`);
-    onLog?.(`Код ошибки: ${error?.code || 'неизвестно'}`);
-    onLog?.(`Сообщение: ${error?.message || String(error)}`);
-    if (error?.response) {
-      onLog?.(`HTTP статус: ${error.response.status} ${error.response.statusText || ''}`);
-      if (error.response.data) {
-        onLog?.(`Данные ответа: ${JSON.stringify(error.response.data)}`);
-      }
-    }
-    if (error?.request) {
-      onLog?.(`Запрос был отправлен, но ответ не получен`);
-    }
-    
-    console.error('[endWork] Request failed', {
-      error: error?.message || error,
-      code: error?.code,
-      status: error?.response?.status,
-      statusText: error?.response?.statusText,
-      responseData: error?.response?.data,
-    });
-    
     return {
       data: {} as WorkProcessEndOut,
       error: error,
