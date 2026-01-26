@@ -528,7 +528,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       if (response.error) {
         const errorData = response.error as any;
-        let errorMessage = 'Ошибка начала смены';
+        let errorMessage = t('work.shift.startError');
         if (errorData?.response?.status === 400) {
           errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
         } else if (errorData?.response?.status >= 500) {
@@ -540,7 +540,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       }
 
       setActiveWorkShift(response.data);
-      toastSuccess('Смена успешно начата');
+      toastSuccess(t('work.shift.startSuccess'));
       logger.info('Work shift started successfully', { shiftId: response.data?.id });
       
       // Обновляем информацию о смене
@@ -560,7 +560,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
             : 'Превышено время ожидания геолокации. Попробуйте снова.';
         toastError(errorMessage);
       } else {
-        toastError('Ошибка начала смены');
+        toastError(t('work.shift.startError'));
       }
     } finally {
       setIsShiftActionLoading(false);
@@ -569,6 +569,16 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
   const handleEndShift = async () => {
     if (!user?.id || !activeWorkShift) return;
+
+    // Проверяем, не начата ли работа на объекте
+    if (isWorking) {
+      toastError(t('work.shift.cannotEndWhileWorking'));
+      logger.warn('Cannot end shift: work on facility is active', {
+        worker_id: user.id,
+        isWorking,
+      });
+      return;
+    }
 
     setIsShiftActionLoading(true);
 
@@ -615,7 +625,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       if (response.error) {
         const errorData = response.error as any;
-        let errorMessage = 'Ошибка завершения смены';
+        let errorMessage = t('work.shift.endError');
         if (errorData?.response?.status === 400) {
           errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
         } else if (errorData?.response?.status >= 500) {
@@ -633,9 +643,9 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         const objectHours = shift.object_time ? (shift.object_time / 3600).toFixed(2) : '0';
         const summary = shift.summary_rate ? shift.summary_rate.toFixed(2) : '0';
         
-        toastSuccess(`Смена завершена. Время: ${totalHours}ч, На объектах: ${objectHours}ч, Сумма: ${summary}`);
+        toastSuccess(t('work.shift.endSuccess', { totalHours, objectHours, summary }));
       } else {
-        toastSuccess('Смена успешно завершена');
+        toastSuccess(t('work.shift.endSuccessSimple'));
       }
       
       // Обновляем состояние - смена завершена, активной смены нет
@@ -654,7 +664,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
             : 'Превышено время ожидания геолокации. Попробуйте снова.';
         toastError(errorMessage);
       } else {
-        toastError('Ошибка завершения смены');
+        toastError(t('work.shift.endError'));
       }
     } finally {
       setIsShiftActionLoading(false);
@@ -1265,10 +1275,10 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                 <div className="bg-theme-accent/20 border border-theme-accent rounded-lg p-4">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-theme-text-primary">
-                      {t('work.shift.active', 'Смена начата')}
+                      {t('work.shift.active')}
                     </span>
                     <Badge className="bg-green-500 text-white">
-                      {t('work.shift.active', 'Активна')}
+                      {t('work.shift.activeBadge')}
                     </Badge>
                   </div>
                   <div className="text-sm text-theme-text-secondary space-y-1">
@@ -1291,7 +1301,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                   size="lg"
                   className="w-full text-lg font-semibold gap-3"
                   onClick={handleEndShift}
-                  disabled={isShiftActionLoading}
+                  disabled={isShiftActionLoading || isWorking}
                 >
                   {isShiftActionLoading ? (
                     <>
@@ -1305,6 +1315,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                     </>
                   )}
                 </Button>
+                {isWorking && (
+                  <p className="text-sm text-amber-600 mt-2 text-center">
+                    {t('work.shift.cannotEndWhileWorking', 'Нельзя завершить смену, пока не завершена работа на объекте')}
+                  </p>
+                )}
               </div>
             ) : (
               <Button
