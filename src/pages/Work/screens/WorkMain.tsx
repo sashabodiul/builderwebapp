@@ -6,6 +6,8 @@ import { Play, Square, MapPin, Calendar, MessageCircle, ListChecks, Car, Unlock,
 import { getFacilities } from '../../../requests/facility';
 import { FacilityOut } from '../../../requests/facility/types';
 import { startWork, startWorkOffice, getActiveWorkProcess } from '../../../requests/work';
+import { getActiveWorkShift, startWorkShift, endWorkShift } from '../../../requests/work-shift';
+import { WorkShiftOut } from '../../../requests/work-shift/types';
 import DelegateTaskDialog from './components/DelegateTaskDialog';
 import { WorkProcessStartOut } from '../../../requests/work/types';
 import { toastError, toastSuccess } from '../../../lib/toasts';
@@ -34,6 +36,8 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
   const [isLoading, setIsLoading] = useState(true);
   const [, setActiveWorkProcess] = useState<WorkProcessStartOut | null>(null);
   const [isStartingWork, setIsStartingWork] = useState(false);
+  const [activeWorkShift, setActiveWorkShift] = useState<WorkShiftOut | null>(null);
+  const [isShiftActionLoading, setIsShiftActionLoading] = useState(false);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reservedVehicle, setReservedVehicle] = useState<Vehicle | null>(null);
   const [reservationRequest, setReservationRequest] = useState<VehicleReservationRequestOut | null>(null);
@@ -190,6 +194,24 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     checkActiveWork();
   }, [user?.id, onStartWork]);
 
+  // Проверка активной смены (только для неофисных работников)
+  useEffect(() => {
+    const checkActiveShift = async () => {
+      if (!user?.id || !canSelectObjectsAndVehicles) return;
+
+      const response = await getActiveWorkShift(user.id);
+
+      if (response.error) {
+        console.error('Failed to check active work shift:', response);
+        return;
+      }
+
+      setActiveWorkShift(response.data);
+    };
+
+    checkActiveShift();
+  }, [user?.id, canSelectObjectsAndVehicles]);
+
   useEffect(() => {
     if (canSelectObjectsAndVehicles && !isRestricted && user?.id) {
       fetchVehicles();
@@ -238,6 +260,15 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
       });
       toastError(t('work.selectObjectFirst'));
       return;
+    }
+
+    // Проверка активной смены перед началом работы на объекте (только для неофисных)
+    if (canSelectObjectsAndVehicles && (canChooseWorkType ? workType === 'facility' : true)) {
+      if (!activeWorkShift) {
+        logger.warn('Cannot start work on facility: work shift not started');
+        toastError('Сначала необходимо начать смену');
+        return;
+      }
     }
 
     setIsStartingWork(true);
@@ -447,6 +478,187 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
   const handleStopWork = () => {
     onStopWork();
+  };
+
+  const handleStartShift = async () => {
+    if (!user?.id) return;
+
+    setIsShiftActionLoading(true);
+
+    try {
+      logger.debug('Requesting geolocation for shift start');
+      toastSuccess(t('work.requestingGeolocation'));
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const successCallback = (pos: GeolocationPosition) => {
+          const elapsed = Date.now() - startTime;
+          logger.info('Geolocation obtained for shift start', {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            elapsedMs: elapsed,
+          });
+          resolve(pos);
+        };
+        
+        const errorCallback = (error: GeolocationPositionError) => {
+          const elapsed = Date.now() - startTime;
+          logger.error('Geolocation error when starting shift', {
+            code: error.code,
+            message: error.message,
+            elapsedMs: elapsed,
+          });
+          reject(error);
+        };
+
+        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 60000
+        });
+      });
+
+      const response = await startWorkShift({
+        worker_id: user.id,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      if (response.error) {
+        const errorData = response.error as any;
+        let errorMessage = 'Ошибка начала смены';
+        if (errorData?.response?.status === 400) {
+          errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
+        } else if (errorData?.response?.status >= 500) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже.';
+        }
+        toastError(errorMessage);
+        logger.error('Failed to start work shift', { error: response.error });
+        return;
+      }
+
+      setActiveWorkShift(response.data);
+      toastSuccess('Смена успешно начата');
+      logger.info('Work shift started successfully', { shiftId: response.data?.id });
+      
+      // Обновляем информацию о смене
+      const refreshResponse = await getActiveWorkShift(user.id);
+      if (!refreshResponse.error && refreshResponse.data) {
+        setActiveWorkShift(refreshResponse.data);
+      }
+    } catch (error) {
+      logger.error('Exception when starting work shift', { error });
+      console.error('Error starting work shift:', error);
+      
+      if (error instanceof GeolocationPositionError) {
+        const errorMessage = error.code === 1
+          ? 'Доступ к геолокации запрещен. Разрешите доступ в настройках устройства.'
+          : error.code === 2
+            ? 'Геолокация недоступна. Проверьте настройки GPS.'
+            : 'Превышено время ожидания геолокации. Попробуйте снова.';
+        toastError(errorMessage);
+      } else {
+        toastError('Ошибка начала смены');
+      }
+    } finally {
+      setIsShiftActionLoading(false);
+    }
+  };
+
+  const handleEndShift = async () => {
+    if (!user?.id || !activeWorkShift) return;
+
+    setIsShiftActionLoading(true);
+
+    try {
+      logger.debug('Requesting geolocation for shift end');
+      toastSuccess(t('work.requestingGeolocation'));
+
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        const startTime = Date.now();
+        
+        const successCallback = (pos: GeolocationPosition) => {
+          const elapsed = Date.now() - startTime;
+          logger.info('Geolocation obtained for shift end', {
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            elapsedMs: elapsed,
+          });
+          resolve(pos);
+        };
+        
+        const errorCallback = (error: GeolocationPositionError) => {
+          const elapsed = Date.now() - startTime;
+          logger.error('Geolocation error when ending shift', {
+            code: error.code,
+            message: error.message,
+            elapsedMs: elapsed,
+          });
+          reject(error);
+        };
+
+        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+          enableHighAccuracy: true,
+          timeout: 30000,
+          maximumAge: 60000
+        });
+      });
+
+      const response = await endWorkShift({
+        worker_id: user.id,
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+
+      if (response.error) {
+        const errorData = response.error as any;
+        let errorMessage = 'Ошибка завершения смены';
+        if (errorData?.response?.status === 400) {
+          errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
+        } else if (errorData?.response?.status >= 500) {
+          errorMessage = 'Ошибка сервера. Попробуйте позже.';
+        }
+        toastError(errorMessage);
+        logger.error('Failed to end work shift', { error: response.error });
+        return;
+      }
+
+      // Показываем информацию о завершенной смене
+      const shift = response.data;
+      if (shift) {
+        const totalHours = shift.total_time ? (shift.total_time / 3600).toFixed(2) : '0';
+        const objectHours = shift.object_time ? (shift.object_time / 3600).toFixed(2) : '0';
+        const summary = shift.summary_rate ? shift.summary_rate.toFixed(2) : '0';
+        
+        toastSuccess(`Смена завершена. Время: ${totalHours}ч, На объектах: ${objectHours}ч, Сумма: ${summary}`);
+      } else {
+        toastSuccess('Смена успешно завершена');
+      }
+      
+      // Обновляем состояние - смена завершена, активной смены нет
+      setActiveWorkShift(null);
+      
+      logger.info('Work shift ended successfully', { shiftId: shift?.id });
+    } catch (error) {
+      logger.error('Exception when ending work shift', { error });
+      console.error('Error ending work shift:', error);
+      
+      if (error instanceof GeolocationPositionError) {
+        const errorMessage = error.code === 1
+          ? 'Доступ к геолокации запрещен. Разрешите доступ в настройках устройства.'
+          : error.code === 2
+            ? 'Геолокация недоступна. Проверьте настройки GPS.'
+            : 'Превышено время ожидания геолокации. Попробуйте снова.';
+        toastError(errorMessage);
+      } else {
+        toastError('Ошибка завершения смены');
+      }
+    } finally {
+      setIsShiftActionLoading(false);
+    }
   };
 
 
@@ -1042,6 +1254,82 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
           </div>
         )}
 
+        {/* Управление сменами (только для неофисных работников) */}
+        {canSelectObjectsAndVehicles && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6 mb-6">
+            <h2 className="text-2xl font-bold text-theme-text-primary mb-4">
+              {t('work.shift.title', 'Рабочая смена')}
+            </h2>
+            {activeWorkShift ? (
+              <div className="space-y-4">
+                <div className="bg-theme-accent/20 border border-theme-accent rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-semibold text-theme-text-primary">
+                      {t('work.shift.active', 'Смена начата')}
+                    </span>
+                    <Badge className="bg-green-500 text-white">
+                      {t('work.shift.active', 'Активна')}
+                    </Badge>
+                  </div>
+                  <div className="text-sm text-theme-text-secondary space-y-1">
+                    <div>
+                      <span className="font-medium">{t('work.shift.startTime', 'Начало')}:</span>{' '}
+                      {new Date(activeWorkShift.start_time).toLocaleString(
+                        { 'ru': 'ru-RU', 'en': 'en-US', 'de': 'de-DE', 'uk': 'uk-UA' }[i18n.language] || 'en-US'
+                      )}
+                    </div>
+                    {activeWorkShift.object_time > 0 && (
+                      <div>
+                        <span className="font-medium">{t('work.shift.objectTime', 'Время на объектах')}:</span>{' '}
+                        {Math.floor(activeWorkShift.object_time / 3600)}ч {Math.floor((activeWorkShift.object_time % 3600) / 60)}м
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  variant="destructive"
+                  size="lg"
+                  className="w-full text-lg font-semibold gap-3"
+                  onClick={handleEndShift}
+                  disabled={isShiftActionLoading}
+                >
+                  {isShiftActionLoading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {t('work.shift.ending', 'Завершение...')}
+                    </>
+                  ) : (
+                    <>
+                      <Square className="h-5 w-5" />
+                      {t('work.shift.end', 'Завершить смену')}
+                    </>
+                  )}
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="default"
+                size="lg"
+                className="w-full text-lg font-semibold gap-3"
+                onClick={handleStartShift}
+                disabled={isShiftActionLoading}
+              >
+                {isShiftActionLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    {t('work.shift.starting', 'Начало...')}
+                  </>
+                ) : (
+                  <>
+                    <Play className="h-5 w-5" />
+                    {t('work.shift.start', 'Начать смену')}
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
+
         {!isWorking ? (
           <div className="bg-theme-bg-card border border-theme-border rounded-xl p-6">
             <div className="text-center">
@@ -1058,12 +1346,13 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                       disabled={
                         (canChooseWorkType && workType === 'facility' && !selectedObject) ||
                         (!canChooseWorkType && canSelectObjectsAndVehicles && !selectedObject) ||
+                        (canSelectObjectsAndVehicles && (canChooseWorkType ? workType === 'facility' : true) && !activeWorkShift) ||
                         isStartingWork
                       }
                       className={`px-8 py-4 rounded-xl text-xl font-bold transition-all flex items-center gap-3 mx-auto ${
                         ((canChooseWorkType && workType === 'office') ||
-                         (canChooseWorkType && workType === 'facility' && selectedObject) ||
-                         (!canChooseWorkType && canSelectObjectsAndVehicles && selectedObject) ||
+                         (canChooseWorkType && workType === 'facility' && selectedObject && activeWorkShift) ||
+                         (!canChooseWorkType && canSelectObjectsAndVehicles && selectedObject && activeWorkShift) ||
                          (!canSelectObjectsAndVehicles)) && !isStartingWork
                           ? 'bg-theme-accent hover:bg-theme-accent-hover text-white shadow-lg hover:shadow-xl'
                           : 'bg-theme-bg-tertiary text-theme-text-muted cursor-not-allowed'
@@ -1085,6 +1374,11 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
                       (!canChooseWorkType && canSelectObjectsAndVehicles && !selectedObject)) && (
                       <p className="text-theme-text-muted mt-3">
                         {t('work.selectObjectFirst')}
+                      </p>
+                    )}
+                    {canSelectObjectsAndVehicles && (canChooseWorkType ? workType === 'facility' : true) && !activeWorkShift && (
+                      <p className="text-theme-text-muted mt-3">
+                        {t('work.shift.startFirst', 'Сначала необходимо начать смену')}
                       </p>
                     )}
                   </>
