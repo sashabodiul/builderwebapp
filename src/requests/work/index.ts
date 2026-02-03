@@ -4,6 +4,7 @@ import axios from 'axios';
 
 // Константы для chunked upload
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
+const CHUNK_CONCURRENCY = 3;
 const botApiUrl = 'https://bot-api.skybud.de';
 const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
 
@@ -13,6 +14,8 @@ type ChunkUploadResponse = {
   chunk_index: number;
   total_chunks: number;
   uploaded: boolean;
+  uploaded_chunks?: number;
+  is_complete?: boolean;
 };
 
 type FileUploadResponse = {
@@ -116,7 +119,8 @@ async function uploadChunk(
 async function uploadFileInChunks(
   file: File,
   fileType: 'video' | 'photo',
-  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void,
+  options?: { parallel?: boolean; concurrency?: number }
 ): Promise<FileUploadResponse> {
   // Генерируем уникальный file_id
   const fileId = `${Date.now()}_${Math.random().toString(36).substring(7)}`;
@@ -124,14 +128,36 @@ async function uploadFileInChunks(
   // Разбиваем файл на чанки
   const chunks = splitFileIntoChunks(file);
   const totalChunks = chunks.length;
+  const useParallel = options?.parallel === true;
   
-  // Загружаем чанки последовательно
-  for (let i = 0; i < chunks.length; i++) {
-    const chunkProgress = (progressEvent: { loaded: number; total: number; percent: number }) => {
+  if (!useParallel) {
+    // Загружаем чанки последовательно
+    for (let i = 0; i < chunks.length; i++) {
+      const chunkProgress = (progressEvent: { loaded: number; total: number; percent: number }) => {
+        if (onProgress) {
+          // Общий прогресс = (загруженные чанки + прогресс текущего чанка) / общее количество чанков
+          const totalLoaded = (i * CHUNK_SIZE) + progressEvent.loaded;
+          const totalSize = file.size;
+          onProgress({
+            loaded: totalLoaded,
+            total: totalSize,
+            percent: Math.round((totalLoaded * 100) / totalSize),
+          });
+        }
+      };
+      
+      await uploadChunk(chunks[i], i, totalChunks, fileId, file.name, fileType, chunkProgress);
+    }
+  } else {
+    const perChunkLoaded = new Array(totalChunks).fill(0);
+    const totalSize = file.size;
+    const queue = Array.from({ length: totalChunks }, (_, i) => i);
+    let firstError: any = null;
+    
+    const updateProgress = (index: number, progressEvent: { loaded: number; total: number; percent: number }) => {
+      perChunkLoaded[index] = progressEvent.loaded;
       if (onProgress) {
-        // Общий прогресс = (загруженные чанки + прогресс текущего чанка) / общее количество чанков
-        const totalLoaded = (i * CHUNK_SIZE) + progressEvent.loaded;
-        const totalSize = file.size;
+        const totalLoaded = perChunkLoaded.reduce((sum, val) => sum + val, 0);
         onProgress({
           loaded: totalLoaded,
           total: totalSize,
@@ -140,7 +166,32 @@ async function uploadFileInChunks(
       }
     };
     
-    await uploadChunk(chunks[i], i, totalChunks, fileId, file.name, fileType, chunkProgress);
+    const worker = async () => {
+      while (queue.length > 0 && !firstError) {
+        const index = queue.shift();
+        if (index === undefined) return;
+        try {
+          await uploadChunk(
+            chunks[index],
+            index,
+            totalChunks,
+            fileId,
+            file.name,
+            fileType,
+            (progressEvent) => updateProgress(index, progressEvent)
+          );
+        } catch (error) {
+          firstError = error;
+        }
+      }
+    };
+    
+    const concurrency = Math.min(options?.concurrency || CHUNK_CONCURRENCY, totalChunks);
+    const workers = Array.from({ length: concurrency }, () => worker());
+    await Promise.all(workers);
+    if (firstError) {
+      throw firstError;
+    }
   }
   
   return {
@@ -183,7 +234,8 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
 
 export const endWork = async (
   data: EndWorkData,
-  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void
+  onProgress?: (progress: { loaded: number; total: number; percent: number }) => void,
+  options?: { parallelChunks?: boolean }
 ): Promise<ApiResponse<WorkProcessEndOut>> => {
   // Определяем общий размер файлов для решения: использовать chunked upload или обычную загрузку
   const totalSize = 
@@ -214,7 +266,9 @@ export const endWork = async (
           });
         }
       };
-      const result = await uploadFileInChunks(data.report_video, 'video', videoProgress);
+      const result = await uploadFileInChunks(data.report_video, 'video', videoProgress, {
+        parallel: options?.parallelChunks,
+      });
       uploadedFileIds.report_video_id = result.file_id;
     }
     
@@ -238,7 +292,9 @@ export const endWork = async (
             });
           }
         };
-        const result = await uploadFileInChunks(photo, 'photo', photoProgress);
+        const result = await uploadFileInChunks(photo, 'photo', photoProgress, {
+          parallel: options?.parallelChunks,
+        });
         uploadedFileIds.done_work_photos_ids.push(result.file_id);
       }
     }
@@ -263,7 +319,9 @@ export const endWork = async (
             });
           }
         };
-        const result = await uploadFileInChunks(photo, 'photo', photoProgress);
+        const result = await uploadFileInChunks(photo, 'photo', photoProgress, {
+          parallel: options?.parallelChunks,
+        });
         uploadedFileIds.instrument_photos_ids.push(result.file_id);
       }
     }

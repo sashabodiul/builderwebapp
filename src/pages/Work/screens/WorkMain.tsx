@@ -54,6 +54,46 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
     details?: any;
   } | null>(null);
   const isRestricted = !user?.rate || user?.worker_type == null;
+  const LAST_KNOWN_POSITION_KEY = 'last_known_position';
+  const saveLastKnownPosition = (pos: GeolocationPosition) => {
+    try {
+      const payload = {
+        timestamp: Date.now(),
+        coords: {
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+        },
+      };
+      localStorage.setItem(LAST_KNOWN_POSITION_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore storage errors
+    }
+  };
+  const getLastKnownPosition = (): GeolocationPosition | null => {
+    try {
+      const raw = localStorage.getItem(LAST_KNOWN_POSITION_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.coords?.latitude || !parsed?.coords?.longitude) return null;
+      const ageMs = Date.now() - (parsed.timestamp || 0);
+      if (ageMs > 30 * 60 * 1000) return null; // older than 30 minutes
+      return {
+        coords: {
+          latitude: parsed.coords.latitude,
+          longitude: parsed.coords.longitude,
+          accuracy: parsed.coords.accuracy || 0,
+          altitude: null,
+          altitudeAccuracy: null,
+          heading: null,
+          speed: null,
+        },
+        timestamp: parsed.timestamp || Date.now(),
+      } as GeolocationPosition;
+    } catch {
+      return null;
+    }
+  };
   
   // Разрешенные типы работников для выбора объектов и бронирования авто
   const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master', 'foreman', 'engineer', 'assistant'];
@@ -288,6 +328,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
             accuracy: pos.coords.accuracy,
             elapsedMs: elapsed,
           });
+          saveLastKnownPosition(pos);
           resolve(pos);
         };
         
@@ -500,6 +541,7 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
             accuracy: pos.coords.accuracy,
             elapsedMs: elapsed,
           });
+          saveLastKnownPosition(pos);
           resolve(pos);
         };
         
@@ -588,33 +630,62 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
 
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
         const startTime = Date.now();
+        let retryAttempt = 0;
         
-        const successCallback = (pos: GeolocationPosition) => {
-          const elapsed = Date.now() - startTime;
-          logger.info('Geolocation obtained for shift end', {
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
-            accuracy: pos.coords.accuracy,
-            elapsedMs: elapsed,
+        const tryGetPosition = (useHighAccuracy: boolean) => {
+          const successCallback = (pos: GeolocationPosition) => {
+            const elapsed = Date.now() - startTime;
+            logger.info('Geolocation obtained for shift end', {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              elapsedMs: elapsed,
+              attempt: retryAttempt + 1,
+              usedHighAccuracy: useHighAccuracy,
+            });
+            saveLastKnownPosition(pos);
+            resolve(pos);
+          };
+          
+          const errorCallback = (error: GeolocationPositionError) => {
+            const elapsed = Date.now() - startTime;
+            logger.error('Geolocation error when ending shift', {
+              code: error.code,
+              message: error.message,
+              elapsedMs: elapsed,
+              attempt: retryAttempt + 1,
+              usedHighAccuracy: useHighAccuracy,
+            });
+            
+            // если таймаут/недоступна, пробуем без высокой точности
+            if (retryAttempt === 0 && useHighAccuracy && error.code !== 1) {
+              retryAttempt++;
+              setTimeout(() => {
+                tryGetPosition(false);
+              }, 500);
+            } else {
+              const cached = getLastKnownPosition();
+              if (cached && error.code !== 1) {
+                logger.warn('Using cached geolocation for shift end', {
+                  latitude: cached.coords.latitude,
+                  longitude: cached.coords.longitude,
+                  accuracy: cached.coords.accuracy,
+                });
+                resolve(cached);
+                return;
+              }
+              reject(error);
+            }
+          };
+          
+          navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
+            enableHighAccuracy: useHighAccuracy,
+            timeout: 45000,
+            maximumAge: 60000
           });
-          resolve(pos);
         };
         
-        const errorCallback = (error: GeolocationPositionError) => {
-          const elapsed = Date.now() - startTime;
-          logger.error('Geolocation error when ending shift', {
-            code: error.code,
-            message: error.message,
-            elapsedMs: elapsed,
-          });
-          reject(error);
-        };
-
-        navigator.geolocation.getCurrentPosition(successCallback, errorCallback, {
-          enableHighAccuracy: true,
-          timeout: 30000,
-          maximumAge: 60000
-        });
+        tryGetPosition(true);
       });
 
       const response = await endWorkShift({

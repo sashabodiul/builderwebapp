@@ -22,7 +22,12 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById('root')!).render(
   <Provider store={store}>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        }}
+      >
         <ToastContainer
           position="top-center"
           autoClose={3000}

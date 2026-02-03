@@ -65,6 +65,30 @@ export const ErrorDetails: FC<ErrorDetailsProps> = ({
   };
 
   const formattedDetails = formatDetails();
+  const handleCopyError = async () => {
+    const parts = [
+      `Ошибка: ${title}`,
+      `Сообщение: ${message}`,
+    ];
+    if (details?.status) {
+      parts.push(`HTTP: ${details.status} ${details.statusText || ''}`.trim());
+    }
+    if (details?.code) {
+      parts.push(`Код: ${details.code}`);
+    }
+    if (details?.responseData) {
+      const responseStr = typeof details.responseData === 'string'
+        ? details.responseData
+        : JSON.stringify(details.responseData, null, 2);
+      parts.push(`Ответ: ${responseStr}`);
+    }
+    const text = parts.join('\n');
+    try {
+      await navigator.clipboard?.writeText(text);
+    } catch {
+      // игнорируем ошибки буфера обмена
+    }
+  };
 
   return (
     <>
@@ -103,6 +127,14 @@ export const ErrorDetails: FC<ErrorDetailsProps> = ({
                 )}
               </div>
             )}
+            <div className="mt-2">
+              <button
+                onClick={handleCopyError}
+                className="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline"
+              >
+                Скопировать ошибку
+              </button>
+            </div>
             {details?.requestData && (
               <div className="mt-2">
                 <button

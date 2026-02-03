@@ -1,4 +1,4 @@
-import { FC, useEffect, useMemo, useState } from 'react';
+import { FC, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
@@ -45,12 +45,126 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     message: string;
     details?: any;
   } | null>(null);
+  const [lastErrorSummary, setLastErrorSummary] = useState<string | null>(null);
   const [uploadLogs, setUploadLogs] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percent: number } | null>(null);
+  const [activeSpeedInfo, setActiveSpeedInfo] = useState<{
+    mbps: number;
+    quality: 'good' | 'medium' | 'poor';
+    stable: boolean;
+    samples: number[];
+  } | null>(null);
+  const hasInitialSpeedCheck = useRef(false);
+  
+  const TELEGRAM_BOT_TOKEN = '7176047748:AAGSddiNsXo-LFfTmQDbpdNiyPQpPTtrMRc';
+  const TELEGRAM_CHAT_ID = '6315604689';
   
   const addLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setUploadLogs(prev => [...prev, `[${timestamp}] ${message}`]);
+  };
+  
+  const getConnectionInfo = () => {
+    const connection = (navigator as any).connection;
+    if (!connection) return null;
+    return {
+      effectiveType: connection.effectiveType,
+      downlink: connection.downlink,
+      rtt: connection.rtt,
+      saveData: connection.saveData,
+    };
+  };
+  
+  const getConnectionStatusMessage = () => {
+    const info = getConnectionInfo();
+    if (!info) return null;
+    const parts = [
+      info.effectiveType ? `Тип сети: ${info.effectiveType}` : null,
+      typeof info.downlink === 'number' ? `Скорость: ${info.downlink} Mbps` : null,
+      typeof info.rtt === 'number' ? `RTT: ${info.rtt} ms` : null,
+      info.saveData ? 'Режим экономии трафика: да' : null,
+    ].filter(Boolean);
+    return parts.length > 0 ? parts.join(' | ') : null;
+  };
+  
+  const getConnectionQuality = () => {
+    const info = getConnectionInfo();
+    if (!info) return 'unknown' as const;
+    const effectiveType = info.effectiveType;
+    const downlink = typeof info.downlink === 'number' ? info.downlink : null;
+    const rtt = typeof info.rtt === 'number' ? info.rtt : null;
+    if (effectiveType === 'slow-2g' || effectiveType === '2g') return 'poor' as const;
+    if (downlink !== null && downlink < 0.5) return 'poor' as const;
+    if (rtt !== null && rtt > 800) return 'poor' as const;
+    if (effectiveType === '3g') return 'medium' as const;
+    if (downlink !== null && downlink < 2) return 'medium' as const;
+    if (rtt !== null && rtt > 300) return 'medium' as const;
+    return 'good' as const;
+  };
+  
+  const testDownloadSpeed = async () => {
+    const testUrl = new URL('/vite.svg', window.location.origin);
+    testUrl.searchParams.set('cacheBust', Date.now().toString());
+    const start = performance.now();
+    const response = await fetch(testUrl.toString(), { cache: 'no-store' });
+    const buffer = await response.arrayBuffer();
+    const end = performance.now();
+    const bytes = buffer.byteLength;
+    const seconds = Math.max((end - start) / 1000, 0.001);
+    const mbps = (bytes * 8) / (seconds * 1024 * 1024);
+    return mbps;
+  };
+  
+  const runSpeedCheck = async () => {
+    try {
+      const samples: number[] = [];
+      // two samples to check stability
+      samples.push(await testDownloadSpeed());
+      samples.push(await testDownloadSpeed());
+      const avg = samples.reduce((a, b) => a + b, 0) / samples.length;
+      const variance = samples.reduce((a, b) => a + Math.abs(b - avg), 0) / samples.length;
+      const stable = variance / Math.max(avg, 0.1) < 0.5;
+      let quality: 'good' | 'medium' | 'poor';
+      if (avg < 1.5) {
+        quality = 'poor';
+      } else if (avg < 5) {
+        quality = 'medium';
+      } else {
+        quality = 'good';
+      }
+      setActiveSpeedInfo({
+        mbps: Number(avg.toFixed(2)),
+        quality,
+        stable,
+        samples: samples.map(s => Number(s.toFixed(2))),
+      });
+      return { avg, quality, stable };
+    } catch {
+      setActiveSpeedInfo(null);
+      return null;
+    }
+  };
+  
+  useEffect(() => {
+    if (embedded || hasInitialSpeedCheck.current) return;
+    hasInitialSpeedCheck.current = true;
+    void runSpeedCheck();
+  }, [embedded]);
+  
+  const sendErrorToTelegram = async (text: string) => {
+    try {
+      await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text,
+          disable_web_page_preview: true,
+        }),
+      });
+    } catch {
+      // игнорируем ошибки отправки
+    }
   };
   
   // Перехватываем console.log, console.error, console.warn для вывода в UI
@@ -238,8 +352,36 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     setUploadLogs([]);
     setUploadProgress(null);
     setErrorDetails(null);
+    setLastErrorSummary(null);
 
     addLog('Начало завершения работы...');
+    const connectionStatus = getConnectionStatusMessage();
+    if (connectionStatus) {
+      addLog(`Сеть: ${connectionStatus}`);
+    }
+    if (getConnectionQuality() === 'poor') {
+      const warnMessage = 'Плохое или нестабильное соединение. Возможны ошибки при загрузке.';
+      addLog(`⚠ ${warnMessage}`);
+      toastError(warnMessage);
+    }
+    
+    addLog('Проверка скорости соединения...');
+    const speedCheck = await runSpeedCheck();
+    if (!speedCheck) {
+      const warnMessage = 'Не удалось проверить скорость соединения. Проверьте интернет.';
+      addLog(`✗ ${warnMessage}`);
+      toastError(warnMessage);
+      setIsCompleting(false);
+      return;
+    }
+    addLog(`Скорость: ${speedCheck.avg.toFixed(2)} Mbps (${speedCheck.quality}, ${speedCheck.stable ? 'стабильная' : 'нестабильная'})`);
+    if (!speedCheck.stable || speedCheck.quality === 'poor') {
+      const warnMessage = 'Соединение нестабильное или слишком медленное. Загрузка файлов отменена.';
+      addLog(`✗ ${warnMessage}`);
+      toastError(warnMessage);
+      setIsCompleting(false);
+      return;
+    }
     addLog(`Пользователь: ID ${user.id}, тип: ${user.worker_type}`);
     addLog(`Фотографий работы: ${workPhotos.length}, инструментов: ${toolsPhotos.length}`);
     addLog(`Видео: ${videoFile ? 'Да' : 'Нет'}`);
@@ -296,8 +438,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       const isAndroid = /android/i.test(navigator.userAgent);
       const geolocationOptions = {
         enableHighAccuracy: canSelectObjectsAndVehicles,
-        timeout: 30000, // Увеличено с 15000 до 30000 для Android совместимости
-        maximumAge: 60000
+        timeout: 60000, // увеличено для снижения таймаутов
+        maximumAge: 120000
       };
 
       logger.debug('Requesting geolocation for work completion', {
@@ -347,8 +489,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
               errorCode3: 'TIMEOUT'
             });
             
-            // На Android, если первая попытка с высоким приоритетом не удалась, пробуем с низким
-            if (isAndroid && retryAttempt === 0 && useHighAccuracy && error.code !== 1) {
+            // Если первая попытка с высоким приоритетом не удалась, пробуем с низким
+            if (retryAttempt === 0 && useHighAccuracy && error.code !== 1) {
               retryAttempt++;
               addLog(`Повторная попытка геолокации с низкой точностью...`);
               logger.debug('Retrying geolocation with lower accuracy on Android', {
@@ -413,6 +555,8 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           if (progress.total > 0) {
             addLog(`Загрузка: ${progress.percent}% (${(progress.loaded / 1024 / 1024).toFixed(2)} MB / ${(progress.total / 1024 / 1024).toFixed(2)} MB)`);
           }
+        }, {
+          parallelChunks: user?.worker_type === 'master',
         });
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
@@ -504,6 +648,25 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         }
         
         // Сохраняем детали ошибки для отображения в UI
+        const errorSummaryParts = [
+          `Ошибка: ${errorMessage}`,
+          errorData?.response?.status ? `HTTP ${errorData.response.status}` : null,
+          errorData?.code ? `Код ${errorData.code}` : null,
+        ].filter(Boolean);
+        setLastErrorSummary(errorSummaryParts.join(' | '));
+        const connectionInfo = getConnectionInfo();
+        const errorText = [
+          'Ошибка завершения работы',
+          `User: ${user.id} (${user.worker_type || 'unknown'})`,
+          `HTTP: ${errorData?.response?.status || response.status || 'unknown'}`,
+          `Code: ${errorData?.code || 'unknown'}`,
+          `Message: ${errorMessage}`,
+          connectionInfo
+            ? `Connection: ${JSON.stringify(connectionInfo)}`
+            : 'Connection: unknown',
+        ].join('\n');
+        void sendErrorToTelegram(errorText);
+        
         setErrorDetails({
           title: 'Ошибка завершения работы',
           message: errorMessage,
@@ -621,6 +784,23 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         });
       } else {
         const errorData = error as any;
+        const errorSummaryParts = [
+          `Ошибка: ${errorMessage}`,
+          errorData?.code ? `Код ${errorData.code}` : null,
+        ].filter(Boolean);
+        setLastErrorSummary(errorSummaryParts.join(' | '));
+        const connectionInfo = getConnectionInfo();
+        const errorText = [
+          'Ошибка завершения работы (исключение)',
+          `User: ${user?.id || 'unknown'} (${user?.worker_type || 'unknown'})`,
+          `Code: ${errorData?.code || 'unknown'}`,
+          `Message: ${errorMessage}`,
+          connectionInfo
+            ? `Connection: ${JSON.stringify(connectionInfo)}`
+            : 'Connection: unknown',
+        ].join('\n');
+        void sendErrorToTelegram(errorText);
+        
         setErrorDetails({
           title: errorTitle,
           message: errorMessage,
@@ -647,6 +827,17 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     <div className={`bg-theme-bg-primary p-6 overflow-x-hidden ${embedded ? '' : 'min-h-screen page'}`}>
       <div className="max-w-2xl mx-auto">
         {/* Error Details */}
+        {lastErrorSummary && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 mb-4">
+            <div className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+              Последняя ошибка:
+            </div>
+            <div className="text-xs text-amber-700 dark:text-amber-300 break-words">
+              {lastErrorSummary}
+            </div>
+          </div>
+        )}
+
         {errorDetails && (
           <ErrorDetails
             title={errorDetails.title}
@@ -656,8 +847,49 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           />
         )}
         
+        {/* Connection status */}
+        {!embedded && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-xs font-semibold text-theme-text-primary">
+                Скорость соединения
+              </div>
+              <div className="text-xs text-theme-text-secondary">
+                {activeSpeedInfo
+                  ? `${activeSpeedInfo.mbps} Mbps`
+                  : (() => {
+                    const info = getConnectionInfo();
+                    return typeof info?.downlink === 'number'
+                      ? `${info.downlink} Mbps`
+                      : 'нет данных';
+                  })()}
+              </div>
+            </div>
+            <div className="mt-2 text-xs">
+              {(() => {
+                const quality = activeSpeedInfo?.quality || getConnectionQuality();
+                if (quality === 'good') {
+                  return <span className="text-green-600">Хорошее соединение</span>;
+                }
+                if (quality === 'medium') {
+                  return <span className="text-amber-600">Среднее соединение</span>;
+                }
+                if (quality === 'poor') {
+                  return <span className="text-red-600">Плохое соединение</span>;
+                }
+                return <span className="text-theme-text-muted">Нет данных о сети</span>;
+              })()}
+              {activeSpeedInfo && (
+                <div className="text-theme-text-muted mt-1">
+                  {activeSpeedInfo.stable ? 'Стабильное' : 'Нестабильное'} · samples: {activeSpeedInfo.samples.join(', ')} Mbps
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         {/* Upload Progress and Logs */}
-        {(isCompleting || uploadLogs.length > 0 || uploadProgress) && (
+        {(isCompleting || uploadLogs.length > 0 || uploadProgress) && !['worker', 'master'].includes(user?.worker_type) && (
           <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
             <h3 className="text-sm font-semibold text-theme-text-primary mb-3">
               {isCompleting ? 'Завершение работы...' : 'Логи операции'}
@@ -686,7 +918,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             {uploadLogs.length > 0 && (
               <div className="bg-theme-bg-tertiary rounded p-3 max-h-60 overflow-y-auto">
                 <div className="space-y-1">
-                  {uploadLogs.map((log, index) => (
+                  {[...uploadLogs].reverse().map((log, index) => (
                     <div key={index} className="text-xs font-mono text-theme-text-secondary">
                       {log}
                     </div>
