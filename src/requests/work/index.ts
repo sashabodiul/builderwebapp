@@ -235,7 +235,16 @@ export const startWork = async (data: StartWorkData): Promise<ApiResponse<WorkPr
 export const endWork = async (
   data: EndWorkData,
   onProgress?: (progress: { loaded: number; total: number; percent: number }) => void,
-  options?: { parallelChunks?: boolean }
+  options?: {
+    parallelChunks?: boolean;
+    onFileProgress?: (progress: {
+      category: 'work' | 'tools' | 'video';
+      index: number;
+      name: string;
+      percent: number;
+    }) => void;
+    onPhaseChange?: (phase: 'uploading' | 'finalizing' | 'done') => void;
+  }
 ): Promise<ApiResponse<WorkProcessEndOut>> => {
   // Определяем общий размер файлов для решения: использовать chunked upload или обычную загрузку
   const totalSize = 
@@ -251,6 +260,10 @@ export const endWork = async (
     instrument_photos_ids?: string[];
   } = {};
   
+  if (options?.onPhaseChange) {
+    options.onPhaseChange('uploading');
+  }
+  
   // Если файлы большие, используем chunked upload
   if (USE_CHUNKED_UPLOAD) {
     // Загружаем видео
@@ -263,6 +276,14 @@ export const endWork = async (
             loaded: progress.loaded,
             total: totalSize,
             percent: Math.round(videoPercent),
+          });
+        }
+        if (options?.onFileProgress) {
+          options.onFileProgress({
+            category: 'video',
+            index: 0,
+            name: data.report_video?.name || 'video',
+            percent: progress.percent,
           });
         }
       };
@@ -289,6 +310,14 @@ export const endWork = async (
               loaded: progress.loaded + (i * photo.size),
               total: totalSize,
               percent: Math.round(30 + alreadyUploadedPercent + currentPhotoPercent),
+            });
+          }
+          if (options?.onFileProgress) {
+            options.onFileProgress({
+              category: 'work',
+              index: i,
+              name: photo.name,
+              percent: progress.percent,
             });
           }
         };
@@ -318,6 +347,14 @@ export const endWork = async (
               percent: Math.round(startPercent + alreadyUploadedPercent + currentPhotoPercent),
             });
           }
+          if (options?.onFileProgress) {
+            options.onFileProgress({
+              category: 'tools',
+              index: i,
+              name: photo.name,
+              percent: progress.percent,
+            });
+          }
         };
         const result = await uploadFileInChunks(photo, 'photo', photoProgress, {
           parallel: options?.parallelChunks,
@@ -325,6 +362,10 @@ export const endWork = async (
         uploadedFileIds.instrument_photos_ids.push(result.file_id);
       }
     }
+  }
+  
+  if (USE_CHUNKED_UPLOAD && options?.onPhaseChange) {
+    options.onPhaseChange('finalizing');
   }
   
   // Отправляем финальный запрос на завершение работы
@@ -375,15 +416,24 @@ export const endWork = async (
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('Authorization', botApiToken);
     
-    if (onProgress && USE_CHUNKED_UPLOAD) {
-      // Для финального запроса показываем 95-100%
+    if (onProgress && xhr.upload) {
       xhr.upload.addEventListener('progress', (event) => {
-        if (event.lengthComputable && onProgress) {
+        if (!event.lengthComputable) return;
+        if (USE_CHUNKED_UPLOAD) {
+          // Для финального запроса показываем 95-100%
           const finalPercent = 95 + Math.round((event.loaded * 5) / event.total);
           onProgress({
             loaded: totalSize + event.loaded,
             total: totalSize + event.total,
             percent: finalPercent,
+          });
+        } else {
+          // Для обычной загрузки показываем 0-100%
+          const percent = Math.round((event.loaded * 100) / event.total);
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percent,
           });
         }
       });
@@ -404,6 +454,9 @@ export const endWork = async (
           try {
             if (onProgress) {
               onProgress({ loaded: totalSize, total: totalSize, percent: 100 });
+            }
+            if (options?.onPhaseChange) {
+              options.onPhaseChange('done');
             }
             resolve({ data: JSON.parse(xhr.responseText) });
           } catch {

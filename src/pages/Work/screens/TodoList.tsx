@@ -2,6 +2,8 @@ import { FC, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { endWork, endWorkOffice } from '../../../requests/work';
 import { logger } from '../../../lib/logger';
 import { WorkProcessEndOut } from '../../../requests/work/types';
@@ -48,6 +50,15 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const [lastErrorSummary, setLastErrorSummary] = useState<string | null>(null);
   const [uploadLogs, setUploadLogs] = useState<string[]>([]);
   const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percent: number } | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<'idle' | 'uploading' | 'finalizing' | 'done'>('idle');
+  const [workFilesProgress, setWorkFilesProgress] = useState<number[]>([]);
+  const [toolsFilesProgress, setToolsFilesProgress] = useState<number[]>([]);
+  const [videoFileProgress, setVideoFileProgress] = useState<number>(0);
+  const wakeLockRef = useRef<any>(null);
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [showUploadNotice, setShowUploadNotice] = useState(false);
+  const [acknowledgedUploadNotice, setAcknowledgedUploadNotice] = useState(false);
+  const [heartbeatTick, setHeartbeatTick] = useState(0);
   const [activeSpeedInfo, setActiveSpeedInfo] = useState<{
     mbps: number;
     quality: 'good' | 'medium' | 'poor';
@@ -161,6 +172,61 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     hasInitialSpeedCheck.current = true;
     void runSpeedCheck();
   }, [embedded]);
+  
+  useEffect(() => {
+    if (!isCompleting) return;
+    const interval = setInterval(() => {
+      setHeartbeatTick((prev) => prev + 1);
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [isCompleting]);
+  
+  useEffect(() => {
+    const acquireWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator && isCompleting) {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+          setWakeLockActive(true);
+          wakeLockRef.current.addEventListener('release', () => {
+            setWakeLockActive(false);
+          });
+        }
+      } catch {
+        setWakeLockActive(false);
+      }
+    };
+    
+    const releaseWakeLock = async () => {
+      try {
+        if (wakeLockRef.current) {
+          await wakeLockRef.current.release();
+          wakeLockRef.current = null;
+        }
+      } catch {
+        // ignore release errors
+      } finally {
+        setWakeLockActive(false);
+      }
+    };
+    
+    if (isCompleting) {
+      void acquireWakeLock();
+    } else {
+      void releaseWakeLock();
+    }
+    
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isCompleting) {
+        void acquireWakeLock();
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      void releaseWakeLock();
+    };
+  }, [isCompleting]);
   
   const sendErrorToTelegram = async (text: string) => {
     try {
@@ -358,12 +424,21 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const handleCompleteWork = async () => {
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
+    if (!acknowledgedUploadNotice) {
+      setShowUploadNotice(true);
+      return;
+    }
+    await startCompletion();
+  };
+  
+  const startCompletion = async () => {
 
     // Очищаем предыдущие логи
     setUploadLogs([]);
     setUploadProgress(null);
     setErrorDetails(null);
     setLastErrorSummary(null);
+    setUploadPhase('idle');
 
     addLog('Начало завершения работы...');
     const connectionStatus = getConnectionStatusMessage();
@@ -377,12 +452,13 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     }
     
     addLog('Проверка скорости соединения...');
-    const speedCheck = await runSpeedCheck();
+      const speedCheck = await runSpeedCheck();
     if (!speedCheck) {
       const warnMessage = 'Не удалось проверить скорость соединения. Проверьте интернет.';
       addLog(`✗ ${warnMessage}`);
       toastError(warnMessage);
       setIsCompleting(false);
+        setAcknowledgedUploadNotice(false);
       return;
     }
     addLog(`Скорость: ${speedCheck.avg.toFixed(2)} Mbps (${speedCheck.quality}, ${speedCheck.stable ? 'стабильная' : 'нестабильная'})`);
@@ -391,6 +467,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       addLog(`✗ ${warnMessage}`);
       toastError(warnMessage);
       setIsCompleting(false);
+        setAcknowledgedUploadNotice(false);
       return;
     }
     addLog(`Пользователь: ID ${user.id}, тип: ${user.worker_type}`);
@@ -526,6 +603,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
       const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
       const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+      const willUseChunked = totalSize > 10 * 1024 * 1024;
+      setWorkFilesProgress(new Array(workPhotos.length).fill(0));
+      setToolsFilesProgress(new Array(toolsPhotos.length).fill(0));
+      setVideoFileProgress(videoFile ? 0 : 0);
+      setUploadPhase('uploading');
       addLog(`Подготовка данных для отправки...`);
       addLog(`Общий размер файлов: ${totalSizeMB} MB`);
 
@@ -566,8 +648,43 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           if (progress.total > 0) {
             addLog(`Загрузка: ${progress.percent}% (${(progress.loaded / 1024 / 1024).toFixed(2)} MB / ${(progress.total / 1024 / 1024).toFixed(2)} MB)`);
           }
+          if (!willUseChunked) {
+            const p = Math.max(0, Math.min(100, progress.percent));
+            if (workPhotos.length > 0) {
+              setWorkFilesProgress(new Array(workPhotos.length).fill(p));
+            }
+            if (toolsPhotos.length > 0) {
+              setToolsFilesProgress(new Array(toolsPhotos.length).fill(p));
+            }
+            if (videoFile) {
+              setVideoFileProgress(p);
+            }
+            if (p >= 100) {
+              setUploadPhase('finalizing');
+            }
+          } else if (progress.percent >= 100) {
+            setUploadPhase('finalizing');
+          }
         }, {
           parallelChunks: user?.worker_type === 'master',
+          onFileProgress: (fileProgress) => {
+            if (fileProgress.category === 'video') {
+              setVideoFileProgress(fileProgress.percent);
+            } else if (fileProgress.category === 'work') {
+              setWorkFilesProgress(prev => {
+                const next = [...prev];
+                next[fileProgress.index] = fileProgress.percent;
+                return next;
+              });
+            } else if (fileProgress.category === 'tools') {
+              setToolsFilesProgress(prev => {
+                const next = [...prev];
+                next[fileProgress.index] = fileProgress.percent;
+                return next;
+              });
+            }
+          },
+          onPhaseChange: (phase) => setUploadPhase(phase),
         });
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
@@ -707,6 +824,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         toastError(errorMessage);
         setIsCompleting(false);
+        setAcknowledgedUploadNotice(false);
         return;
       }
 
@@ -747,6 +865,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
       addLog(`✓ Работа успешно завершена!`);
       setUploadProgress(null);
+      setUploadPhase('done');
       toastSuccess(t('work.workEnded'));
       onComplete && onComplete(response.data);
     } catch (error) {
@@ -831,6 +950,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       
       toastError(errorMessage);
       setIsCompleting(false);
+      setAcknowledgedUploadNotice(false);
     }
   };
 
@@ -898,6 +1018,119 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             </div>
           </div>
         )}
+        
+        {!embedded && isCompleting && (
+          <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
+            <div className="text-sm font-semibold text-theme-text-primary mb-2">
+              Загрузка файлов
+            </div>
+            <div className="space-y-3">
+              <div className="text-xs text-theme-text-secondary">
+                {wakeLockActive
+                  ? 'Экран не будет гаснуть во время загрузки'
+                  : 'Не блокируйте экран во время загрузки'}
+              </div>
+              {workPhotos.length > 0 && (
+                <div>
+                  <div className="text-xs text-theme-text-secondary mb-1">
+                    Файлы работы: {workFilesProgress.filter(p => p >= 100).length}/{workPhotos.length}
+                  </div>
+                  <div className="space-y-1">
+                    {workPhotos.map((file, idx) => (
+                      <div key={`work-${idx}`} className="text-xs">
+                        <div className="flex justify-between">
+                          <span className="truncate">{file.name}</span>
+                          <span>{Math.round(workFilesProgress[idx] || 0)}%</span>
+                        </div>
+                        <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
+                          <div
+                            className="bg-theme-accent h-1 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.round(workFilesProgress[idx] || 0)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {toolsPhotos.length > 0 && (
+                <div>
+                  <div className="text-xs text-theme-text-secondary mb-1">
+                    Файлы инструментов: {toolsFilesProgress.filter(p => p >= 100).length}/{toolsPhotos.length}
+                  </div>
+                  <div className="space-y-1">
+                    {toolsPhotos.map((file, idx) => (
+                      <div key={`tools-${idx}`} className="text-xs">
+                        <div className="flex justify-between">
+                          <span className="truncate">{file.name}</span>
+                          <span>{Math.round(toolsFilesProgress[idx] || 0)}%</span>
+                        </div>
+                        <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
+                          <div
+                            className="bg-theme-accent h-1 rounded-full transition-all duration-300"
+                            style={{ width: `${Math.round(toolsFilesProgress[idx] || 0)}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {videoFile && (
+                <div>
+                  <div className="text-xs text-theme-text-secondary mb-1">
+                    Видео: {Math.round(videoFileProgress)}%
+                  </div>
+                  <div className="text-xs">
+                    <div className="flex justify-between">
+                      <span className="truncate">{videoFile.name}</span>
+                      <span>{Math.round(videoFileProgress)}%</span>
+                    </div>
+                    <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
+                      <div
+                        className="bg-theme-accent h-1 rounded-full transition-all duration-300"
+                        style={{ width: `${Math.round(videoFileProgress)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {uploadPhase === 'finalizing' && (
+                <div className="flex items-center gap-2 text-xs text-theme-text-secondary">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-theme-accent"></div>
+                  Данные загружены. Ожидайте обработки запроса сервером{'.'.repeat((heartbeatTick % 3) + 1)}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        <Dialog open={showUploadNotice} onOpenChange={setShowUploadNotice}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Важно</DialogTitle>
+              <DialogDescription>
+                Во время загрузки файлов не блокируйте экран и не сворачивайте приложение.
+                Это может прервать отправку данных.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="default"
+                onClick={() => {
+                  setShowUploadNotice(false);
+                  setAcknowledgedUploadNotice(true);
+                  void startCompletion();
+                }}
+              >
+                Понял
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         
         {/* Upload Progress and Logs */}
         {(isCompleting || uploadLogs.length > 0 || uploadProgress) && !['worker', 'master'].includes(user?.worker_type) && (
