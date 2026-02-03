@@ -103,7 +103,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   };
   
   const testDownloadSpeed = async () => {
-    const testUrl = new URL('/speed-test-100mb.txt', window.location.origin);
+    const testUrl = new URL('/speed-test-49mb.txt', window.location.origin);
     testUrl.searchParams.set('cacheBust', Date.now().toString());
     const rangeBytes = 5 * 1024 * 1024; // 5MB sample to avoid large downloads
     const start = performance.now();
