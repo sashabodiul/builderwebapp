@@ -59,6 +59,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const [showUploadNotice, setShowUploadNotice] = useState(false);
   const [acknowledgedUploadNotice, setAcknowledgedUploadNotice] = useState(false);
   const [heartbeatTick, setHeartbeatTick] = useState(0);
+  const [finalizingStartedAt, setFinalizingStartedAt] = useState<number | null>(null);
   const [activeSpeedInfo, setActiveSpeedInfo] = useState<{
     mbps: number;
     quality: 'good' | 'medium' | 'poor';
@@ -180,6 +181,16 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     }, 15000);
     return () => clearInterval(interval);
   }, [isCompleting]);
+  
+  useEffect(() => {
+    if (uploadPhase === 'finalizing') {
+      if (!finalizingStartedAt) {
+        setFinalizingStartedAt(Date.now());
+      }
+    } else {
+      setFinalizingStartedAt(null);
+    }
+  }, [uploadPhase, finalizingStartedAt]);
   
   useEffect(() => {
     const acquireWakeLock = async () => {
@@ -439,6 +450,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     setErrorDetails(null);
     setLastErrorSummary(null);
     setUploadPhase('idle');
+    setFinalizingStartedAt(null);
 
     addLog('Начало завершения работы...');
     const connectionStatus = getConnectionStatusMessage();
@@ -1102,6 +1114,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
                 <div className="flex items-center gap-2 text-xs text-theme-text-secondary">
                   <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-theme-accent"></div>
                   Данные загружены. Ожидайте обработки запроса сервером{'.'.repeat((heartbeatTick % 3) + 1)}
+                </div>
+              )}
+              {uploadPhase === 'finalizing' && finalizingStartedAt && (
+                <div className="text-xs text-theme-text-muted">
+                  Время ожидания: {Math.floor((Date.now() - finalizingStartedAt) / 1000)} сек.
                 </div>
               )}
             </div>
