@@ -103,15 +103,26 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   };
   
   const testDownloadSpeed = async () => {
-    const testUrl = new URL('/vite.svg', window.location.origin);
+    const testUrl = new URL('/speed-test-100mb.txt', window.location.origin);
     testUrl.searchParams.set('cacheBust', Date.now().toString());
+    const rangeBytes = 5 * 1024 * 1024; // 5MB sample to avoid large downloads
     const start = performance.now();
-    const response = await fetch(testUrl.toString(), { cache: 'no-store' });
+    const response = await fetch(testUrl.toString(), {
+      cache: 'no-store',
+      headers: {
+        Range: `bytes=0-${rangeBytes - 1}`,
+      },
+    });
     const buffer = await response.arrayBuffer();
     const end = performance.now();
     const bytes = buffer.byteLength;
     const seconds = Math.max((end - start) / 1000, 0.001);
     const mbps = (bytes * 8) / (seconds * 1024 * 1024);
+    try {
+      addLog(`Тест скорости: загружено ${(bytes / 1024 / 1024).toFixed(2)} MB, данные не сохраняются`);
+    } catch {
+      // ignore log errors
+    }
     return mbps;
   };
   
