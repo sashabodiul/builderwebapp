@@ -21,6 +21,7 @@ export type WorkProcessStartOut = {
 export type WorkProcessEndOut = {
   worker_id: number;
   facility_id: number | null;
+  shift_id?: number | null;
   start_time: string;
   start_latitude: number;
   start_longitude: number;
