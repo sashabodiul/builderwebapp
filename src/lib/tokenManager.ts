@@ -11,7 +11,6 @@ import { WorkerLoginData } from '../requests/worker/types';
 
 const AUTH_TOKEN_KEY = 'authToken';
 const REFRESH_TOKEN_KEY = 'refreshToken';
-const USER_EMAIL_KEY = 'username'; // Already used in RegisterForm
 // Note: We don't store password for security reasons
 
 // Default CRM API user credentials
