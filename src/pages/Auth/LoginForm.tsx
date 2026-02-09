@@ -53,6 +53,16 @@ const LoginForm = () => {
       return;
     }
     
+    // Check if response contains tokens (some login endpoints return tokens)
+    const responseData = response.data as any;
+    if (responseData?.access_token) {
+      localStorage.setItem('authToken', responseData.access_token);
+      if (responseData?.refresh_token) {
+        localStorage.setItem('refreshToken', responseData.refresh_token);
+      }
+      localStorage.setItem('username', email);
+    }
+    
     dispatch(setUser(response.data));
     toastSuccess(t('auth.loginSuccess') || 'Successfully logged in');
     navigate('/');

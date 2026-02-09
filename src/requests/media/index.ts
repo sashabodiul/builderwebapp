@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getApiBaseUrl } from '../../lib/apiConfig';
+import { ensureValidToken } from '../../lib/tokenManager';
 
 export type MediaItem = {
   id: number;
@@ -45,17 +46,23 @@ export const fetchMediaByObjectId = async (
   const url = `${baseUrl}/api/v1/media?${queryParams.toString()}`;
   
   try {
-    const apiToken = import.meta.env.VITE_API_TOKEN;
+    // Ensure token is valid before making request - use only user's token, not default
+    const validToken = await ensureValidToken();
+    
+    if (!validToken) {
+      throw new Error('Authentication required. Please login again.');
+    }
+    
     const response = await axios.get<MediaResponse>(url, {
       headers: {
         'Accept': 'application/json',
-        ...(apiToken && { 'Authorization': apiToken }),
+        'Authorization': validToken,
       },
     });
     return response.data || { items: [], total: 0 };
   } catch (error: any) {
     console.error('Failed to fetch media:', error);
-    throw new Error(error?.response?.data?.detail || 'Failed to fetch media');
+    throw new Error(error?.response?.data?.detail || error?.message || 'Failed to fetch media');
   }
 };
 
@@ -84,18 +91,24 @@ export const toggleMediaLike = async (
   const url = `${baseUrl}/api/v1/media/${mediaId}/like?worker_id=${workerId}`;
   
   try {
-    const apiToken = import.meta.env.VITE_API_TOKEN;
+    // Ensure token is valid before making request - use only user's token, not default
+    const validToken = await ensureValidToken();
+    
+    if (!validToken) {
+      throw new Error('Authentication required. Please login again.');
+    }
+    
     const response = await axios.post<LikeResponse>(url, {}, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        ...(apiToken && { 'Authorization': apiToken }),
+        'Authorization': validToken,
       },
     });
     return response.data;
   } catch (error: any) {
     console.error('Failed to toggle like:', error);
-    throw new Error(error?.response?.data?.detail || 'Failed to toggle like');
+    throw new Error(error?.response?.data?.detail || error?.message || 'Failed to toggle like');
   }
 };
 
@@ -114,17 +127,23 @@ export const getLikedMedia = async (
   const url = `${baseUrl}/api/v1/media/liked?${queryParams.toString()}`;
   
   try {
-    const apiToken = import.meta.env.VITE_API_TOKEN;
+    // Ensure token is valid before making request - use only user's token, not default
+    const validToken = await ensureValidToken();
+    
+    if (!validToken) {
+      throw new Error('Authentication required. Please login again.');
+    }
+    
     const response = await axios.get<LikedMediaResponse>(url, {
       headers: {
         'Accept': 'application/json',
-        ...(apiToken && { 'Authorization': apiToken }),
+        'Authorization': validToken,
       },
     });
     return response.data || { items: [], total: 0, limit, offset, worker_id: workerId };
   } catch (error: any) {
     console.error('Failed to fetch liked media:', error);
-    throw new Error(error?.response?.data?.detail || 'Failed to fetch liked media');
+    throw new Error(error?.response?.data?.detail || error?.message || 'Failed to fetch liked media');
   }
 };
 

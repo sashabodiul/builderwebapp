@@ -775,6 +775,34 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         if (errorData?.code === 'ERR_NETWORK' || errorData?.message?.includes('Network Error') || errorData?.message?.includes('Failed to fetch')) {
           // Если OPTIONS прошел, но POST не отправился, это может быть ограничение Telegram WebView
           errorMessage = `Не удалось отправить файлы (${totalSizeMB} MB). Это может быть ограничение Telegram WebView на Android. Попробуйте: 1) Использовать Wi-Fi вместо мобильного интернета, 2) Уменьшить размер видео, 3) Отправить меньше фотографий.`;
+        } else if (errorData?.code === 'ERR_BAD_RESPONSE') {
+          // Специальная обработка для ERR_BAD_RESPONSE
+          const httpStatus = errorData?.response?.status;
+          const responseMessage = errorData?.message || '';
+          
+          if (responseMessage.includes('Empty response')) {
+            errorMessage = 'Сервер вернул пустой ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
+          } else if (responseMessage.includes('Failed to parse')) {
+            errorMessage = 'Сервер вернул некорректный ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
+          } else if (httpStatus === 413) {
+            errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
+          } else if (httpStatus === 408 || errorData?.code === 'ECONNABORTED') {
+            errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
+          } else if (httpStatus >= 500) {
+            errorMessage = `Ошибка сервера (${httpStatus}). Сервер временно недоступен. Попробуйте позже или обратитесь в поддержку.`;
+          } else if (httpStatus === 400) {
+            errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова. Если проблема повторяется, обратитесь в поддержку.';
+          } else if (httpStatus === 401 || httpStatus === 403) {
+            errorMessage = 'Ошибка авторизации. Перезайдите в приложение.';
+          } else if (httpStatus === 404) {
+            errorMessage = 'Эндпоинт не найден. Возможно, проблема с конфигурацией сервера. Обратитесь в поддержку.';
+          } else if (httpStatus === 429) {
+            errorMessage = 'Слишком много запросов. Подождите немного и попробуйте снова.';
+          } else if (httpStatus) {
+            errorMessage = `Ошибка сервера (${httpStatus}): ${responseMessage || 'Неизвестная ошибка'}. Попробуйте позже или обратитесь в поддержку.`;
+          } else {
+            errorMessage = `Ошибка при получении ответа от сервера: ${responseMessage || 'Неизвестная ошибка'}. Проверьте интернет-соединение и попробуйте снова.`;
+          }
         } else if (errorData?.response?.status === 413) {
           errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
         } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
@@ -926,9 +954,33 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         });
       } else {
         const errorData = error as any;
+        
+        // Улучшенная обработка ERR_BAD_RESPONSE в блоке catch
+        if (errorData?.code === 'ERR_BAD_RESPONSE') {
+          const httpStatus = errorData?.response?.status;
+          const responseMessage = errorData?.message || '';
+          
+          if (responseMessage.includes('Empty response')) {
+            errorMessage = 'Сервер вернул пустой ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
+          } else if (responseMessage.includes('Failed to parse')) {
+            errorMessage = 'Сервер вернул некорректный ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
+          } else if (httpStatus >= 500) {
+            errorMessage = `Ошибка сервера (${httpStatus}). Сервер временно недоступен. Попробуйте позже.`;
+          } else if (httpStatus === 400) {
+            errorMessage = 'Неверный запрос. Проверьте данные и попробуйте снова.';
+          } else if (httpStatus === 401 || httpStatus === 403) {
+            errorMessage = 'Ошибка авторизации. Перезайдите в приложение.';
+          } else if (httpStatus) {
+            errorMessage = `Ошибка сервера (${httpStatus}): ${responseMessage || 'Неизвестная ошибка'}. Попробуйте позже.`;
+          } else {
+            errorMessage = `Ошибка при получении ответа от сервера: ${responseMessage || 'Неизвестная ошибка'}. Проверьте интернет-соединение.`;
+          }
+        }
+        
         const errorSummaryParts = [
           `Ошибка: ${errorMessage}`,
           errorData?.code ? `Код ${errorData.code}` : null,
+          errorData?.response?.status ? `HTTP ${errorData.response.status}` : null,
         ].filter(Boolean);
         setLastErrorSummary(errorSummaryParts.join(' | '));
         const connectionInfo = getConnectionInfo();
@@ -936,6 +988,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           'Ошибка завершения работы (исключение)',
           `User: ${user?.id || 'unknown'} (${user?.worker_type || 'unknown'})`,
           `Code: ${errorData?.code || 'unknown'}`,
+          `HTTP: ${errorData?.response?.status || 'unknown'}`,
           `Message: ${errorMessage}`,
           connectionInfo
             ? `Connection: ${JSON.stringify(connectionInfo)}`
@@ -952,9 +1005,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
               message: error.message,
             } : String(error),
             code: errorData?.code,
+            response: errorData?.response,
             environment: {
               isAndroid: /android/i.test(navigator.userAgent),
               userAgent: navigator.userAgent,
+              connectionType: (navigator as any).connection?.effectiveType,
             },
           },
         });

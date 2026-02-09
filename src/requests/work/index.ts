@@ -458,25 +458,73 @@ export const endWork = async (
             if (options?.onPhaseChange) {
               options.onPhaseChange('done');
             }
-            resolve({ data: JSON.parse(xhr.responseText) });
-          } catch {
+            
+            // Проверяем, есть ли содержимое в ответе
+            const responseText = xhr.responseText?.trim() || '';
+            if (!responseText) {
+              // Пустой ответ - это может быть валидный случай для некоторых эндпоинтов
+              // Но для endWork мы ожидаем данные, поэтому это ошибка
+              reject({
+                code: 'ERR_BAD_RESPONSE',
+                message: 'Empty response from server',
+                response: { 
+                  status: xhr.status, 
+                  statusText: xhr.statusText,
+                  data: null,
+                  responseText: '',
+                },
+              });
+              return;
+            }
+            
+            // Пытаемся распарсить JSON
+            const parsedData = JSON.parse(responseText);
+            resolve({ data: parsedData });
+          } catch (parseError: any) {
+            // Ошибка парсинга JSON
+            const responseText = xhr.responseText || '';
             reject({
               code: 'ERR_BAD_RESPONSE',
-              message: 'Failed to parse response',
-              response: { status: xhr.status, data: xhr.responseText },
+              message: `Failed to parse response: ${parseError?.message || 'Invalid JSON'}`,
+              response: { 
+                status: xhr.status, 
+                statusText: xhr.statusText,
+                data: responseText.substring(0, 500), // Ограничиваем размер для логирования
+                responseLength: responseText.length,
+              },
             });
           }
         } else {
+          // HTTP ошибка (не 2xx)
           let errorData;
+          const responseText = xhr.responseText || '';
+          
           try {
-            errorData = JSON.parse(xhr.responseText);
+            if (responseText.trim()) {
+              errorData = JSON.parse(responseText);
+            } else {
+              errorData = { 
+                detail: xhr.statusText || `HTTP ${xhr.status}`,
+                message: `Server returned status ${xhr.status}`,
+              };
+            }
           } catch {
-            errorData = { detail: xhr.statusText };
+            // Если не удалось распарсить, используем текст ответа как есть
+            errorData = { 
+              detail: xhr.statusText || `HTTP ${xhr.status}`,
+              rawResponse: responseText.substring(0, 500), // Ограничиваем размер
+              responseLength: responseText.length,
+            };
           }
+          
           reject({
             code: 'ERR_BAD_RESPONSE',
-            message: `HTTP ${xhr.status}`,
-            response: { status: xhr.status, data: errorData },
+            message: `HTTP ${xhr.status}: ${errorData?.detail || errorData?.message || xhr.statusText || 'Unknown error'}`,
+            response: { 
+              status: xhr.status, 
+              statusText: xhr.statusText,
+              data: errorData,
+            },
           });
         }
       }

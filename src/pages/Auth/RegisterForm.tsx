@@ -469,6 +469,10 @@ const RegisterForm = () => {
       if (registerResponse?.access_token) {
         localStorage.setItem('authToken', registerResponse.access_token);
         localStorage.setItem('username', email);
+        // Сохраняем refresh_token для автоматической регенерации токена
+        if (registerResponse?.refresh_token) {
+          localStorage.setItem('refreshToken', registerResponse.refresh_token);
+        }
         
         // Create worker record in bot-api after successful registration
         try {

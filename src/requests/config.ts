@@ -1,5 +1,6 @@
 import axios, { AxiosRequestConfig, AxiosResponse, Method } from "axios";
 import { getApiBaseUrl } from "../lib/apiConfig";
+import { ensureValidToken, getAuthToken } from "../lib/tokenManager";
 
 // Use environment variable if set, otherwise use the configurable API URL
 const getBaseUrl = (): string => {
@@ -23,10 +24,62 @@ export const updateApiBaseUrl = () => {
   api.defaults.baseURL = getBaseUrl();
 };
 
-api.interceptors.request.use((config) => {
-  const apiToken = import.meta.env.VITE_API_TOKEN;
-  if (apiToken) {
-    config.headers["Authorization"] = apiToken;
+// Flag to prevent multiple simultaneous token validations
+let isTokenValidationInProgress = false;
+
+api.interceptors.request.use(async (config) => {
+  // Check if this is a request to CRM API (not bot-api)
+  const isCrmApiRequest = config.baseURL?.includes('api-crm') || 
+                          config.url?.includes('api-crm') ||
+                          getBaseUrl().includes('api-crm');
+  
+  // For CRM API requests, validate and regenerate token if needed
+  // CRM API uses default user info@skybud.de
+  if (isCrmApiRequest && !isTokenValidationInProgress) {
+    try {
+      isTokenValidationInProgress = true;
+      const validToken = await ensureValidToken();
+      
+      if (validToken) {
+        // Use the validated token as-is (API might expect it without Bearer prefix)
+        config.headers["Authorization"] = validToken;
+      } else {
+        // Failed to get token - this shouldn't happen, but throw error to prevent request
+        throw new Error('Failed to get authentication token for CRM API.');
+      }
+    } catch (error) {
+      console.error('Error validating token:', error);
+      // Try one more time to get default token
+      try {
+        const { getDefaultCrmToken } = await import('../lib/tokenManager');
+        const defaultToken = await getDefaultCrmToken();
+        if (defaultToken) {
+          config.headers["Authorization"] = defaultToken;
+        } else {
+          throw error;
+        }
+      } catch {
+        throw error;
+      }
+    } finally {
+      isTokenValidationInProgress = false;
+    }
+  } else {
+    // For non-CRM API requests (bot-api), use static token or user's token
+    // bot-api uses static token, not user-specific tokens
+    const authToken = getAuthToken();
+    if (authToken) {
+      // Use user's token if available
+      config.headers["Authorization"] = authToken;
+    } else {
+      // For bot-api, we might need a static token, but don't use VITE_API_TOKEN for user data
+      // Only use it if explicitly needed for bot-api operations
+      const apiToken = import.meta.env.VITE_API_TOKEN;
+      if (apiToken && !isCrmApiRequest) {
+        // Only use VITE_API_TOKEN for non-CRM API (bot-api) requests
+        config.headers["Authorization"] = apiToken;
+      }
+    }
   }
   
   // Для FormData не устанавливаем Content-Type - браузер сам установит правильный заголовок с boundary
