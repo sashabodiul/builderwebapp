@@ -1,22 +1,74 @@
 import apiRequest from "../config.ts";
 import { ApiResponse } from "../shared/types.ts";
 import { WorkTaskOut, WorkTaskCreate, WorkTaskUpdate, WorkTaskQueryParams, WorkTaskBulkUpdate, WorkTaskBulkUpdateResponse } from "./types.ts";
+import axios from "axios";
+
+// This endpoint should use bot-api, not api-crm
+// bot-api uses static token, not JWT
+const botApiUrl = 'https://bot-api.skybud.de';
+const botApiToken = '8fd3b8c4b91e47f5a6e2d7c9f1a4b3d2';
 
 export const getWorkTasks = async (params?: WorkTaskQueryParams): Promise<ApiResponse<WorkTaskOut[]>> => {
   const queryParams = new URLSearchParams();
   if (params?.limit) queryParams.append('limit', params.limit.toString());
   if (params?.offset) queryParams.append('offset', params.offset.toString());
-  if (params?.facility_id) queryParams.append('facility_id', params.facility_id.toString());
-  if (params?.facility_type_id) queryParams.append('facility_type_id', params.facility_type_id.toString());
-  if (params?.worker_id) queryParams.append('worker_id', params.worker_id.toString());
+  if (params?.facility_id !== undefined && params.facility_id !== null) queryParams.append('facility_id', params.facility_id.toString());
+  if (params?.facility_type_id !== undefined && params.facility_type_id !== null) queryParams.append('facility_type_id', params.facility_type_id.toString());
+  if (params?.worker_id !== undefined && params.worker_id !== null) queryParams.append('worker_id', params.worker_id.toString());
   if (params?.finished !== undefined && params.finished !== null) queryParams.append('finished', params.finished.toString());
   
-  const url = queryParams.toString() ? `/work_task/?${queryParams.toString()}` : '/work_task/';
-  return await apiRequest<WorkTaskOut[]>("GET", url);
+  const url = queryParams.toString() ? `/api/v1/work_task/?${queryParams.toString()}` : '/api/v1/work_task/';
+  const fullUrl = `${botApiUrl}${url}`;
+  
+  console.log('[getWorkTasks] Requesting from bot-api:', fullUrl);
+  
+  try {
+    const response = await axios.get(fullUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+      timeout: 15000,
+    });
+    
+    console.log('[getWorkTasks] Success, received', response.data?.length || 0, 'tasks');
+    return { data: response.data };
+  } catch (error: any) {
+    console.error('[getWorkTasks] Error:', {
+      message: error?.message,
+      code: error?.code,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+      url: fullUrl,
+    });
+    
+    return {
+      data: [] as WorkTaskOut[],
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const getWorkTask = async (task_id: number): Promise<ApiResponse<WorkTaskOut>> => {
-  return await apiRequest<WorkTaskOut>("GET", `/work_task/${task_id}`);
+  const fullUrl = `${botApiUrl}/api/v1/work_task/${task_id}`;
+  
+  try {
+    const response = await axios.get(fullUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+      timeout: 15000,
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkTaskOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const createWorkTask = async (data: WorkTaskCreate): Promise<ApiResponse<WorkTaskOut>> => {
@@ -31,11 +83,25 @@ export const createWorkTask = async (data: WorkTaskCreate): Promise<ApiResponse<
   formData.append('send_notification', 'true');
   if (data.photo) formData.append('photo', data.photo);
 
-  return await apiRequest<WorkTaskOut>("POST", "/work_task/", {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }, formData);
+  const fullUrl = `${botApiUrl}/api/v1/work_task/`;
+  
+  try {
+    const response = await axios.post(fullUrl, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // Don't set Content-Type for FormData - browser will set it with boundary
+      },
+      timeout: 30000,
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkTaskOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const updateWorkTask = async (task_id: number, data: WorkTaskUpdate): Promise<ApiResponse<WorkTaskOut>> => {
@@ -48,17 +114,66 @@ export const updateWorkTask = async (task_id: number, data: WorkTaskUpdate): Pro
   if (data.expires_at !== undefined) formData.append('expires_at', data.expires_at || '');
   if (data.photo) formData.append('photo', data.photo);
 
-  return await apiRequest<WorkTaskOut>("PUT", `/work_task/${task_id}`, {
-    headers: {
-      'Content-Type': 'multipart/form-data'
-    }
-  }, formData);
+  const fullUrl = `${botApiUrl}/api/v1/work_task/${task_id}`;
+  
+  try {
+    const response = await axios.put(fullUrl, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // Don't set Content-Type for FormData - browser will set it with boundary
+      },
+      timeout: 30000,
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkTaskOut,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const deleteWorkTask = async (task_id: number): Promise<ApiResponse<void>> => {
-  return await apiRequest<void>("DELETE", `/work_task/${task_id}`);
+  const fullUrl = `${botApiUrl}/api/v1/work_task/${task_id}`;
+  
+  try {
+    await axios.delete(fullUrl, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+      timeout: 15000,
+    });
+    return { data: undefined as void };
+  } catch (error: any) {
+    return {
+      data: undefined as void,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
 
 export const bulkUpdateWorkTasks = async (data: WorkTaskBulkUpdate): Promise<ApiResponse<WorkTaskBulkUpdateResponse>> => {
-  return await apiRequest<WorkTaskBulkUpdateResponse>("PATCH", "/work_task/bulk-update", {}, data);
+  const fullUrl = `${botApiUrl}/api/v1/work_task/bulk-update`;
+  
+  try {
+    const response = await axios.patch(fullUrl, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
+      timeout: 15000,
+    });
+    return { data: response.data };
+  } catch (error: any) {
+    return {
+      data: {} as WorkTaskBulkUpdateResponse,
+      error: error,
+      status: error?.response?.status,
+    };
+  }
 };
