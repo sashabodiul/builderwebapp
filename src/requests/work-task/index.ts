@@ -21,25 +21,48 @@ export const getWorkTasks = async (params?: WorkTaskQueryParams): Promise<ApiRes
   const fullUrl = `${botApiUrl}${url}`;
   
   console.log('[getWorkTasks] Requesting from bot-api:', fullUrl);
+  console.log('[getWorkTasks] Full token:', botApiToken);
+  console.log('[getWorkTasks] Params:', params);
+  
+  // Создаем новый экземпляр axios без interceptor'ов, чтобы избежать перехвата
+  const axiosInstance = axios.create({
+    timeout: 15000,
+  });
+  
+  // Убеждаемся, что заголовки установлены правильно
+  const headers: Record<string, string> = {
+    'Accept': 'application/json',
+    'Authorization': botApiToken, // Токен без префикса Bearer, как в curl
+  };
+  
+  console.log('[getWorkTasks] Request headers:', {
+    Accept: headers.Accept,
+    Authorization: headers.Authorization.substring(0, 15) + '...',
+  });
   
   try {
-    const response = await axios.get(fullUrl, {
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': botApiToken,
-      },
-      timeout: 15000,
+    const response = await axiosInstance.get(fullUrl, {
+      headers,
     });
     
-    console.log('[getWorkTasks] Success, received', response.data?.length || 0, 'tasks');
+    console.log('[getWorkTasks] Success! Status:', response.status);
+    console.log('[getWorkTasks] Received', response.data?.length || 0, 'tasks');
+    console.log('[getWorkTasks] Response data:', response.data);
     return { data: response.data };
   } catch (error: any) {
-    console.error('[getWorkTasks] Error:', {
+    console.error('[getWorkTasks] Error details:', {
       message: error?.message,
       code: error?.code,
       status: error?.response?.status,
       statusText: error?.response?.statusText,
       url: fullUrl,
+      requestUrl: error?.config?.url,
+      sentHeaders: {
+        Authorization: error?.config?.headers?.Authorization || 'NOT SET',
+        Accept: error?.config?.headers?.Accept || 'NOT SET',
+      },
+      responseData: error?.response?.data,
+      responseHeaders: error?.response?.headers,
     });
     
     return {
