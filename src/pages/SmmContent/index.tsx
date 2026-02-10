@@ -84,18 +84,37 @@ const SmmContent: React.FC = () => {
       setLoadingFacilities(true);
       setError(null);
       try {
+        // Объекты загружаются из bot-api со статическим токеном, не нужно ждать JWT токен
+        console.log('[SmmContent] Fetching facilities from bot-api...');
         const response = await getFacilities();
         if (response.error) {
           throw new Error(t('smm.errorLoadingFacilities', 'Не удалось загрузить объекты'));
         }
         const data = response.data || [];
+        console.log('[SmmContent] Facilities loaded:', data.length);
         setFacilities(Array.isArray(data) ? data : []);
         if (!selectedId && Array.isArray(data) && data.length > 0) {
           setSelectedId(data[0].id);
         }
       } catch (e: any) {
+        console.error('[SmmContent] Error loading facilities:', e);
         setError(e?.message ?? t('smm.error', 'Ошибка загрузки'));
         toastError(e?.message ?? t('smm.error', 'Ошибка загрузки'));
+        // Retry через 2 секунды
+        setTimeout(() => {
+          getFacilities().then(retryResponse => {
+            if (!retryResponse.error) {
+              const data = retryResponse.data || [];
+              setFacilities(Array.isArray(data) ? data : []);
+              if (!selectedId && Array.isArray(data) && data.length > 0) {
+                setSelectedId(data[0].id);
+              }
+            }
+          }).finally(() => {
+            setLoadingFacilities(false);
+          });
+        }, 2000);
+        return;
       } finally {
         setLoadingFacilities(false);
       }

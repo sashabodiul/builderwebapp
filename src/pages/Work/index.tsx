@@ -54,14 +54,37 @@ const Work: FC = () => {
     }
 
     const fetchFacilities = async () => {
-      const response = await getFacilities();
+      try {
+        // Объекты загружаются из bot-api со статическим токеном, не нужно ждать JWT токен
+        console.log('[Work] Fetching facilities from bot-api...');
+        const response = await getFacilities();
 
-      if (response.error) {
-        console.error('Failed to fetch facilities:', response);
-        return;
+        if (response.error) {
+          console.error('[Work] Failed to fetch facilities:', response);
+          // Retry один раз через 2 секунды
+          setTimeout(() => {
+            getFacilities().then(retryResponse => {
+              if (!retryResponse.error) {
+                setFacilities(retryResponse.data);
+              }
+            });
+          }, 2000);
+          return;
+        }
+
+        console.log('[Work] Facilities loaded:', response.data?.length || 0);
+        setFacilities(response.data || []);
+      } catch (error) {
+        console.error('[Work] Error fetching facilities:', error);
+        // Retry через 2 секунды
+        setTimeout(() => {
+          getFacilities().then(retryResponse => {
+            if (!retryResponse.error) {
+              setFacilities(retryResponse.data || []);
+            }
+          });
+        }, 2000);
       }
-
-      setFacilities(response.data);
     };
 
     fetchFacilities();

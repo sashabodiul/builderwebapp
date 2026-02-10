@@ -114,19 +114,50 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
         return;
       }
 
-      const response = await getFacilities();
+      try {
+        // Объекты загружаются из bot-api со статическим токеном, не нужно ждать JWT токен
+        console.log('[WorkMain] Fetching facilities from bot-api...');
+        const response = await getFacilities();
 
-      if (response.error) {
-        console.error('Failed to fetch facilities:', response);
-        toastError(t('work.loadError'));
+        if (response.error) {
+          console.error('[WorkMain] Failed to fetch facilities:', response);
+          // Retry один раз через 2 секунды
+          setTimeout(() => {
+            getFacilities().then(retryResponse => {
+              if (!retryResponse.error) {
+                const facilitiesData = Array.isArray(retryResponse.data) ? retryResponse.data : [];
+                setFacilities(facilitiesData);
+                setIsLoading(false);
+              } else {
+                toastError(t('work.loadError'));
+                setIsLoading(false);
+              }
+            });
+          }, 2000);
+          return;
+        }
+
+        // Ensure data is an array
+        const facilitiesData = Array.isArray(response.data) ? response.data : [];
+        console.log('[WorkMain] Facilities loaded:', facilitiesData.length);
+        setFacilities(facilitiesData);
         setIsLoading(false);
-        return;
+      } catch (error) {
+        console.error('[WorkMain] Error fetching facilities:', error);
+        // Retry через 2 секунды
+        setTimeout(() => {
+          getFacilities().then(retryResponse => {
+            if (!retryResponse.error) {
+              const facilitiesData = Array.isArray(retryResponse.data) ? retryResponse.data : [];
+              setFacilities(facilitiesData);
+              setIsLoading(false);
+            } else {
+              toastError(t('work.loadError'));
+              setIsLoading(false);
+            }
+          });
+        }, 2000);
       }
-
-      // Ensure data is an array
-      const facilitiesData = Array.isArray(response.data) ? response.data : [];
-      setFacilities(facilitiesData);
-      setIsLoading(false);
     };
 
     fetchFacilities();
