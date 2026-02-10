@@ -41,24 +41,36 @@ api.interceptors.request.use(async (config) => {
       const validToken = await ensureValidToken();
       
       if (validToken) {
-        // Use the validated token as-is (API might expect it without Bearer prefix)
-        config.headers["Authorization"] = validToken;
+        // Try different token formats - some APIs expect Bearer prefix, some don't
+        // First try with Bearer prefix (most common)
+        let authHeader = validToken;
+        if (!validToken.startsWith('Bearer ')) {
+          authHeader = `Bearer ${validToken}`;
+        }
+        config.headers["Authorization"] = authHeader;
+        console.log('[Config] Using token for CRM API request:', config.url);
       } else {
         // Failed to get token - this shouldn't happen, but throw error to prevent request
+        console.error('[Config] Failed to get valid token for CRM API');
         throw new Error('Failed to get authentication token for CRM API.');
       }
     } catch (error) {
-      console.error('Error validating token:', error);
+      console.error('[Config] Error validating token:', error);
       // Try one more time to get default token
       try {
         const { getDefaultCrmToken } = await import('../lib/tokenManager');
         const defaultToken = await getDefaultCrmToken();
         if (defaultToken) {
-          config.headers["Authorization"] = defaultToken;
+          // Try with Bearer prefix
+          const authHeader = defaultToken.startsWith('Bearer ') ? defaultToken : `Bearer ${defaultToken}`;
+          config.headers["Authorization"] = authHeader;
+          console.log('[Config] Using fallback default token for CRM API request');
         } else {
+          console.error('[Config] Failed to get default token as fallback');
           throw error;
         }
-      } catch {
+      } catch (fallbackError) {
+        console.error('[Config] Fallback token retrieval also failed:', fallbackError);
         throw error;
       }
     } finally {

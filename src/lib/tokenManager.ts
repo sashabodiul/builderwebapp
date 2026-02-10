@@ -61,8 +61,14 @@ export const validateToken = async (token: string): Promise<boolean> => {
     const baseUrl = getApiBaseUrl();
     // Try to use a lightweight endpoint - if /worker/me doesn't exist, try /worker/ with limit=1
     // This is just to check if token is valid, not to get actual data
-    // Try without Bearer prefix first (some APIs use token directly)
-    const authHeader = token.startsWith('Bearer ') ? token : token;
+    // Try different token formats - some APIs expect Bearer prefix, some don't
+    let authHeader = token;
+    if (!token.startsWith('Bearer ')) {
+      // Try with Bearer prefix
+      authHeader = `Bearer ${token}`;
+    }
+    
+    console.log('[TokenManager] Validating token, baseUrl:', baseUrl);
     const response = await axios.get(`${baseUrl}/api/v1/worker/?limit=1`, {
       headers: {
         'Authorization': authHeader,
@@ -72,20 +78,39 @@ export const validateToken = async (token: string): Promise<boolean> => {
       validateStatus: (status) => status < 500, // Don't throw on 401/403
     });
     
+    console.log('[TokenManager] Token validation response status:', response.status);
+    
     // Token is valid if status is 200-299
     // 401/403 means token is invalid
     if (response.status === 401 || response.status === 403) {
+      console.warn('[TokenManager] Token validation failed: 401/403');
+      // Try without Bearer prefix if we used it
+      if (authHeader.startsWith('Bearer ')) {
+        console.log('[TokenManager] Retrying without Bearer prefix');
+        const retryResponse = await axios.get(`${baseUrl}/api/v1/worker/?limit=1`, {
+          headers: {
+            'Authorization': token,
+            'Accept': 'application/json',
+          },
+          timeout: 5000,
+          validateStatus: (status) => status < 500,
+        });
+        return retryResponse.status >= 200 && retryResponse.status < 300;
+      }
       return false;
     }
     return response.status >= 200 && response.status < 300;
   } catch (error: any) {
+    console.error('[TokenManager] Token validation error:', error);
     // Check if it's an auth error
     if (error.response?.status === 401 || error.response?.status === 403) {
+      console.warn('[TokenManager] Token validation failed: auth error');
       return false;
     }
     // Network errors or timeouts - assume token might be valid but connection failed
     // We'll let the actual request fail if token is really invalid
     if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+      console.warn('[TokenManager] Token validation: network error, assuming valid');
       return true; // Assume valid if we can't check
     }
     return false;
@@ -181,6 +206,7 @@ export const regenerateTokenWithLogin = async (email: string, password: string):
 export const getDefaultCrmToken = async (): Promise<string | null> => {
   try {
     const baseUrl = getApiBaseUrl();
+    console.log('[TokenManager] Getting default CRM token from:', baseUrl);
     
     // Try to login with default CRM user credentials
     const formData = new URLSearchParams();
@@ -199,22 +225,41 @@ export const getDefaultCrmToken = async (): Promise<string | null> => {
       }
     );
     
+    console.log('[TokenManager] Login response status:', response.status);
+    console.log('[TokenManager] Login response data keys:', Object.keys(response.data || {}));
+    
     // Check if response contains token
     const responseData = response.data;
     if (responseData?.access_token) {
+      console.log('[TokenManager] Token found in response.data.access_token');
       return responseData.access_token;
+    }
+    
+    // Check for token in different possible fields
+    if (responseData?.token) {
+      console.log('[TokenManager] Token found in response.data.token');
+      return responseData.token;
     }
     
     // If token is in headers or different format, try to extract it
     const authHeader = response.headers['authorization'] || response.headers['Authorization'];
     if (authHeader) {
+      console.log('[TokenManager] Token found in headers');
       // Remove 'Bearer ' prefix if present
       return authHeader.replace(/^Bearer\s+/i, '');
     }
     
+    console.warn('[TokenManager] No token found in response');
+    console.warn('[TokenManager] Response data:', JSON.stringify(responseData, null, 2));
     return null;
   } catch (error: any) {
-    console.error('Failed to get default CRM token:', error);
+    console.error('[TokenManager] Failed to get default CRM token:', error);
+    console.error('[TokenManager] Error details:', {
+      message: error?.message,
+      response: error?.response?.data,
+      status: error?.response?.status,
+      statusText: error?.response?.statusText,
+    });
     return null;
   }
 };
