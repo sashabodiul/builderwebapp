@@ -3,6 +3,7 @@ import { WorkProcessStartOut, WorkProcessEndOut, StartWorkData, EndWorkData, Sta
 import axios from 'axios';
 
 // Константы для chunked upload
+// Размер чанка 5MB - раньше работало, если не работает, проблема не в размере
 const CHUNK_SIZE = 5 * 1024 * 1024; // 5 MB
 const CHUNK_CONCURRENCY = 3;
 const botApiUrl = 'https://bot-api.skybud.de';
@@ -56,63 +57,134 @@ async function uploadChunk(
   formData.append('file_type', fileType);
   formData.append('chunk', chunk, `chunk_${chunkIndex}`);
 
-  return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${botApiUrl}/api/v1/upload/chunk`, true);
-    xhr.setRequestHeader('Accept', 'application/json');
-    xhr.setRequestHeader('Authorization', botApiToken);
-    
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable && onProgress) {
-        onProgress({
-          loaded: event.loaded,
-          total: event.total,
-          percent: Math.round((event.loaded * 100) / event.total),
-        });
-      }
-    });
-    
-    xhr.onreadystatechange = () => {
-      if (xhr.readyState === XMLHttpRequest.DONE) {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            resolve(JSON.parse(xhr.responseText));
-          } catch {
-            reject({
-              code: 'ERR_BAD_RESPONSE',
-              message: 'Failed to parse chunk upload response',
-              response: { status: xhr.status },
-            });
-          }
-        } else {
-          reject({
-            code: 'ERR_BAD_RESPONSE',
-            message: `HTTP ${xhr.status}`,
-            response: { status: xhr.status },
+  // Логируем размер чанка для диагностики
+  const chunkSizeKB = (chunk.size / 1024).toFixed(2);
+  const chunkSizeMB = (chunk.size / (1024 * 1024)).toFixed(2);
+  console.log(`[uploadChunk] Uploading chunk ${chunkIndex + 1}/${totalChunks}, size: ${chunkSizeKB} KB (${chunkSizeMB} MB), file: ${fileName}`);
+  
+  // Логируем для диагностики
+  console.log(`[uploadChunk] Chunk details: size=${chunkSizeKB} KB, index=${chunkIndex}, total=${totalChunks}, file=${fileName}`);
+
+  const uploadUrl = `${botApiUrl}/api/v1/upload/chunk`;
+  console.log(`[uploadChunk] Starting upload to: ${uploadUrl}`);
+  console.log(`[uploadChunk] Request headers: Accept=application/json, Authorization=${botApiToken.substring(0, 15)}...`);
+  
+  // Используем axios вместо XMLHttpRequest для лучшей обработки CORS и больших запросов
+  // axios лучше обрабатывает CORS preflight и может обойти некоторые проблемы с прокси
+  try {
+    const response = await axios.post(uploadUrl, formData, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+        // НЕ устанавливаем Content-Type - браузер/axios сам установит правильный заголовок с boundary для FormData
+      },
+      timeout: 300000, // 5 минут на чанк
+      // Включаем отслеживание прогресса
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total && onProgress) {
+          onProgress({
+            loaded: progressEvent.loaded,
+            total: progressEvent.total,
+            percent: Math.round((progressEvent.loaded * 100) / progressEvent.total),
           });
         }
+      },
+      // Валидируем статус - не выбрасываем ошибку для 4xx/5xx, обрабатываем вручную
+      validateStatus: (status) => status < 600, // Принимаем все статусы для ручной обработки
+    });
+    
+    console.log(`[uploadChunk] Response received: status=${response.status}, statusText=${response.statusText}`);
+    
+    if (response.status >= 200 && response.status < 300) {
+      console.log(`[uploadChunk] Success! Response:`, response.data);
+      return response.data;
+    } else {
+      // Обработка ошибок
+      if (response.status === 413) {
+        const chunkSizeKB = (chunk.size / 1024).toFixed(2);
+        const chunkSizeMB = (chunk.size / (1024 * 1024)).toFixed(2);
+        console.error(`[uploadChunk] 413 Error - Chunk size: ${chunkSizeKB} KB (${chunkSizeMB} MB), chunk index: ${chunkIndex}, file: ${fileName}`);
+        console.error(`[uploadChunk] Response headers:`, response.headers);
+        console.error(`[uploadChunk] Response data:`, response.data);
+        throw {
+          code: 'ERR_BAD_RESPONSE',
+          message: `Chunk size too large (413). Chunk: ${chunkSizeKB} KB. Server or proxy rejected the request.`,
+          response: { 
+            status: response.status,
+            statusText: response.statusText,
+            chunkSize: chunk.size,
+            chunkSizeKB: parseFloat(chunkSizeKB),
+            chunkSizeMB: parseFloat(chunkSizeMB),
+            responseHeaders: response.headers,
+            responseData: response.data,
+          },
+        };
+      } else {
+        console.error(`[uploadChunk] HTTP Error ${response.status}:`, response.statusText);
+        console.error(`[uploadChunk] Response data:`, response.data);
+        throw {
+          code: 'ERR_BAD_RESPONSE',
+          message: `HTTP ${response.status}: ${response.statusText}`,
+          response: { 
+            status: response.status,
+            statusText: response.statusText,
+            responseData: response.data,
+          },
+        };
       }
-    };
-    
-    xhr.onerror = () => {
-      reject({
-        code: 'ERR_NETWORK',
-        message: 'Network Error',
-        response: { status: xhr.status || 0 },
-      });
-    };
-    
-    xhr.timeout = 300000; // 5 минут на чанк
-    xhr.ontimeout = () => {
-      reject({
-        code: 'ECONNABORTED',
-        message: 'Chunk upload timeout',
-        response: { status: 408 },
-      });
-    };
-    
-    xhr.send(formData);
-  });
+    }
+  } catch (error: any) {
+    // Обработка сетевых ошибок и ошибок axios
+    if (error.response) {
+      // Ответ получен, но статус не 2xx
+      const response = error.response;
+      if (response.status === 413) {
+        const chunkSizeKB = (chunk.size / 1024).toFixed(2);
+        const chunkSizeMB = (chunk.size / (1024 * 1024)).toFixed(2);
+        console.error(`[uploadChunk] 413 Error (from catch) - Chunk size: ${chunkSizeKB} KB (${chunkSizeMB} MB)`);
+        throw {
+          code: 'ERR_BAD_RESPONSE',
+          message: `Chunk size too large (413). Chunk: ${chunkSizeKB} KB. Server or proxy rejected the request.`,
+          response: { 
+            status: response.status,
+            statusText: response.statusText,
+            chunkSize: chunk.size,
+            chunkSizeKB: parseFloat(chunkSizeKB),
+            chunkSizeMB: parseFloat(chunkSizeMB),
+            responseData: response.data,
+          },
+        };
+      }
+      throw {
+        code: 'ERR_BAD_RESPONSE',
+        message: `HTTP ${response.status}: ${response.statusText}`,
+        response: { 
+          status: response.status,
+          statusText: response.statusText,
+          responseData: response.data,
+        },
+      };
+    } else if (error.request) {
+      // Запрос отправлен, но ответа нет (сетевая ошибка, CORS, таймаут)
+      console.error(`[uploadChunk] Network error:`, error.message);
+      console.error(`[uploadChunk] Error code:`, error.code);
+      throw {
+        code: error.code || 'ERR_NETWORK',
+        message: error.message || 'Network Error',
+        response: { status: 0 },
+        error: error,
+      };
+    } else {
+      // Ошибка при настройке запроса
+      console.error(`[uploadChunk] Request setup error:`, error.message);
+      throw {
+        code: 'ERR_REQUEST',
+        message: error.message || 'Failed to setup request',
+        response: { status: 0 },
+        error: error,
+      };
+    }
+  }
 }
 
 // Загрузить весь файл через chunked upload

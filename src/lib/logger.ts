@@ -67,6 +67,29 @@ class Logger {
                          console.log;
     
     consoleMethod(`[${level.toUpperCase()}] ${message}`, data || '');
+    
+    // Отправляем в WebApp Logger для отправки на бэкенд
+    // Используем динамический импорт, чтобы избежать циклических зависимостей
+    if (typeof window !== 'undefined') {
+      try {
+        // Получаем webappLogger через глобальную переменную или динамический импорт
+        const webAppLogger = (window as any).__webAppLogger;
+        if (webAppLogger) {
+          const context: Record<string, any> = {};
+          if (data) {
+            try {
+              // Пытаемся сериализовать data для контекста
+              context.data = JSON.parse(JSON.stringify(data));
+            } catch {
+              context.data = String(data);
+            }
+          }
+          webAppLogger.addManualLog(level, message, context);
+        }
+      } catch (e) {
+        // Игнорируем ошибки интеграции
+      }
+    }
   }
 
   info(message: string, data?: any) {

@@ -785,7 +785,12 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           } else if (responseMessage.includes('Failed to parse')) {
             errorMessage = 'Сервер вернул некорректный ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
           } else if (httpStatus === 413) {
-            errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
+            // Проверяем, это ошибка при загрузке чанка или финального запроса
+            if (responseMessage.includes('Chunk size too large')) {
+              errorMessage = `Размер чанка слишком большой (413). Сервер или прокси отклонил запрос. Попробуйте уменьшить размер файлов или обратитесь в поддержку.`;
+            } else {
+              errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
+            }
           } else if (httpStatus === 408 || errorData?.code === 'ECONNABORTED') {
             errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
           } else if (httpStatus >= 500) {
@@ -804,7 +809,13 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             errorMessage = `Ошибка при получении ответа от сервера: ${responseMessage || 'Неизвестная ошибка'}. Проверьте интернет-соединение и попробуйте снова.`;
           }
         } else if (errorData?.response?.status === 413) {
-          errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
+          // Проверяем, это ошибка при загрузке чанка или финального запроса
+          const responseMessage = errorData?.message || '';
+          if (responseMessage.includes('Chunk size too large')) {
+            errorMessage = `Размер чанка слишком большой (413). Сервер или прокси отклонил запрос. Попробуйте уменьшить размер файлов или обратитесь в поддержку.`;
+          } else {
+            errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
+          }
         } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
           errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
         } else if (errorData?.response?.status >= 500) {

@@ -1,4 +1,3 @@
-import apiRequest from "../config.ts";
 import { ApiResponse } from "../shared/types.ts";
 import { WorkTaskOut, WorkTaskCreate, WorkTaskUpdate, WorkTaskQueryParams, WorkTaskBulkUpdate, WorkTaskBulkUpdateResponse } from "./types.ts";
 import axios from "axios";
@@ -23,26 +22,48 @@ export const getWorkTasks = async (params?: WorkTaskQueryParams): Promise<ApiRes
   console.log('[getWorkTasks] Requesting from bot-api:', fullUrl);
   console.log('[getWorkTasks] Full token:', botApiToken);
   console.log('[getWorkTasks] Params:', params);
+  console.log('[getWorkTasks] User agent:', navigator.userAgent);
+  console.log('[getWorkTasks] Is Telegram WebApp:', typeof window !== 'undefined' && (window as any).Telegram?.WebApp !== undefined);
   
   // Создаем новый экземпляр axios без interceptor'ов, чтобы избежать перехвата
+  // Устанавливаем заголовки через defaults для гарантии, что они будут установлены
   const axiosInstance = axios.create({
     timeout: 15000,
+    headers: {
+      'Accept': 'application/json',
+      'Authorization': botApiToken, // Токен без префикса Bearer, как в curl
+    },
   });
   
-  // Убеждаемся, что заголовки установлены правильно
-  const headers: Record<string, string> = {
-    'Accept': 'application/json',
-    'Authorization': botApiToken, // Токен без префикса Bearer, как в curl
-  };
+  // Добавляем interceptor для логирования реальных заголовков запроса
+  axiosInstance.interceptors.request.use((config) => {
+    const authHeader = config.headers?.Authorization || config.headers?.authorization;
+    const authValue = authHeader ? (typeof authHeader === 'string' ? authHeader : String(authHeader)) : 'NOT SET';
+    const authPreview = authValue !== 'NOT SET' && authValue.length > 15 ? authValue.slice(0, 15) + '...' : authValue;
+    console.log('[getWorkTasks] Request interceptor - actual headers being sent:', {
+      Accept: config.headers?.Accept || config.headers?.accept,
+      Authorization: authPreview,
+      AuthorizationType: typeof authHeader,
+      allHeaders: Object.keys(config.headers || {}),
+    });
+    return config;
+  });
   
-  console.log('[getWorkTasks] Request headers:', {
-    Accept: headers.Accept,
-    Authorization: headers.Authorization.substring(0, 15) + '...',
+  const defaultAuth = axiosInstance.defaults.headers.common['Authorization'];
+  const defaultAuthStr = defaultAuth ? (typeof defaultAuth === 'string' ? defaultAuth : String(defaultAuth)) : 'NOT SET';
+  const defaultAuthPreview = defaultAuthStr !== 'NOT SET' && defaultAuthStr.length > 15 ? defaultAuthStr.slice(0, 15) + '...' : defaultAuthStr;
+  console.log('[getWorkTasks] Request headers (from defaults):', {
+    Accept: axiosInstance.defaults.headers.common['Accept'],
+    Authorization: defaultAuthPreview,
   });
   
   try {
+    // Также устанавливаем заголовки явно в запросе для гарантии
     const response = await axiosInstance.get(fullUrl, {
-      headers,
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': botApiToken,
+      },
     });
     
     console.log('[getWorkTasks] Success! Status:', response.status);
