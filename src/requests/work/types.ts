@@ -58,9 +58,6 @@ export type EndWorkData = {
   latitude: number;
   longitude: number;
   status_object_finished: boolean;
-  report_video?: File | null;
-  done_work_photos?: File[] | null;
-  instrument_photos?: File[] | null;
 };
 
 export type StartWorkOfficeData = {

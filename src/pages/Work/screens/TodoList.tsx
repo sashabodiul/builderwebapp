@@ -25,16 +25,13 @@ interface Task {
 interface TodoListProps {
   onComplete?: (workData: WorkProcessEndOut) => void;
   onBack?: () => void;
-  workPhotos?: File[];
-  toolsPhotos?: File[];
-  videoFile?: File | null;
   facilityId?: number | null;
   facilityTypeId?: number | null;
   embedded?: boolean;
   hideBack?: boolean;
 }
 
-const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], toolsPhotos = [], videoFile = null, facilityId = null, facilityTypeId = null, embedded = false, hideBack = false }) => {
+const TodoList: FC<TodoListProps> = ({ onComplete, onBack, facilityId = null, facilityTypeId = null, embedded = false, hideBack = false }) => {
   const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [newTaskText, setNewTaskText] = useState('');
@@ -49,17 +46,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   } | null>(null);
   const [lastErrorSummary, setLastErrorSummary] = useState<string | null>(null);
   const [uploadLogs, setUploadLogs] = useState<string[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<{ loaded: number; total: number; percent: number } | null>(null);
-  const [uploadPhase, setUploadPhase] = useState<'idle' | 'uploading' | 'finalizing' | 'done'>('idle');
-  const [workFilesProgress, setWorkFilesProgress] = useState<number[]>([]);
-  const [toolsFilesProgress, setToolsFilesProgress] = useState<number[]>([]);
-  const [videoFileProgress, setVideoFileProgress] = useState<number>(0);
-  const wakeLockRef = useRef<any>(null);
-  const [wakeLockActive, setWakeLockActive] = useState(false);
-  const [showUploadNotice, setShowUploadNotice] = useState(false);
-  const [acknowledgedUploadNotice, setAcknowledgedUploadNotice] = useState(false);
   const [heartbeatTick, setHeartbeatTick] = useState(0);
-  const [finalizingStartedAt, setFinalizingStartedAt] = useState<number | null>(null);
   const [activeSpeedInfo, setActiveSpeedInfo] = useState<{
     mbps: number;
     quality: 'good' | 'medium' | 'poor';
@@ -182,62 +169,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
     return () => clearInterval(interval);
   }, [isCompleting]);
   
-  useEffect(() => {
-    if (uploadPhase === 'finalizing') {
-      if (!finalizingStartedAt) {
-        setFinalizingStartedAt(Date.now());
-      }
-    } else {
-      setFinalizingStartedAt(null);
-    }
-  }, [uploadPhase, finalizingStartedAt]);
-  
-  useEffect(() => {
-    const acquireWakeLock = async () => {
-      try {
-        if ('wakeLock' in navigator && isCompleting) {
-          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
-          setWakeLockActive(true);
-          wakeLockRef.current.addEventListener('release', () => {
-            setWakeLockActive(false);
-          });
-        }
-      } catch {
-        setWakeLockActive(false);
-      }
-    };
-    
-    const releaseWakeLock = async () => {
-      try {
-        if (wakeLockRef.current) {
-          await wakeLockRef.current.release();
-          wakeLockRef.current = null;
-        }
-      } catch {
-        // ignore release errors
-      } finally {
-        setWakeLockActive(false);
-      }
-    };
-    
-    if (isCompleting) {
-      void acquireWakeLock();
-    } else {
-      void releaseWakeLock();
-    }
-    
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && isCompleting) {
-        void acquireWakeLock();
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      void releaseWakeLock();
-    };
-  }, [isCompleting]);
   
   const sendErrorToTelegram = async (text: string) => {
     try {
@@ -435,10 +366,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
   const handleCompleteWork = async () => {
     if (embedded) return; // embedded mode doesn't finish work
     if (!user?.id) return;
-    if (!acknowledgedUploadNotice) {
-      setShowUploadNotice(true);
-      return;
-    }
     await startCompletion();
   };
   
@@ -446,45 +373,11 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
 
     // Очищаем предыдущие логи
     setUploadLogs([]);
-    setUploadProgress(null);
     setErrorDetails(null);
     setLastErrorSummary(null);
-    setUploadPhase('idle');
-    setFinalizingStartedAt(null);
 
     addLog('Начало завершения работы...');
-    const connectionStatus = getConnectionStatusMessage();
-    if (connectionStatus) {
-      addLog(`Сеть: ${connectionStatus}`);
-    }
-    if (getConnectionQuality() === 'poor') {
-      const warnMessage = 'Плохое или нестабильное соединение. Возможны ошибки при загрузке.';
-      addLog(`⚠ ${warnMessage}`);
-      toastError(warnMessage);
-    }
-    
-    addLog('Проверка скорости соединения...');
-      const speedCheck = await runSpeedCheck();
-    if (!speedCheck) {
-      const warnMessage = 'Не удалось проверить скорость соединения. Проверьте интернет.';
-      addLog(`✗ ${warnMessage}`);
-      toastError(warnMessage);
-      setIsCompleting(false);
-        setAcknowledgedUploadNotice(false);
-      return;
-    }
-    addLog(`Скорость: ${speedCheck.avg.toFixed(2)} Mbps (${speedCheck.quality}, ${speedCheck.stable ? 'стабильная' : 'нестабильная'})`);
-    if (!speedCheck.stable || speedCheck.quality === 'poor') {
-      const warnMessage = 'Соединение нестабильное или слишком медленное. Загрузка файлов отменена.';
-      addLog(`✗ ${warnMessage}`);
-      toastError(warnMessage);
-      setIsCompleting(false);
-        setAcknowledgedUploadNotice(false);
-      return;
-    }
     addLog(`Пользователь: ID ${user.id}, тип: ${user.worker_type}`);
-    addLog(`Фотографий работы: ${workPhotos.length}, инструментов: ${toolsPhotos.length}`);
-    addLog(`Видео: ${videoFile ? 'Да' : 'Нет'}`);
 
     logger.info('handleCompleteWork called', {
       user: { id: user.id, worker_type: user.worker_type },
@@ -492,9 +385,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       facilityId,
       facilityTypeId,
       tasksCount: tasks.length,
-      workPhotosCount: workPhotos.length,
-      toolsPhotosCount: toolsPhotos.length,
-      hasVideo: !!videoFile,
       isObjectCompleted,
     });
 
@@ -613,29 +503,18 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       
       logger.debug('Geolocation obtained, continuing with work completion');
 
-      const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
-      const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
-      const willUseChunked = totalSize > 10 * 1024 * 1024;
-      setWorkFilesProgress(new Array(workPhotos.length).fill(0));
-      setToolsFilesProgress(new Array(toolsPhotos.length).fill(0));
-      setVideoFileProgress(videoFile ? 0 : 0);
-      setUploadPhase('uploading');
       addLog(`Подготовка данных для отправки...`);
-      addLog(`Общий размер файлов: ${totalSizeMB} MB`);
 
       let response;
       let requestData;
       
       if (canSelectObjectsAndVehicles) {
-        // Для admin, coder, worker, master - обычный эндпоинт с facility_id и instrument_photos
+        // Для admin, coder, worker, master - обычный эндпоинт без файлов
         requestData = {
           worker_id: user.id,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           status_object_finished: isObjectCompleted,
-          done_work_photos: workPhotos.length > 0 ? workPhotos : undefined,
-          instrument_photos: toolsPhotos.length > 0 ? toolsPhotos : undefined,
-          report_video: videoFile || undefined,
         };
         addLog(`Отправка запроса на завершение работы...`);
         addLog(`URL: https://bot-api.skybud.de/api/v1/work/end`);
@@ -645,59 +524,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         addLog(`  - latitude: ${requestData.latitude}`);
         addLog(`  - longitude: ${requestData.longitude}`);
         addLog(`  - status_object_finished: ${requestData.status_object_finished}`);
-        addLog(`  - done_work_photos: ${workPhotos.length} файлов`);
-        addLog(`  - instrument_photos: ${toolsPhotos.length} файлов`);
-        addLog(`  - report_video: ${videoFile ? 'Да' : 'Нет'}`);
-        logger.info('Ending facility work', {
-          ...requestData,
-          workPhotosCount: workPhotos.length,
-          toolsPhotosCount: toolsPhotos.length,
-          hasVideo: !!videoFile,
-        });
+        logger.info('Ending facility work', requestData);
         
-        response = await endWork(requestData, (progress) => {
-          setUploadProgress(progress);
-          if (progress.total > 0) {
-            addLog(`Загрузка: ${progress.percent}% (${(progress.loaded / 1024 / 1024).toFixed(2)} MB / ${(progress.total / 1024 / 1024).toFixed(2)} MB)`);
-          }
-          if (!willUseChunked) {
-            const p = Math.max(0, Math.min(100, progress.percent));
-            if (workPhotos.length > 0) {
-              setWorkFilesProgress(new Array(workPhotos.length).fill(p));
-            }
-            if (toolsPhotos.length > 0) {
-              setToolsFilesProgress(new Array(toolsPhotos.length).fill(p));
-            }
-            if (videoFile) {
-              setVideoFileProgress(p);
-            }
-            if (p >= 100) {
-              setUploadPhase('finalizing');
-            }
-          } else if (progress.percent >= 100) {
-            setUploadPhase('finalizing');
-          }
-        }, {
-          parallelChunks: user?.worker_type === 'master',
-          onFileProgress: (fileProgress) => {
-            if (fileProgress.category === 'video') {
-              setVideoFileProgress(fileProgress.percent);
-            } else if (fileProgress.category === 'work') {
-              setWorkFilesProgress(prev => {
-                const next = [...prev];
-                next[fileProgress.index] = fileProgress.percent;
-                return next;
-              });
-            } else if (fileProgress.category === 'tools') {
-              setToolsFilesProgress(prev => {
-                const next = [...prev];
-                next[fileProgress.index] = fileProgress.percent;
-                return next;
-              });
-            }
-          },
-          onPhaseChange: (phase) => setUploadPhase(phase),
-        });
+        response = await endWork(requestData);
       } else {
         // Для остальных - офисный эндпоинт без facility_id, instrument_photos, фото и видео
         requestData = {
@@ -741,12 +570,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         const errorDetails = {
           requestData: {
             ...requestData,
-            // Не логируем сами файлы, только их размеры
-            workPhotosCount: workPhotos.length,
-            toolsPhotosCount: toolsPhotos.length,
-            hasVideo: !!videoFile,
-            videoSize: videoFile ? videoFile.size : 0,
-            totalPhotosSize: [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0),
           },
           response: {
             error: response.error,
@@ -769,12 +592,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         // Более информативное сообщение об ошибке
         let errorMessage = t('work.endWorkError');
-        const totalSize = [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0) + (videoFile?.size || 0);
-        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
         
         if (errorData?.code === 'ERR_NETWORK' || errorData?.message?.includes('Network Error') || errorData?.message?.includes('Failed to fetch')) {
-          // Если OPTIONS прошел, но POST не отправился, это может быть ограничение Telegram WebView
-          errorMessage = `Не удалось отправить файлы (${totalSizeMB} MB). Это может быть ограничение Telegram WebView на Android. Попробуйте: 1) Использовать Wi-Fi вместо мобильного интернета, 2) Уменьшить размер видео, 3) Отправить меньше фотографий.`;
+          errorMessage = 'Не удалось отправить запрос. Проверьте интернет-соединение и попробуйте снова.';
         } else if (errorData?.code === 'ERR_BAD_RESPONSE') {
           // Специальная обработка для ERR_BAD_RESPONSE
           const httpStatus = errorData?.response?.status;
@@ -785,14 +605,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
           } else if (responseMessage.includes('Failed to parse')) {
             errorMessage = 'Сервер вернул некорректный ответ. Возможно, проблема на стороне сервера. Попробуйте позже или обратитесь в поддержку.';
           } else if (httpStatus === 413) {
-            // Проверяем, это ошибка при загрузке чанка или финального запроса
-            if (responseMessage.includes('Chunk size too large')) {
-              errorMessage = `Размер чанка слишком большой (413). Сервер или прокси отклонил запрос. Попробуйте уменьшить размер файлов или обратитесь в поддержку.`;
-            } else {
-              errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
-            }
+            errorMessage = 'Запрос слишком большой. Обратитесь в поддержку.';
           } else if (httpStatus === 408 || errorData?.code === 'ECONNABORTED') {
-            errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
+            errorMessage = 'Превышено время ожидания. Проверьте интернет-соединение и попробуйте снова.';
           } else if (httpStatus >= 500) {
             errorMessage = `Ошибка сервера (${httpStatus}). Сервер временно недоступен. Попробуйте позже или обратитесь в поддержку.`;
           } else if (httpStatus === 400) {
@@ -809,15 +624,9 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
             errorMessage = `Ошибка при получении ответа от сервера: ${responseMessage || 'Неизвестная ошибка'}. Проверьте интернет-соединение и попробуйте снова.`;
           }
         } else if (errorData?.response?.status === 413) {
-          // Проверяем, это ошибка при загрузке чанка или финального запроса
-          const responseMessage = errorData?.message || '';
-          if (responseMessage.includes('Chunk size too large')) {
-            errorMessage = `Размер чанка слишком большой (413). Сервер или прокси отклонил запрос. Попробуйте уменьшить размер файлов или обратитесь в поддержку.`;
-          } else {
-            errorMessage = `Файлы слишком большие (${totalSizeMB} MB). Попробуйте уменьшить размер фотографий или видео.`;
-          }
+          errorMessage = 'Запрос слишком большой. Обратитесь в поддержку.';
         } else if (errorData?.response?.status === 408 || errorData?.code === 'ECONNABORTED') {
-          errorMessage = `Превышено время ожидания при отправке файлов (${totalSizeMB} MB). Проверьте интернет-соединение и попробуйте снова. Рекомендуется использовать Wi-Fi для больших файлов.`;
+          errorMessage = 'Превышено время ожидания. Проверьте интернет-соединение и попробуйте снова.';
         } else if (errorData?.response?.status >= 500) {
           errorMessage = 'Ошибка сервера. Попробуйте позже.';
         } else if (errorData?.response?.status === 400) {
@@ -859,11 +668,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
               latitude: requestData.latitude,
               longitude: requestData.longitude,
               status_object_finished: requestData.status_object_finished,
-              workPhotosCount: workPhotos.length,
-              toolsPhotosCount: toolsPhotos.length,
-              hasVideo: !!videoFile,
-              videoSize: videoFile ? videoFile.size : 0,
-              totalPhotosSize: [...workPhotos, ...toolsPhotos].reduce((sum, file) => sum + file.size, 0),
             },
             environment: {
               isAndroid: /android/i.test(navigator.userAgent),
@@ -875,7 +679,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         
         toastError(errorMessage);
         setIsCompleting(false);
-        setAcknowledgedUploadNotice(false);
         return;
       }
 
@@ -886,15 +689,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       addLog(`  - worker_id: ${response.data?.worker_id || 'неизвестно'}`);
       addLog(`  - facility_id: ${response.data?.facility_id || 'null'}`);
       addLog(`  - end_time: ${response.data?.end_time || 'неизвестно'}`);
-      if (response.data?.report_video_url) {
-        addLog(`  - report_video_url: ${response.data.report_video_url}`);
-      }
-      if (response.data?.done_work_photos_url) {
-        addLog(`  - done_work_photos_url: ${response.data.done_work_photos_url.length} файлов`);
-      }
-      if (response.data?.instrument_photos_url) {
-        addLog(`  - instrument_photos_url: ${response.data.instrument_photos_url.length} файлов`);
-      }
+      addLog(`  - После завершения работы вам будет отправлено Telegram сообщение с кнопками для загрузки медиа`);
       
       logger.info('Work completed successfully', {
         workProcessId: response.data?.id,
@@ -915,8 +710,7 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       }
 
       addLog(`✓ Работа успешно завершена!`);
-      setUploadProgress(null);
-      setUploadPhase('done');
+      addLog(`Проверьте Telegram - вам будет отправлено сообщение с кнопками для загрузки медиа`);
       toastSuccess(t('work.workEnded'));
       onComplete && onComplete(response.data);
     } catch (error) {
@@ -1028,7 +822,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
       
       toastError(errorMessage);
       setIsCompleting(false);
-      setAcknowledgedUploadNotice(false);
     }
   };
 
@@ -1100,146 +893,24 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, workPhotos = [], tool
         {!embedded && isCompleting && (
           <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
             <div className="text-sm font-semibold text-theme-text-primary mb-2">
-              Загрузка файлов
+              Завершение работы
             </div>
             <div className="space-y-3">
-              <div className="text-xs text-theme-text-secondary">
-                {wakeLockActive
-                  ? 'Экран не будет гаснуть во время загрузки'
-                  : 'Не блокируйте экран во время загрузки'}
+              <div className="flex items-center gap-2 text-xs text-theme-text-secondary">
+                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-theme-accent"></div>
+                Отправка запроса на сервер{'.'.repeat((heartbeatTick % 3) + 1)}
               </div>
-              {workPhotos.length > 0 && (
-                <div>
-                  <div className="text-xs text-theme-text-secondary mb-1">
-                    Файлы работы: {workFilesProgress.filter(p => p >= 100).length}/{workPhotos.length}
-                  </div>
-                  <div className="space-y-1">
-                    {workPhotos.map((file, idx) => (
-                      <div key={`work-${idx}`} className="text-xs">
-                        <div className="flex justify-between">
-                          <span className="truncate">{file.name}</span>
-                          <span>{Math.round(workFilesProgress[idx] || 0)}%</span>
-                        </div>
-                        <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
-                          <div
-                            className="bg-theme-accent h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.round(workFilesProgress[idx] || 0)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {toolsPhotos.length > 0 && (
-                <div>
-                  <div className="text-xs text-theme-text-secondary mb-1">
-                    Файлы инструментов: {toolsFilesProgress.filter(p => p >= 100).length}/{toolsPhotos.length}
-                  </div>
-                  <div className="space-y-1">
-                    {toolsPhotos.map((file, idx) => (
-                      <div key={`tools-${idx}`} className="text-xs">
-                        <div className="flex justify-between">
-                          <span className="truncate">{file.name}</span>
-                          <span>{Math.round(toolsFilesProgress[idx] || 0)}%</span>
-                        </div>
-                        <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
-                          <div
-                            className="bg-theme-accent h-1 rounded-full transition-all duration-300"
-                            style={{ width: `${Math.round(toolsFilesProgress[idx] || 0)}%` }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {videoFile && (
-                <div>
-                  <div className="text-xs text-theme-text-secondary mb-1">
-                    Видео: {Math.round(videoFileProgress)}%
-                  </div>
-                  <div className="text-xs">
-                    <div className="flex justify-between">
-                      <span className="truncate">{videoFile.name}</span>
-                      <span>{Math.round(videoFileProgress)}%</span>
-                    </div>
-                    <div className="w-full bg-theme-bg-tertiary rounded-full h-1">
-                      <div
-                        className="bg-theme-accent h-1 rounded-full transition-all duration-300"
-                        style={{ width: `${Math.round(videoFileProgress)}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {uploadPhase === 'finalizing' && (
-                <div className="flex items-center gap-2 text-xs text-theme-text-secondary">
-                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-theme-accent"></div>
-                  Данные загружены. Ожидайте обработки запроса сервером{'.'.repeat((heartbeatTick % 3) + 1)}
-                </div>
-              )}
-              {uploadPhase === 'finalizing' && finalizingStartedAt && (
-                <div className="text-xs text-theme-text-muted">
-                  Время ожидания: {Math.floor((Date.now() - finalizingStartedAt) / 1000)} сек.
-                </div>
-              )}
             </div>
           </div>
         )}
         
-        <Dialog open={showUploadNotice} onOpenChange={setShowUploadNotice}>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Важно</DialogTitle>
-              <DialogDescription>
-                Во время загрузки файлов не блокируйте экран и не сворачивайте приложение.
-                Это может прервать отправку данных.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button
-                variant="default"
-                onClick={() => {
-                  setShowUploadNotice(false);
-                  setAcknowledgedUploadNotice(true);
-                  void startCompletion();
-                }}
-              >
-                Понял
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
         
         {/* Upload Progress and Logs */}
-        {(isCompleting || uploadLogs.length > 0 || uploadProgress) && !['worker', 'master'].includes(user?.worker_type) && (
+        {(isCompleting || uploadLogs.length > 0) && !['worker', 'master'].includes(user?.worker_type) && (
           <div className="bg-theme-bg-card border border-theme-border rounded-lg p-4 mb-4">
             <h3 className="text-sm font-semibold text-theme-text-primary mb-3">
               {isCompleting ? 'Завершение работы...' : 'Логи операции'}
             </h3>
-            
-            {/* Progress Bar */}
-            {uploadProgress && uploadProgress.total > 0 && (
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-theme-text-secondary mb-1">
-                  <span>Загрузка файлов</span>
-                  <span>{uploadProgress.percent}%</span>
-                </div>
-                <div className="w-full bg-theme-bg-tertiary rounded-full h-2">
-                  <div
-                    className="bg-theme-accent h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress.percent}%` }}
-                  />
-                </div>
-                <div className="text-xs text-theme-text-muted mt-1">
-                  {((uploadProgress.loaded / 1024 / 1024).toFixed(2))} MB / {((uploadProgress.total / 1024 / 1024).toFixed(2))} MB
-                </div>
-              </div>
-            )}
             
             {/* Logs */}
             {uploadLogs.length > 0 && (

@@ -2,7 +2,6 @@ import { FC, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import WorkMain from './screens/WorkMain';
-import WorkCompletion from './screens/WorkCompletion';
 import TodoList from './screens/TodoList';
 import WorkSummary from './screens/WorkSummary';
 import WorkHistory from './screens/WorkHistory';
@@ -16,9 +15,6 @@ const Work: FC = () => {
   const [currentScreen, setCurrentScreen] = useState<WorkScreen>('main');
   const [selectedObject, setSelectedObject] = useState<string>('');
   const [facilities, setFacilities] = useState<FacilityOut[]>([]);
-  const [workPhotos, setWorkPhotos] = useState<File[]>([]);
-  const [toolsPhotos, setToolsPhotos] = useState<File[]>([]);
-  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [workSummaryData, setWorkSummaryData] = useState<WorkProcessEndOut | null>(null);
 
   // Приховуємо кнопку назад для головного екрану Work
@@ -100,21 +96,9 @@ const Work: FC = () => {
   };
 
   const handleStopWork = () => {
-    const workerType: string | undefined = user?.worker_type;
-    const allowedWorkerTypes = ['admin', 'coder', 'worker', 'master'];
-    const canSelectObjectsAndVehicles = workerType && allowedWorkerTypes.includes(workerType);
-    const canUploadMedia = workerType === 'master' || workerType === 'admin';
-
-    if (canSelectObjectsAndVehicles && canUploadMedia) {
-      // Для admin, coder, worker, master с правами на медиа - показываем экран completion
-      setCurrentScreen('completion');
-    } else {
-      // Для остальных - пропускаем экран completion (без фото инструментов)
-      setWorkPhotos([]);
-      setToolsPhotos([]);
-      setVideoFile(null);
-      setCurrentScreen('todo');
-    }
+    // Теперь медиа загружается отдельно через Telegram после завершения работы
+    // Пропускаем экран completion и сразу переходим к списку задач
+    setCurrentScreen('todo');
   };
 
   const handleCompletionBack = () => {
@@ -122,7 +106,7 @@ const Work: FC = () => {
   };
 
   const handleTodoListBack = () => {
-    setCurrentScreen('completion');
+    setCurrentScreen('main');
   };
 
   // const handleWorkComplete = () => {
@@ -139,20 +123,11 @@ const Work: FC = () => {
 
   const handleSummaryComplete = () => {
     // Очищаємо дані після перегляду підсумків
-    setWorkPhotos([]);
-    setToolsPhotos([]);
-    setVideoFile(null);
     setWorkSummaryData(null);
     setCurrentScreen('main');
     setSelectedObject('');
   };
 
-  const handleTodoListTransition = (photos: File[], tools: File[], video: File | null) => {
-    setWorkPhotos(photos);
-    setToolsPhotos(tools);
-    setVideoFile(video);
-    setCurrentScreen('todo');
-  };
 
   const handleShowHistory = () => {
     setCurrentScreen('history');
@@ -172,28 +147,13 @@ const Work: FC = () => {
   };
 
   switch (currentScreen) {
-    case 'completion':
-      return (
-        <WorkCompletion
-          onBack={handleCompletionBack}
-          onTodoList={handleTodoListTransition}
-          objectName={getSelectedObjectName()}
-        />
-      );
-
     case 'todo': {
-      const workerType: string | undefined = user?.worker_type;
-      const canUploadMedia = workerType === 'master' || workerType === 'admin';
       return (
         <TodoList
           onComplete={handleTodoListComplete}
           onBack={handleTodoListBack}
-          workPhotos={workPhotos}
-          toolsPhotos={toolsPhotos}
-          videoFile={videoFile}
           facilityId={selectedObject ? Number(selectedObject) : null}
           facilityTypeId={facilities.find(f => f.id.toString() === selectedObject)?.facility_type_id ?? null}
-          hideBack={!canUploadMedia}
         />
       );
     }
