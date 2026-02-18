@@ -1,5 +1,4 @@
 import { FC, useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import WorkMain from './screens/WorkMain';
 import TodoList from './screens/TodoList';
@@ -10,7 +9,6 @@ import { getFacilities, FacilityOut, WorkProcessEndOut } from '@/requests';
 type WorkScreen = 'main' | 'completion' | 'todo' | 'summary' | 'history';
 
 const Work: FC = () => {
-  const { t } = useTranslation();
   const user = useSelector((state: any) => state.data.user);
   const [currentScreen, setCurrentScreen] = useState<WorkScreen>('main');
   const [selectedObject, setSelectedObject] = useState<string>('');
