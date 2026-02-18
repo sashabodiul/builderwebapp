@@ -101,10 +101,6 @@ const Work: FC = () => {
     setCurrentScreen('todo');
   };
 
-  const handleCompletionBack = () => {
-    setCurrentScreen('main');
-  };
-
   const handleTodoListBack = () => {
     setCurrentScreen('main');
   };
@@ -135,15 +131,6 @@ const Work: FC = () => {
 
   const handleHistoryBack = () => {
     setCurrentScreen('main');
-  };
-
-  const getSelectedObjectName = () => {
-    if (!canSelectObjectsAndVehicles) {
-      // Для офисных работников
-      return `${t('work.workPlace')}: ${t('work.office')}`;
-    }
-    const facility = facilities.find(facility => facility.id.toString() === selectedObject);
-    return facility?.name || t('work.unnamedObject');
   };
 
   switch (currentScreen) {

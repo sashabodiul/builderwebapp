@@ -1543,9 +1543,6 @@ const WorkMain: FC<WorkMainProps> = ({ onStartWork, onStopWork, selectedObject, 
               <div className="text-xl font-semibold text-theme-text-primary mb-3">{t('work.todoList')}</div>
               <TodoList
                 embedded
-                workPhotos={[]}
-                toolsPhotos={[]}
-                videoFile={null}
                 facilityId={selectedObject ? Number(selectedObject) : null}
                 facilityTypeId={facilities.find(f => f.id.toString() === selectedObject)?.facility_type_id ?? null}
               />

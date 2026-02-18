@@ -2,8 +2,6 @@ import { FC, useEffect, useMemo, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 import { Check, X, Plus, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { endWork, endWorkOffice } from '../../../requests/work';
 import { logger } from '../../../lib/logger';
 import { WorkProcessEndOut } from '../../../requests/work/types';
@@ -72,18 +70,6 @@ const TodoList: FC<TodoListProps> = ({ onComplete, onBack, facilityId = null, fa
       rtt: connection.rtt,
       saveData: connection.saveData,
     };
-  };
-  
-  const getConnectionStatusMessage = () => {
-    const info = getConnectionInfo();
-    if (!info) return null;
-    const parts = [
-      info.effectiveType ? `Тип сети: ${info.effectiveType}` : null,
-      typeof info.downlink === 'number' ? `Скорость: ${info.downlink} Mbps` : null,
-      typeof info.rtt === 'number' ? `RTT: ${info.rtt} ms` : null,
-      info.saveData ? 'Режим экономии трафика: да' : null,
-    ].filter(Boolean);
-    return parts.length > 0 ? parts.join(' | ') : null;
   };
   
   const getConnectionQuality = () => {
