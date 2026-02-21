@@ -229,7 +229,23 @@ class WebAppLogger {
     return undefined;
   }
 
+  /** IANA timezone (e.g. Europe/Kyiv) и смещение в минутах для контекста логов */
+  private getTimezoneContext(): { timezone: string; utcOffsetMinutes: number } {
+    let timezone = 'UTC';
+    try {
+      timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || timezone;
+    } catch {
+      // fallback остаётся UTC
+    }
+    // getTimezoneOffset(): положительное = запад UTC, отрицательное = восток; для "минут впереди UTC" инвертируем
+    const utcOffsetMinutes = -new Date().getTimezoneOffset();
+    return { timezone, utcOffsetMinutes };
+  }
+
   private addLog(level: LogLevel, message: string, context?: Record<string, any>): void {
+    const timezoneContext = this.getTimezoneContext();
+    const baseContext = { ...timezoneContext };
+    const userContext = context ? { ...context, stack: undefined } : {};
     const entry: LogEntry = {
       level,
       message,
@@ -237,7 +253,7 @@ class WebAppLogger {
       url: window.location.href,
       user_agent: navigator.userAgent,
       stack: context?.stack,
-      context: context ? { ...context, stack: undefined } : undefined, // stack отдельно
+      context: { ...baseContext, ...userContext },
     };
     
     this.buffer.push(entry);
