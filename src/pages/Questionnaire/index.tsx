@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { submitQuestionnaire } from '@/requests/questionnaire';
+import { getFacilities } from '@/requests/facility';
+import type { FacilityOut } from '@/requests/facility/types';
 import { toastSuccess, toastError } from '@/lib/toasts';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from '@/components/LanguageSwitcher';
@@ -44,6 +46,7 @@ const questionnaireSchema = z.object({
     message: 'Выберите тип поездки',
   }),
   work_type: z.string().optional(),
+  facility_id: z.number().optional().nullable(),
   reason: z.string().min(1, 'Причина поездки обязательна для заполнения'),
   destination_description: z.string().min(1, 'Описание места назначения обязательно'),
   destination_lat: z
@@ -54,18 +57,26 @@ const questionnaireSchema = z.object({
     .number()
     .min(-180, 'Долгота должна быть от -180 до 180')
     .max(180, 'Долгота должна быть от -180 до 180'),
-}).refine(
-  (data) => {
-    if (data.reason_type === 'WORK') {
-      return data.work_type && (data.work_type === 'Мойка' || data.work_type === 'Заправка' || data.work_type === 'Сервис' || data.work_type === 'За запчастями');
-    }
-    return true;
-  },
-  {
-    message: 'Выберите тип рабочей поездки',
-    path: ['work_type'],
-  }
-);
+})
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK') {
+        const allowed = ['Домой', 'На объект', 'Мойка', 'Заправка', 'Сервис', 'За запчастями'];
+        return data.work_type && allowed.includes(data.work_type);
+      }
+      return true;
+    },
+    { message: 'Выберите тип рабочей поездки', path: ['work_type'] }
+  )
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK' && data.work_type === 'На объект') {
+        return data.facility_id != null && data.facility_id > 0;
+      }
+      return true;
+    },
+    { message: 'Выберите объект', path: ['facility_id'] }
+  );
 
 type QuestionnaireFormData = z.infer<typeof questionnaireSchema>;
 
@@ -118,6 +129,8 @@ const QuestionnairePage: React.FC = () => {
   const [showMap, setShowMap] = useState(false);
   const [address, setAddress] = useState<string>('');
   const [isSearchingAddress, setIsSearchingAddress] = useState(false);
+  const [facilities, setFacilities] = useState<FacilityOut[]>([]);
+  const [facilitiesLoading, setFacilitiesLoading] = useState(false);
   const { t } = useTranslation();
 
   const form = useForm<QuestionnaireFormData>({
@@ -125,6 +138,7 @@ const QuestionnairePage: React.FC = () => {
     defaultValues: {
       reason_type: 'WORK' as 'WORK' | 'PERSONAL',
       work_type: undefined,
+      facility_id: undefined,
       reason: '',
       destination_description: '',
       destination_lat: 50.4501,
@@ -133,6 +147,27 @@ const QuestionnairePage: React.FC = () => {
   });
 
   const reasonType = form.watch('reason_type');
+  const workType = form.watch('work_type');
+
+  // Загрузка объектов при выборе "На объект"
+  useEffect(() => {
+    if (workType !== 'На объект') {
+      form.setValue('facility_id', undefined);
+      return;
+    }
+    let cancelled = false;
+    setFacilitiesLoading(true);
+    getFacilities({ limit: 100, offset: 0 })
+      .then((res) => {
+        if (!cancelled && res.data) setFacilities(res.data);
+      })
+      .finally(() => {
+        if (!cancelled) setFacilitiesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [workType]);
 
   const destinationLat = form.watch('destination_lat');
   const destinationLng = form.watch('destination_lng');
@@ -230,9 +265,11 @@ const QuestionnairePage: React.FC = () => {
         destination_lng: data.destination_lng,
       };
       
-      // Добавляем work_type только если это рабочая поездка
       if (data.reason_type === 'WORK' && data.work_type) {
         submitData.work_type = data.work_type;
+      }
+      if (data.reason_type === 'WORK' && data.work_type === 'На объект' && data.facility_id != null) {
+        submitData.facility_id = data.facility_id;
       }
       
       await submitQuestionnaire(startStateIdNum, submitData);
@@ -285,9 +322,9 @@ const QuestionnairePage: React.FC = () => {
                   <Select
                     onValueChange={(value) => {
                       field.onChange(value);
-                      // Сбрасываем work_type при смене типа поездки
                       if (value !== 'WORK') {
                         form.setValue('work_type', undefined);
+                        form.setValue('facility_id', undefined);
                       }
                     }}
                     value={field.value}
@@ -307,7 +344,7 @@ const QuestionnairePage: React.FC = () => {
               )}
             />
 
-            {/* Тип рабочей поездки (показывается только для рабочей) */}
+            {/* Тип рабочей поездки: Домой / На объект */}
             {reasonType === 'WORK' && (
               <FormField
                 control={form.control}
@@ -316,7 +353,10 @@ const QuestionnairePage: React.FC = () => {
                   <FormItem>
                     <FormLabel className="text-base font-semibold">{t('questionnaire.workType')} *</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        if (value !== 'На объект') form.setValue('facility_id', undefined);
+                      }}
                       value={field.value}
                     >
                       <FormControl>
@@ -325,10 +365,44 @@ const QuestionnairePage: React.FC = () => {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
+                        <SelectItem value="Домой" className="text-base py-3">{t('questionnaire.workHome')}</SelectItem>
+                        <SelectItem value="На объект" className="text-base py-3">{t('questionnaire.workToFacility')}</SelectItem>
                         <SelectItem value="Мойка" className="text-base py-3">{t('questionnaire.wash')}</SelectItem>
                         <SelectItem value="Заправка" className="text-base py-3">{t('questionnaire.fuel')}</SelectItem>
                         <SelectItem value="Сервис" className="text-base py-3">{t('questionnaire.service')}</SelectItem>
                         <SelectItem value="За запчастями" className="text-base py-3">{t('questionnaire.parts')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Выбор объекта (только при "На объект") */}
+            {reasonType === 'WORK' && workType === 'На объект' && (
+              <FormField
+                control={form.control}
+                name="facility_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-semibold">{t('questionnaire.facility')} *</FormLabel>
+                    <Select
+                      onValueChange={(value) => field.onChange(value === '' ? undefined : parseInt(value, 10))}
+                      value={field.value != null ? String(field.value) : ''}
+                      disabled={facilitiesLoading}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-11 text-base">
+                          <SelectValue placeholder={facilitiesLoading ? t('questionnaire.loadingFacilities') : t('questionnaire.facilityPlaceholder')} />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {facilities.map((f) => (
+                          <SelectItem key={f.id} value={String(f.id)} className="text-base py-3">
+                            {f.name || `Объект #${f.id}`}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

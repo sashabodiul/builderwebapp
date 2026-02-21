@@ -4,6 +4,8 @@ const VEHICLE_TRACKER_API_BASE = 'https://vehicle-tracker.skybud.de/api/v1';
 
 export interface QuestionnaireRequest {
   reason_type: 'WORK' | 'PERSONAL';
+  work_type?: string; // при WORK: "Домой" | "На объект"
+  facility_id?: number; // при work_type === "На объект" — id объекта из GET /api/v1/facility/
   reason: string;
   destination_description: string;
   destination_lat: number;
