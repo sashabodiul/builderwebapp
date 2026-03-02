@@ -15,10 +15,12 @@
 | `reason_type` | `"WORK"` \| `"PERSONAL"` | да | Тип поездки |
 | `work_type` | `string` | при `reason_type === "WORK"` | Подтип рабочей поездки: `"Домой"`, `"На объект"`, `"Мойка"`, `"Заправка"`, `"Сервис"`, `"За запчастями"` |
 | `facility_id` | `number` | при `work_type === "На объект"` | ID объекта из **bot-api** (список объектов: `GET /api/v1/facility/`) |
-| `reason` | string | да | Причина поездки |
-| `destination_description` | string | да | Описание места назначения |
-| `destination_lat` | number | да | Широта |
-| `destination_lng` | number | да | Долгота |
+| `reason` | string | при `reason_type === "WORK"` | Причина поездки |
+| `destination_description` | string | при `reason_type === "WORK"` | Описание места назначения |
+| `destination_lat` | number | при `reason_type === "WORK"` | Широта |
+| `destination_lng` | number | при `reason_type === "WORK"` | Долгота |
+
+**Важно:** при `reason_type === "PERSONAL"` фронтенд отправляет **только** `reason_type`. Поля `reason`, `destination_description`, `destination_lat`, `destination_lng` не передаются.
 
 ## Пример тела
 
@@ -62,15 +64,11 @@
 }
 ```
 
-**Личная поездка** (без `work_type` и `facility_id`):
+**Личная поездка** — минимальный payload, только тип поездки:
 
 ```json
 {
-  "reason_type": "PERSONAL",
-  "reason": "Личные дела",
-  "destination_description": "Магазин",
-  "destination_lat": 50.45,
-  "destination_lng": 30.52
+  "reason_type": "PERSONAL"
 }
 ```
 
@@ -88,3 +86,24 @@
    - `work_type` — опционально, только при `reason_type === "WORK"`.
    - `facility_id` — опционально; при `work_type === "На объект"` считать его обязательным и проверять, что объект существует (например, сверка с bot-api или своей БД).
 2. Сохранять `work_type` и `facility_id` в той же сущности, что и остальные поля опросника (например, в записи «ответ на опросник» или в поездке), чтобы дальше использовать для отчётов и логики (например, привязка поездки к объекту).
+
+---
+
+## Изменения для бэкенда: личная поездка
+
+Фронтенд для **личной поездки** больше не показывает поля «Причина», «Описание места назначения», «Координаты» — только выбор «Личная» и кнопка «Отправить». Поэтому запрос приходит с минимальным телом.
+
+### Что изменить на бэкенде
+
+1. **Валидация тела запроса**
+   - Разрешить для **POST** `.../questionnaire/{start_state_id}` при `reason_type === "PERSONAL"` приём тела, в котором **обязательно только** поле `reason_type`.
+   - Поля `reason`, `destination_description`, `destination_lat`, `destination_lng` делать **опциональными** в схеме (или не требовать их при `reason_type === "PERSONAL"`).
+   - При `reason_type === "PERSONAL"` не требовать и не использовать `work_type`, `facility_id`, `reason`, `destination_description`, `destination_lat`, `destination_lng`.
+
+2. **Обработка и сохранение**
+   - При `reason_type === "PERSONAL"` сохранять в БД только `reason_type` (и служебные поля вроде `start_state_id`, `created_at` и т.п.).
+   - Для полей `reason`, `destination_description`, `destination_lat`, `destination_lng` при личной поездке допускать `null` или отсутствие в запросе и не заполнять их.
+
+3. **Пример допустимого запроса для личной поездки**
+   - Тело: `{ "reason_type": "PERSONAL" }`.
+   - Ответ: как и раньше (например, 200 и созданная запись опросника с `reason_type: "PERSONAL"` и пустыми/нулевыми остальными полями).

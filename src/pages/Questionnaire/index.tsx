@@ -47,16 +47,10 @@ const questionnaireSchema = z.object({
   }),
   work_type: z.string().optional(),
   facility_id: z.number().optional().nullable(),
-  reason: z.string().min(1, 'Причина поездки обязательна для заполнения'),
-  destination_description: z.string().min(1, 'Описание места назначения обязательно'),
-  destination_lat: z
-    .number()
-    .min(-90, 'Широта должна быть от -90 до 90')
-    .max(90, 'Широта должна быть от -90 до 90'),
-  destination_lng: z
-    .number()
-    .min(-180, 'Долгота должна быть от -180 до 180')
-    .max(180, 'Долгота должна быть от -180 до 180'),
+  reason: z.string().optional(),
+  destination_description: z.string().optional(),
+  destination_lat: z.number().optional(),
+  destination_lng: z.number().optional(),
 })
   .refine(
     (data) => {
@@ -76,6 +70,44 @@ const questionnaireSchema = z.object({
       return true;
     },
     { message: 'Выберите объект', path: ['facility_id'] }
+  )
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK') {
+        return (data.reason?.trim().length ?? 0) > 0;
+      }
+      return true;
+    },
+    { message: 'Причина поездки обязательна для заполнения', path: ['reason'] }
+  )
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK') {
+        return (data.destination_description?.trim().length ?? 0) > 0;
+      }
+      return true;
+    },
+    { message: 'Описание места назначения обязательно', path: ['destination_description'] }
+  )
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK') {
+        const lat = data.destination_lat;
+        return lat != null && lat >= -90 && lat <= 90;
+      }
+      return true;
+    },
+    { message: 'Широта должна быть от -90 до 90', path: ['destination_lat'] }
+  )
+  .refine(
+    (data) => {
+      if (data.reason_type === 'WORK') {
+        const lng = data.destination_lng;
+        return lng != null && lng >= -180 && lng <= 180;
+      }
+      return true;
+    },
+    { message: 'Долгота должна быть от -180 до 180', path: ['destination_lng'] }
   );
 
 type QuestionnaireFormData = z.infer<typeof questionnaireSchema>;
@@ -256,22 +288,17 @@ const QuestionnairePage: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Формируем данные для отправки
       const submitData: any = {
         reason_type: data.reason_type as 'WORK' | 'PERSONAL',
-        reason: data.reason,
-        destination_description: data.destination_description,
-        destination_lat: data.destination_lat,
-        destination_lng: data.destination_lng,
       };
-      
-      if (data.reason_type === 'WORK' && data.work_type) {
-        submitData.work_type = data.work_type;
+      if (data.reason_type === 'WORK') {
+        submitData.reason = data.reason ?? '';
+        submitData.destination_description = data.destination_description ?? '';
+        submitData.destination_lat = data.destination_lat ?? 0;
+        submitData.destination_lng = data.destination_lng ?? 0;
+        if (data.work_type) submitData.work_type = data.work_type;
+        if (data.work_type === 'На объект' && data.facility_id != null) submitData.facility_id = data.facility_id;
       }
-      if (data.reason_type === 'WORK' && data.work_type === 'На объект' && data.facility_id != null) {
-        submitData.facility_id = data.facility_id;
-      }
-      
       await submitQuestionnaire(startStateIdNum, submitData);
       toastSuccess(t('questionnaire.success'));
       form.reset();
@@ -344,9 +371,10 @@ const QuestionnairePage: React.FC = () => {
               )}
             />
 
-            {/* Тип рабочей поездки: Домой / На объект */}
+            {/* Остальные поля только для рабочей поездки */}
             {reasonType === 'WORK' && (
-              <FormField
+              <>
+            <FormField
                 control={form.control}
                 name="work_type"
                 render={({ field }) => (
@@ -377,10 +405,9 @@ const QuestionnairePage: React.FC = () => {
                   </FormItem>
                 )}
               />
-            )}
 
             {/* Выбор объекта (только при "На объект") */}
-            {reasonType === 'WORK' && workType === 'На объект' && (
+            {workType === 'На объект' && (
               <FormField
                 control={form.control}
                 name="facility_id"
@@ -580,6 +607,8 @@ const QuestionnairePage: React.FC = () => {
                 💡 {t('questionnaire.mapHint')}
               </p>
             </div>
+              </>
+            )}
 
             {/* Кнопка отправки */}
             <div className="pt-2 pb-safe" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.5rem)' }}>
